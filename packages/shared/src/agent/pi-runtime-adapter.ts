@@ -88,7 +88,7 @@ export class PiRuntimeAdapter implements AgentRuntime {
   private readonly sessions = new Map<string, RuntimeSessionState>();
   /** Active session file in the runtime. */
   private activePath: string | null = null;
-  /** Last configured Pi extension list + the Finagent-core-only subset. */
+  /** Last configured Pi extension list + the Felix-core-only subset. */
   private extensions: string[] = [];
   private coreExtensions: string[] = [];
   /** True once optional extensions were dropped for reliability (Diagnostics). */
@@ -117,7 +117,7 @@ export class PiRuntimeAdapter implements AgentRuntime {
    */
   setExtensions(extensions: string[]): void {
     this.extensions = extensions;
-    // The Finagent extension is the first entry (V7 listBundledPiExtensions);
+    // The Felix extension is the first entry (V7 listBundledPiExtensions);
     // everything after it is an optional observability extension. On failure
     // this slice is what the retry degrades to (V8.1 §37).
     this.coreExtensions = extensions.slice(0, 1).filter(Boolean);
@@ -152,7 +152,7 @@ export class PiRuntimeAdapter implements AgentRuntime {
   /** 
    * Run one prompt, with one retry at most. If the FIRST attempt dies at
    * startup with an optional-extension load failure (V8.1 §37), the retry
-   * drops the optional extensions and respawns with the Finagent core only —
+   * drops the optional extensions and respawns with the Felix core only —
    * observability can never block agent execution. The failed attempt's
    * run_failed event is suppressed on the retry path so the conversation does
    * not see a spurious infrastructure error.
@@ -168,7 +168,7 @@ export class PiRuntimeAdapter implements AgentRuntime {
 
       // First attempt ended without a terminal event → an infrastructure
       // startup failure attributable to an optional extension. Degrade once
-      // to the Finagent core extension and retry this same prompt.
+      // to the Felix core extension and retry this same prompt.
       this.rpcClient.updateExtensions(this.coreExtensions);
       await this.rpcClient.restart().catch(() => undefined);
       this.degraded = true;
@@ -506,7 +506,7 @@ function buildPrompt(
     : '';
 
   return [
-    'You are Finagent, a finance agent backend.',
+    'You are Felix, a finance agent backend.',
     'Use only registered finance tools for market, K-line, intraday, and portfolio data.',
     'Never construct LongBridge CLI commands directly.',
     'Plan, call tools, observe results, then provide the final answer.',

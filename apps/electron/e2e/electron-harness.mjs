@@ -65,7 +65,9 @@ function tryResolve(packagePath) {
 
 export function spawnElectron({ appRoot, repoRoot, port, userDataDir, logPath }) {
   const electronBinary = resolveElectronBinary(appRoot, repoRoot);
-  const electronMain = join(appRoot, 'src/main/index.js');
+  // Launch the application directory so Electron reads its version and
+  // product name from package.json, including in documentation captures.
+  const electronMain = appRoot;
   const log = createWriteStream(logPath, { flags: 'w' });
   const args = [
     electronMain,

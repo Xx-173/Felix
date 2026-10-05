@@ -1,4 +1,4 @@
-import { ANSWER_BLOCK_FENCE_LANG } from '@finagent/core';
+import { ANSWER_BLOCK_FENCE_LANG_ALIASES } from '@finagent/core';
 
 /**
  * One segment of a Copilot answer: either Markdown text or a typed
@@ -54,7 +54,7 @@ export function parseAnswerSegments(content: string): AnswerSegment[] {
       continue;
     }
 
-    const typed = info.trim() === ANSWER_BLOCK_FENCE_LANG;
+    const typed = ANSWER_BLOCK_FENCE_LANG_ALIASES.some((language) => info.trim() === language);
     if (typed) flushText();
     else textLines.push(line);
 

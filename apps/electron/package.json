@@ -1,5 +1,6 @@
 {
   "name": "@finagent/electron",
+  "productName": "Felix",
   "version": "0.4.0-beta.2",
   "private": true,
   "felix": {
@@ -9,6 +10,7 @@
   "main": "./src/main/index.js",
   "scripts": {
     "dev": "vite",
+    "start": "electron .",
     "build": "vite build && bun run build:preload && bun run build:main",
     "test": "bun test",
     "typecheck": "tsc --noEmit",

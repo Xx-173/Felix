@@ -59,7 +59,7 @@ describe('wrapToolsWithPrivacy', () => {
     const tools = wrapToolsWithPrivacy([stubPortfolioTool(), stubQuoteTool()], 'standard');
     const portfolioOut = await tools[0].execute('c1', {}, new AbortController().signal);
     expect(portfolioOut.content[0].text).toContain('Portfolio overview');
-    expect(portfolioOut.content[0].text).toContain('[Finagent privacy level standard: portfolio details redacted]');
+    expect(portfolioOut.content[0].text).toContain('[Felix privacy level standard: portfolio details redacted]');
     expect(portfolioOut.content[0].text).not.toContain('AAPL');
     expect(portfolioOut.content[0].text).not.toContain('123456');
     expect(portfolioOut.content[0].text).not.toContain('DATA:');
@@ -68,7 +68,7 @@ describe('wrapToolsWithPrivacy', () => {
   it('redacts portfolio DATA at minimal the same way', async () => {
     const tools = wrapToolsWithPrivacy([stubPortfolioTool()], 'minimal');
     const out = await tools[0].execute('c1', {}, new AbortController().signal);
-    expect(out.content[0].text).toContain('[Finagent privacy level minimal: portfolio details redacted]');
+    expect(out.content[0].text).toContain('[Felix privacy level minimal: portfolio details redacted]');
     expect(out.content[0].text).not.toContain('AAPL');
     expect(out.content[0].text).not.toContain('DATA:');
   });

@@ -80,6 +80,13 @@ describe('AnswerContent', () => {
     expect(evidence).not.toBeNull();
   });
 
+  it('renders financial cards and evidence from answers saved before the Felix rename', async () => {
+    const container = await renderContent(METRIC_GRID.replace('```felix-block', '```folio-block'));
+    expect(container.querySelector('[data-block-type="metric_grid"]')).not.toBeNull();
+    expect(container.textContent).toContain('$123.45');
+    expect(container.querySelector('[data-evidence-id="get_quote-1"]')).not.toBeNull();
+  });
+
   it('renders a time_series_chart block as an SVG with provenance footer', async () => {
     const container = await renderContent(`Trend:\n\n${TIME_SERIES}`);
     const chart = container.querySelector('[data-testid="answer-block-chart"]');

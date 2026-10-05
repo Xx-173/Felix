@@ -13,6 +13,9 @@ export const ANSWER_BLOCK_SCHEMA_VERSION = 1;
 /** Fence language that marks a typed block inside an answer string. */
 export const ANSWER_BLOCK_FENCE_LANG = 'felix-block';
 
+/** Read old persisted answers without changing the format of new answers. */
+export const ANSWER_BLOCK_FENCE_LANG_ALIASES = [ANSWER_BLOCK_FENCE_LANG, 'folio-block'] as const;
+
 /**
  * Canonical unit semantics. Values are plain numbers — units and currencies
  * are explicit fields, never free-text suffixes.

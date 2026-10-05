@@ -2,7 +2,7 @@
 //
 // This is intentionally not a fixture, shim, fake provider, or hand-built
 // structured result. It starts the real Pi RPC runtime with the repository's
-// Finagent extension, asks the model to call get_quote, and checks the real
+// Felix extension, asks the model to call get_quote, and checks the real
 // tool result that RunManager persists as financialEvidence. A fresh
 // MessageRepository instance then proves the evidence survives reload.
 //

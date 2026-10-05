@@ -5,6 +5,11 @@ const block = (body: string, closed = true) => ({ kind: 'block' as const, body, 
 const text = (value: string) => ({ kind: 'text' as const, text: value });
 
 describe('parseAnswerSegments fence boundaries', () => {
+  it('keeps legacy typed examples inside ordinary fences as text', () => {
+    const content = ['````markdown', '```folio-block', '{"metrics":[]}', '```', '````'].join('\n');
+    expect(parseAnswerSegments(content)).toEqual([text(content)]);
+  });
+
   it('does not activate a typed example inside a backtick code fence', () => {
     const content = ['```json', '```felix-block', '{"metrics":[]}', '```', '```', 'After'].join('\n');
 

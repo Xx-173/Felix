@@ -1,6 +1,6 @@
 > 本文是 [architecture.md](architecture.md) 的中文翻译；如有出入，以英文原文为准。
 
-# Finance Agent - 系统架构
+# Felix - 系统架构
 
 ## 概览
 

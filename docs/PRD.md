@@ -822,7 +822,7 @@ finagent/
   },
   "metadata": {
     "description": "生成市场概览摘要",
-    "author": "finagent",
+    "author": "Xx-173",
     "version": "1.0.0",
     "tags": ["market", "summary"],
     "enabled": true

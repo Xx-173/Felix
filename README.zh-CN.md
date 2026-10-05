@@ -157,7 +157,7 @@ Longbridge / Massive 提供商
 
 ### 面向用户
 
-从[发布页面](https://github.com/Xx-173/Felix/releases)下载最新的 macOS 构建。启动 Felix 后：
+目前尚未发布可安装版本，请先按下方步骤从源码运行；后续 macOS 安装包会发布到[发布页面](https://github.com/Xx-173/Felix/releases)。启动 Felix 后：
 
 1. 首次启动即可浏览完整工作台——未接入服务前展示内置示例数据（带“示例数据”徽标）。
 2. 在 **设置 → 模型** 中配置 LLM 提供商，或使用本地提供商进行确定性演示。
@@ -182,21 +182,24 @@ git clone https://github.com/Xx-173/Felix.git
 cd Felix
 bun install
 
-# 以开发模式运行桌面应用
+# 先构建桌面应用
+bun run build
+
+# 终端 1：启动渲染进程开发服务
 bun run dev
 
-# 确定性本地 Agent 路径——无需外部 LLM
-FINAGENT_AGENT_PROVIDER=local bun run dev
+# 终端 2：启动 Felix 桌面应用（保持终端 1 运行）
+bun run --cwd apps/electron start
 
-# 离线演示模式：真实供应商不可用时回退到内置示例数据（Copilot 回答带 Sample data 标注）
-FINAGENT_AGENT_PROVIDER=local FINAGENT_DEMO_DATA=1 bun run dev
+# POSIX shell 中启动离线演示：本地 Agent + 内置示例数据
+FINAGENT_AGENT_PROVIDER=local FINAGENT_DEMO_DATA=1 bun run --cwd apps/electron start
 ```
 
 ### 命令
 
 | 命令 | 说明 |
 | --- | --- |
-| `bun run dev` | 以开发模式启动 Electron 渲染进程 |
+| `bun run dev` | 启动渲染进程开发服务；需单独启动 Electron |
 | `bun test` | 运行完整单元与集成测试套件 |
 | `bun run typecheck` | 对所有工作区包执行类型检查 |
 | `bun run build` | 构建包、渲染进程、预加载与主进程 |
@@ -281,4 +284,14 @@ UI 改动请附上截图或简要的视觉 QA 说明（当布局或交互发生�
 ```sh
 bun run build
 node apps/electron/e2e/docs-screenshots.mjs
+```
+
+历史 `folio-block` 回答仍可读取。已有 `.finagent` 数据目录、内部包和扩展标识、检查点防护哨兵及基准集 ID 保留兼容性。
+
+PowerShell 启动本地离线演示（先在另一个终端运行 `bun run dev`）：
+
+```powershell
+$env:FINAGENT_AGENT_PROVIDER = "local"
+$env:FINAGENT_DEMO_DATA = "1"
+bun run --cwd apps/electron start
 ```

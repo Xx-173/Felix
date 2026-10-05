@@ -1,4 +1,4 @@
-# Finance Agent - System Architecture
+# Felix - System Architecture
 
 ## Overview
 

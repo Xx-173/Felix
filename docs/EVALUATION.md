@@ -102,7 +102,7 @@ failure degrades to a status/log entry (spec §87).
   results reduced to schema summaries (never raw holdings/positions/cash/
   account ids/broker metadata).
 - `full`: complete trace; credentials/tokens/secrets are still redacted.
-- `EvaluationRedactor` enforces redaction locally AND the Finagent Pi extension
+- `EvaluationRedactor` enforces redaction locally AND the Felix Pi extension
   redacts portfolio tool outputs when `FINAGENT_PRIVACY_LEVEL` < `full`, so raw
   portfolio data never enters the Pi conversation (and thus never a trace).
 - API key: `safeStorage` via `CredentialStore` (provider `langsmith`); renderer

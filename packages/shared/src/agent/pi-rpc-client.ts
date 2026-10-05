@@ -25,7 +25,7 @@ export interface PiRpcClientOptions {
   /**
    * Additional Pi extensions appended as repeated `--extension` flags (V7).
    * Each entry is a path to an extension entry file, resolved against `cwd`.
-   * The Finagent extension is included by default via the args default;
+   * The Felix extension is included by default via the args default;
    * pass this list to add LangSmith or other extensions (spec §6-7).
    */
   extensions?: string[];

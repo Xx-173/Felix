@@ -6,6 +6,7 @@ import { registerAboutIpc } from './about.ts';
 import { writeSupportBundle } from '@finagent/shared/diagnostics';
 import { loadFinagentEnv } from './loadEnv.ts';
 import { getRuntimeRoot } from '@finagent/shared/resources';
+app.setName('Felix');
 let mainWindow: BrowserWindow | null = null;
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const appRoot = join(__dirname, '../..');

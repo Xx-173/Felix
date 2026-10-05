@@ -843,7 +843,7 @@ export class AgentKernelHost {
   private async runAgentPrompt(content: string, signal?: AbortSignal, recovery?: ResearchSynthesisInput['recovery']): Promise<string> {
     // Keep synthesis runs out of the user's copilot history. The run still
     // uses the normal kernel/runtime contract, but its session is internal.
-    const session = await this.kernel.sessions.createSession('__folio_internal_research__');
+    const session = await this.kernel.sessions.createSession('__felix_internal_research__');
     let agentRunId: string | undefined;
     let cleanup = () => {};
     try {
@@ -2554,7 +2554,7 @@ export class AgentKernelHost {
     const env: NodeJS.ProcessEnv = {
       FINAGENT_SKILLS_DIR: getSkillsDir(),
       FINAGENT_PROVIDER_OVERRIDES: overrides.length > 0 ? JSON.stringify(overrides) : '',
-      // V7: the Finagent extension enforces tool-output privacy from this flag
+      // V7: the Felix extension enforces tool-output privacy from this flag
       // (spec §60) — always set so the level is unambiguous.
       FINAGENT_PRIVACY_LEVEL: this.evaluationSettings.privacyLevel,
     };

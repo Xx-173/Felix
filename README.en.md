@@ -157,7 +157,7 @@ The core boundary is deliberately small: providers return normalized data with p
 
 ### For Users
 
-Download the latest macOS build from the [Releases page](https://github.com/Xx-173/Felix/releases). After launching Felix:
+No installable release has been published yet. For now, follow the source setup below; future macOS packages will be available on the [Releases page](https://github.com/Xx-173/Felix/releases). After launching Felix:
 
 1. The full workspace is browsable on first launch — built-in sample data (badged “Sample data”) is shown until services are connected.
 2. Configure an LLM provider in **Settings → Models**, or use the local provider for a deterministic demo.
@@ -182,22 +182,24 @@ git clone https://github.com/Xx-173/Felix.git
 cd Felix
 bun install
 
-# Run the desktop app in development
+# Build before starting the desktop app
+bun run build
+
+# Terminal 1: renderer development server
 bun run dev
 
-# Deterministic local agent path — no external LLM required
-FINAGENT_AGENT_PROVIDER=local bun run dev
+# Terminal 2: launch Felix (keep Terminal 1 running)
+bun run --cwd apps/electron start
 
-# Offline demo mode: fall back to built-in sample data when no real provider
-# is available (Copilot answers are labeled "Sample data")
-FINAGENT_AGENT_PROVIDER=local FINAGENT_DEMO_DATA=1 bun run dev
+# Offline demo in a POSIX shell
+FINAGENT_AGENT_PROVIDER=local FINAGENT_DEMO_DATA=1 bun run --cwd apps/electron start
 ```
 
 ### Commands
 
 | Command | Description |
 | --- | --- |
-| `bun run dev` | Start the Electron renderer in development mode |
+| `bun run dev` | Start the renderer dev server; launch Electron separately |
 | `bun test` | Run the full unit and integration suite |
 | `bun run typecheck` | Typecheck every workspace package |
 | `bun run build` | Build packages, renderer, preload, and main process |
@@ -282,4 +284,14 @@ Regenerate the screenshots (requires the Electron runtime):
 ```sh
 bun run build
 node apps/electron/e2e/docs-screenshots.mjs
+```
+
+Legacy `folio-block` answers remain readable. Existing `.finagent` data directories, package and extension identifiers, checkpoint guard sentinels, and benchmark IDs remain compatible.
+
+PowerShell offline demo (keep `bun run dev` running in another terminal):
+
+```powershell
+$env:FINAGENT_AGENT_PROVIDER = "local"
+$env:FINAGENT_DEMO_DATA = "1"
+bun run --cwd apps/electron start
 ```

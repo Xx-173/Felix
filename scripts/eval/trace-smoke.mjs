@@ -3,7 +3,7 @@
 //
 //   bun run scripts/eval/trace-smoke.mjs
 //
-// Spawns the Pi runtime with the Finagent + LangSmith extensions and sends a
+// Spawns the Pi runtime with the Felix + LangSmith extensions and sends a
 // minimal prompt. Verifies the runtime starts, the prompt completes, and no
 // extension-load errors appear on stderr. When a LangSmith API key is
 // configured it additionally queries the runs API for the resulting trace and

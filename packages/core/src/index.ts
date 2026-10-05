@@ -1,4 +1,4 @@
-// Core type definitions for Finagent
+// Core type definitions for Felix
 
 import type { SupportedLocale } from './locale.ts';
 import type { FinancialEvidenceEnvelope } from './financial-evidence.ts';

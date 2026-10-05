@@ -29,7 +29,9 @@ export const loadedSessionIdsAtom = atom<Set<string>>(new Set<string>());
 
 /** Internal synthesis sessions are implementation details, not user chats. */
 function isInternalSession(title: string): boolean {
-  return title === 'Research' || title.startsWith('__folio_internal_');
+  return title === 'Research'
+    || title.startsWith('__felix_internal_')
+    || title.startsWith('__folio_internal_');
 }
 
 export const hydrateSessionsAtom = atom(

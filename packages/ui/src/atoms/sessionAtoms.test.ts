@@ -117,13 +117,18 @@ describe('session atoms', () => {
 
   it('hides internal research sessions while preserving user sessions', async () => {
     const store = createStore();
-    savedSessions = [makeSession('Research'), makeSession('__folio_internal_research__'), makeSession('Session A')];
+    savedSessions = [
+      makeSession('Research'),
+      makeSession('__folio_internal_research__'),
+      makeSession('__felix_internal_research__'),
+      makeSession('Session A'),
+    ];
 
     await store.set(hydrateSessionsAtom, makeClient());
 
     expect(store.get(sessionsAtom)).toHaveLength(1);
     expect(store.get(sessionsAtom)[0].title).toBe('Session A');
-    expect(store.get(activeSessionIdAtom)).toBe('s3');
+    expect(store.get(activeSessionIdAtom)).toBe('s4');
   });
 
   it('creates a session through the kernel and activates it', async () => {

@@ -31,7 +31,7 @@ import { QuoteCard } from './structured/QuoteCard';
 import { PortfolioRiskCard } from './structured/PortfolioRiskCard';
 import { AgentAmbientField, type AgentMotionState } from '../motion/AgentAmbientField';
 
-const folioLogoUrl = new URL('../../assets/felix-logo.png', import.meta.url).href;
+const felixLogoUrl = new URL('../../assets/felix-logo.png', import.meta.url).href;
 
 // ---------------------------------------------------------------------------
 // Defensive parsing of structured tool results (get_quote / get_portfolio).
@@ -225,7 +225,7 @@ export const AgentPanel: React.FC = () => {
       >
         <div className="px-6 text-center">
           <img
-            src={folioLogoUrl}
+            src={felixLogoUrl}
             alt=""
             className="mx-auto mb-4 h-14 w-14 rounded-[16px] shadow-[0_14px_38px_rgba(var(--accent-rgb),0.18)]"
             draggable={false}

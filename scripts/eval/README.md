@@ -5,7 +5,7 @@ Hand-run evaluation/verification tooling for the agent-evaluation domain
 
 ## `trace-smoke.mjs`
 
-Spawns the Pi runtime with the Finagent + LangSmith extensions and sends a
+Spawns the Pi runtime with the Felix + LangSmith extensions and sends a
 minimal prompt, verifying runtime startup, prompt completion, and (when a
 LangSmith key is configured) that a trace run with `metadata.thread_id` equal
 to the Pi session id landed in LangSmith.

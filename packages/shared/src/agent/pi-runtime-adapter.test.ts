@@ -75,7 +75,7 @@ function drain(iterable: AsyncIterable<unknown>): Promise<unknown[]> {
 }
 
 describe('PiRuntimeAdapter retry-once isolation (V8.1 §37)', () => {
-  it('retries once with the Finagent core extension when an optional extension fails to load', async () => {
+  it('retries once with the Felix core extension when an optional extension fails to load', async () => {
     const rpc = new FakeRpcClient();
     const adapter = new PiRuntimeAdapter({ rpcClient: rpc as never });
     adapter.setExtensions(['.pi/extensions/finagent/index.ts', '.pi/extensions/langsmith/index.ts']);

@@ -1,6 +1,6 @@
 # LongBridge Skill Setup Guide
 
-This document guides you through installing and configuring the LongBridge integration for Finance Agent.
+This document guides you through installing and configuring the LongBridge integration for Felix.
 
 ---
 
@@ -72,15 +72,15 @@ Claude: [Uses LongBridge skill to fetch quote]
 
 ---
 
-## 3. Finance Agent Integration
+## 3. Felix Integration
 
-Finance Agent uses LongBridge CLI through the `longbridge-tools` package. The Electron main process calls it through `MarketDataService` in `@finagent/shared`, so Watchlist and Chat share caching, request coalescing, and normalized errors.
+Felix uses LongBridge CLI through the `longbridge-tools` package. The Electron main process calls it through `MarketDataService` in `@finagent/shared`, so Watchlist and Chat share caching, request coalescing, and normalized errors.
 
 ### Architecture
 
 ```
 ┌─────────────────────────────────────┐
-│      Local Finance Agent Backend    │
+│      Local Felix Backend    │
 │  packages/shared/src/agent/         │
 │                                     │
 │  - IntentRouter                     │

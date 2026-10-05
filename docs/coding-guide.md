@@ -1,6 +1,6 @@
-# Finance Agent - Coding Agent Instructions
+# Felix - Coding Agent Instructions
 
-This document provides guidance for AI coding agents working on the Finance Agent project.
+This document provides guidance for AI coding agents working on the Felix project.
 
 ---
 
@@ -20,7 +20,7 @@ When starting work on this project, Claude Code will automatically:
 
 ## Skill System
 
-Finance Agent uses a **Skill Hub** system for extensibility. Skills are loaded
+Felix uses a **Skill Hub** system for extensibility. Skills are loaded
 from `SKILL.md` files (`<skillsDir>/<name>/SKILL.md`) with frontmatter
 (name/keywords) and can be enabled/disabled; the choice persists to
 `skills-state.json`. Marketplace and editor features are out of scope for V1.
@@ -99,7 +99,7 @@ Prompt Skills are stored as JSON and editable via UI:
   },
   "metadata": {
     "description": "生成市场概览摘要",
-    "author": "finagent",
+    "author": "Xx-173",
     "version": "1.0.0",
     "tags": ["market", "summary"],
     "enabled": true,

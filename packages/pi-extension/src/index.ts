@@ -48,7 +48,7 @@ import { listSkillResourcesTool, readSkillResourceTool } from './tools/skillReso
 const PI_PRIVACY_LEVEL = readPrivacyLevelEnv(process.env);
 
 /**
- * Read the Finagent tool-output privacy level from an env object
+ * Read the Felix tool-output privacy level from an env object
  * (FINAGENT_PRIVACY_LEVEL=minimal|standard|full). Unknown, empty, or unset
  * values mean no privacy wrapping — tools keep their raw DATA blocks.
  */
@@ -100,7 +100,7 @@ function wrapPortfolioExecute(
         const summary = marker >= 0 ? block.text.slice(0, marker) : '';
         return {
           ...block,
-          text: `${summary}\n\n[Finagent privacy level ${level}: portfolio details redacted]`,
+          text: `${summary}\n\n[Felix privacy level ${level}: portfolio details redacted]`,
         };
       }),
     };

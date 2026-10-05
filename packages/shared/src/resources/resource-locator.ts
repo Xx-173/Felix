@@ -82,7 +82,7 @@ export function getLangSmithExtensionEntry(): string {
 
 /**
  * All bundled Pi extensions, in load order. `extra` paths are appended after
- * the Finagent extension (V7 §6-7): the runtime loads them all via repeated
+ * the Felix extension (V7 §6-7): the runtime loads them all via repeated
  * `--extension` flags.
  */
 export function listBundledPiExtensions(extra: string[] = []): string[] {
