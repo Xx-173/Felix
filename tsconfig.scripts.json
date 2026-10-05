@@ -1,0 +1,9 @@
+{
+  "extends": "./tsconfig.json",
+  "include": [
+    "scripts/research-acceptance.ts",
+    "scripts/eval/run.ts",
+    "scripts/eval/quality-gate.test.ts"
+  ],
+  "exclude": ["node_modules", "dist"]
+}
