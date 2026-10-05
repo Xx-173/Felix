@@ -7,6 +7,7 @@ import {
   quoteCacheAtomFamily,
   watchlistLatestTimestampAtom,
   watchlistQuotesAreDemoAtom,
+  watchlistHasDemoQuotesAtom,
   fetchQuoteAtom,
   addToWatchlistAtom,
   removeFromWatchlistAtom,
@@ -37,6 +38,7 @@ export const Watchlist: React.FC<{ showHeader?: boolean }> = ({ showHeader = tru
   const activeSymbol = useAtomValue(activeSymbolAtom);
   const latestTimestamp = useAtomValue(watchlistLatestTimestampAtom);
   const quotesAreDemo = useAtomValue(watchlistQuotesAreDemoAtom);
+  const hasDemoQuotes = useAtomValue(watchlistHasDemoQuotesAtom);
 
   const [newSymbol, setNewSymbol] = React.useState('');
   const [error, setError] = React.useState('');
@@ -104,9 +106,9 @@ export const Watchlist: React.FC<{ showHeader?: boolean }> = ({ showHeader = tru
               {t('navigation.watchlist')}
             </span>
             <span className="flex min-w-0 items-center gap-2">
-              {quotesAreDemo && <DemoBadge />}
+              {hasDemoQuotes && <DemoBadge />}
               <DataFreshness
-                providerName="Longbridge"
+                providerName={quotesAreDemo ? t('demo.badge') : 'Longbridge'}
                 updatedAtMs={
                   latestTimestamp ? latestTimestamp * 1000 : undefined
                 }

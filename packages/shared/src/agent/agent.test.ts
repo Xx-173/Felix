@@ -94,6 +94,25 @@ describe('routeFinanceIntent', () => {
 });
 
 describe('MarketDataService', () => {
+  it('refreshes a cached unavailable status after login and coalesces concurrent probes', async () => {
+    let authed = false;
+    let calls = 0;
+    const service = new MarketDataService({ fetchers: {
+      getLongBridgeStatus: async () => {
+        calls += 1;
+        await new Promise((resolve) => setTimeout(resolve, 5));
+        return { installed: true, authed, available: authed, status: authed ? 'available' : 'not_authed' };
+      },
+    } });
+    expect((await service.getLongBridgeStatus()).available).toBe(false);
+    authed = true;
+    expect((await service.getLongBridgeStatus()).available).toBe(false);
+    const results = await Promise.all([service.getLongBridgeStatus({ refresh: true }), service.getLongBridgeStatus({ refresh: true })]);
+    expect(results.every((status) => status.available)).toBe(true);
+    expect(calls).toBe(2);
+    expect((await service.getLongBridgeStatus()).available).toBe(true);
+  });
+
   it('caches quote results within the TTL', async () => {
     let calls = 0;
     let now = 1_000;

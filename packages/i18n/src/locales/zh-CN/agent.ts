@@ -34,6 +34,7 @@ export const agent = {
     clear: '清除证券上下文',
   },
   model: {
+    unavailableHint: 'AI 模型控制暂不可用，请检查 AI 提供商设置。',
     label: '模型',
     loading: '加载模型中…',
     select: '选择模型',

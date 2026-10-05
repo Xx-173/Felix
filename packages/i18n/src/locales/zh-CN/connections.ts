@@ -3,6 +3,13 @@ import type { connections as enConnections } from '../en-US/connections.ts';
 
 /** Connections / providers surface — Simplified Chinese. Provider & model ids stay untranslated (§11). */
 export const connections = {
+  longbridgeBanner: {
+    not_installed: 'LongBridge CLI 不可用，请打开连接设置查看安装和接入步骤。',
+    not_authed: 'LongBridge 尚未登录，请打开连接设置完成账户授权。',
+    rate_limited: 'LongBridge 暂时触发请求限流，请稍后重试。',
+    timeout: 'LongBridge 响应超时，请检查网络连接后重试。',
+    unknown: '暂时无法检查 LongBridge 状态，请重试或查看连接设置。',
+  },
   title: '连接',
   enabled: '已启用',
   configure: '配置',

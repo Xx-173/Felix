@@ -1,5 +1,6 @@
 import type {
   ApiResult,
+  HealthCheckReport,
   FinancialProviderStatus,
   ProviderCoverage,
   ProviderHealth,
@@ -64,18 +65,7 @@ export interface ConnectResult {
   verificationUrl?: string;
 }
 
-export interface HealthCheckItem {
-  ok: boolean;
-  detail: string | null;
-  error: ConnectionError | null;
-}
-
-export interface HealthCheckReport {
-  ai: HealthCheckItem;
-  marketData: HealthCheckItem;
-  skills: HealthCheckItem;
-  agentRuntime: HealthCheckItem;
-}
+export type { HealthCheckItem, HealthCheckReport } from '@finagent/core';
 
 /** The connections channel surface (wired by the Lead at integration). */
 export interface ConnectionsChannel {

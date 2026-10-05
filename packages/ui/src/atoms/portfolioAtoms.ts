@@ -65,7 +65,7 @@ export const fetchPortfolioAtom = atom(
       set(portfolioCacheAtom, {
         data: snapshot,
         failure: failure ?? null,
-        isDemo: false,
+        isDemo: snapshot.source === 'demo',
         timestamp: Date.now(),
         loading: false,
         error: null,

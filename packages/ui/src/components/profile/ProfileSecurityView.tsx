@@ -4,8 +4,8 @@ import { useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import type { AboutInfo } from '../../client';
 import { useFinagentClient } from '../../client';
-import { activeSymbolAtom, navSectionAtom, settingsTabAtom } from '../../atoms';
-import { loadConnections, loadHealthCheck, type ConnectionEntry, type HealthCheckReport } from '../../client/connections';
+import { navSectionAtom, settingsTabAtom } from '../../atoms';
+import { loadConnections, loadHealthCheck, type ConnectionEntry, type HealthCheckReport, type HealthCheckItem } from '../../client/connections';
 import { Button } from '../primitives/Button';
 
 type LoadState = 'loading' | 'ready';
@@ -49,9 +49,9 @@ export const ProfileSecurityView: React.FC = () => {
     setNavSection('settings');
   };
 
-  const healthRows: Array<{ label: string; ok: boolean | null }> = [
-    { label: t('profile.healthAi'), ok: health?.ai.ok ?? null },
-    { label: t('profile.healthMarketData'), ok: health?.marketData.ok ?? null },
+  const healthRows: Array<{ label: string; ok: boolean | null; mode?: HealthCheckItem['mode'] }> = [
+    { label: t('profile.healthAi'), ok: health?.ai.ok ?? null, mode: health?.ai.mode },
+    { label: t('profile.healthMarketData'), ok: health?.marketData.ok ?? null, mode: health?.marketData.mode },
     { label: t('profile.healthSkills'), ok: health?.skills.ok ?? null },
     { label: t('profile.healthRuntime'), ok: health?.agentRuntime.ok ?? null },
   ];
@@ -114,9 +114,11 @@ export const ProfileSecurityView: React.FC = () => {
           <h2 className="mt-2">{t('profile.securityTitle')}</h2>
           <div className="felix-health-list mt-4">
             {healthRows.map((row) => (
-              <div key={row.label} className="felix-health-row"><CheckStatus ok={row.ok} /><span>{row.label}</span><strong>{row.ok === null ? '—' : row.ok ? t('profile.ready') : t('profile.needsAttention')}</strong></div>
+              <div key={row.label} className="felix-health-row"><CheckStatus ok={row.mode ? null : row.ok} /><span>{row.label}</span><strong>{row.ok === null ? '—' : row.ok ? t(row.mode === 'demo' ? 'profile.demoOnly' : row.mode === 'local' ? 'profile.localOnly' : 'profile.ready') : t('profile.needsAttention')}</strong></div>
             ))}
           </div>
+          {health?.marketData.mode === 'demo' && <p className="mt-3 text-[11px] text-foreground/60">{t('profile.demoHealthHint')}</p>}
+          {health?.ai.mode === 'local' && <p className="mt-3 text-[11px] text-foreground/60">{t('profile.localHealthHint')}</p>}
           <div className="mt-5 border-t border-border pt-4 text-[11px] leading-relaxed text-foreground/42">
             {t('profile.securityHint')}
           </div>

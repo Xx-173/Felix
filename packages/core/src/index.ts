@@ -9,6 +9,8 @@ export type { SupportedLocale, LocalePreference } from './locale.ts';
 export * from './stream-events.ts';
 
 export interface Quote {
+  /** Explicit marker for synthetic sample values; absence does not prove freshness. */
+  source?: 'demo';
   symbol: string;
   /** Felix canonical instrument id when the quote was resolved through the catalog. */
   instrumentId?: string;
@@ -602,3 +604,5 @@ export * from './instrument-catalog.ts';
 export * from './financial-evidence.ts';
 export * from './reconciliation.ts';
 export * from './reconciliation-provider.ts';
+
+export type { HealthCheckItem, HealthCheckReport } from './health.ts';

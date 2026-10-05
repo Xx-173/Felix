@@ -46,6 +46,7 @@ function demoQuoteFor(symbol: string): Quote {
   const change = round2(lastPrice - prevClose);
   const dayOpen = round2(prevClose * (1 + (seeded(symbol, 41) - 0.5) * 0.01));
   return {
+    source: 'demo',
     symbol: symbol.toUpperCase(),
     lastPrice,
     change,
@@ -123,6 +124,7 @@ function demoPortfolioSnapshot(): PortfolioSnapshot {
     { id: 'demo', name: 'Demo Account', market: 'US', currency: 'USD', netAssets: round2(marketValue + cash), cash },
   ];
   return {
+    source: 'demo',
     baseCurrency: 'USD',
     totalAssets: round2(marketValue + cash),
     marketValue,

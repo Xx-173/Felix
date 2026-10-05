@@ -34,6 +34,7 @@ export const agent = {
     clear: 'Clear security context',
   },
   model: {
+    unavailableHint: 'AI model controls are unavailable. Check your AI provider settings.',
     label: 'Model',
     loading: 'Loading models…',
     select: 'Select model',

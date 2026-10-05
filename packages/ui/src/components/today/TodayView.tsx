@@ -18,7 +18,7 @@ import {
 } from '../../atoms'
 import { researchOriginAtom } from '../../atoms/discoverAtoms'
 import { watchlistMoversAtom, mapUpcomingEvents, thesesNeedingReview } from '../../atoms/todayAtoms'
-import { watchlistQuotesAreDemoAtom } from '../../atoms/quoteAtoms'
+import { watchlistHasDemoQuotesAtom } from '../../atoms/quoteAtoms'
 import { demoCalendarEvents } from '../../demo/demoData'
 import { DemoBadge } from '../primitives/DemoBadge'
 import { analyzePortfolioRiskAtom } from '../../atoms/portfolioRiskAtoms'
@@ -97,7 +97,7 @@ export const TodayView: React.FC = () => {
   const [eventsAreDemo, setEventsAreDemo] = useState(false)
   const [automationOpen, setAutomationOpen] = useState(false)
   const [searchQuery, setSearchQuery] = useState('')
-  const quotesAreDemo = useAtomValue(watchlistQuotesAreDemoAtom)
+  const quotesAreDemo = useAtomValue(watchlistHasDemoQuotesAtom)
 
   useEffect(() => {
     let cancelled = false

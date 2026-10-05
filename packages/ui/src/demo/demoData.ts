@@ -71,6 +71,7 @@ export function demoQuote(symbol: string, nowMs: number = Date.now()): Quote | n
   const prevClose = round2(spec.lastPrice / (1 + spec.changePercent / 100));
   const change = round2(spec.lastPrice - prevClose);
   return {
+    source: 'demo',
     symbol,
     lastPrice: spec.lastPrice,
     change,
@@ -163,6 +164,7 @@ export function demoPortfolioSnapshot(nowMs: number = Date.now()): PortfolioSnap
   };
 
   return {
+    source: 'demo',
     baseCurrency: 'USD',
     totalAssets,
     marketValue,

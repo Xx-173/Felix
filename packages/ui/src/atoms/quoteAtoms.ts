@@ -84,7 +84,7 @@ export const fetchQuoteAtom = atom(
         timestamp: Date.now(),
         loading: false,
         error: null,
-        isDemo: false,
+        isDemo: quote.source === 'demo',
       });
 
       return quote;
@@ -129,3 +129,11 @@ export const watchlistQuotesAreDemoAtom = atom<boolean>((get) => {
     return cache.data != null && cache.isDemo;
   });
 });
+
+/** Mixed watchlists still need to disclose the sample values they contain. */
+export const watchlistHasDemoQuotesAtom = atom<boolean>((get) =>
+  get(watchlistAtom).some((symbol) => {
+    const cache = get(quoteCacheAtomFamily(symbol));
+    return cache.data != null && cache.isDemo;
+  })
+);

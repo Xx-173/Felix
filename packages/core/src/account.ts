@@ -55,6 +55,8 @@ export interface PortfolioAccount {
  * "unavailable", never a broken parse.
  */
 export interface PortfolioSnapshot {
+  /** Explicit marker for synthetic sample accounts and holdings. */
+  source?: 'demo';
   /** ISO 4217 base currency the vendor reports in. */
   baseCurrency?: string;
   totalAssets?: number;

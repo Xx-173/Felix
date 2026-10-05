@@ -2,6 +2,13 @@ import type { NamespaceResource } from '../keys.ts';
 
 /** Connections / providers surface (spec §11, §14). Provider & model ids stay untranslated (§11). */
 export const connections = {
+  longbridgeBanner: {
+    not_installed: 'LongBridge CLI is unavailable. Open connection settings for installation and setup.',
+    not_authed: 'LongBridge sign-in is required. Open connection settings to authorize your account.',
+    rate_limited: 'LongBridge is temporarily rate limited. Wait a moment, then retry.',
+    timeout: 'LongBridge did not respond in time. Check your connection and retry.',
+    unknown: 'LongBridge status could not be checked. Retry or inspect connection settings.',
+  },
   title: 'Connections',
   enabled: 'Enabled',
   configure: 'Configure',

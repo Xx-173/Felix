@@ -17,14 +17,16 @@ const ItemRow: React.FC<{ label: string; item: HealthCheckItem; t: (key: string)
   <div className="flex items-center justify-between gap-4 border-b border-border px-3 py-2.5 last:border-b-0">
     <span className="text-[13px] font-medium text-foreground">{label}</span>
     <span className="flex items-center gap-2 text-[12px]">
-      {item.ok ? (
+      {item.mode ? (
+        <span className="text-foreground/50">—</span>
+      ) : item.ok ? (
         <span className="text-[var(--mac-green)]">✓</span>
       ) : (
         <span className="text-[var(--mac-red)]">✗</span>
       )}
       <span className="text-foreground/60">
         {item.ok
-          ? item.detail ?? t('onboarding.environment.ready')
+          ? item.mode === 'demo' ? t('profile.demoHealthHint') : item.mode === 'local' ? t('profile.localHealthHint') : item.detail ?? t('onboarding.environment.ready')
           : item.error?.message ?? item.detail ?? t('onboarding.environment.unavailable')}
       </span>
     </span>

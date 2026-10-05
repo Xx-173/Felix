@@ -56,6 +56,7 @@ try {
     await page.evaluate(() => document.fonts.ready);
     await page.waitForTimeout(750);
     const text = await page.locator('body').innerText();
+    if (/Command failed|is not recognized as an internal|\uFFFD/.test(await page.locator('.felix-banner').innerText().catch(() => ''))) throw new Error(`Raw CLI failure visible in ${name}`);
     if (/\bFolio\b/.test(text)) throw new Error(`Old brand visible in ${name}`);
     if (!text.includes('Felix Research')) throw new Error(`Missing Felix branding in ${name}`);
     const cdp = await context.newCDPSession(page);
@@ -93,6 +94,11 @@ try {
       ['discover', 'Discover', 'discover-view'],
     ]) {
       await navigate(label, ready);
+      if (name === 'profile') {
+        await page.getByText('Sample data only', { exact: true }).waitFor();
+        await page.getByText('Local rules only', { exact: true }).waitFor();
+        console.log('VERIFY demo health is separate from connected services');
+      }
       await capture(name);
     }
   }
@@ -109,9 +115,32 @@ try {
     const input = page.locator('[data-testid="agent-input"]').first();
     await input.fill(prompt);
     await input.press('Enter');
-    // Capture the persisted answer after streaming settles. The live answer
-    // is replaced during the evidence refresh, so it is not a stable frame.
-    await page.waitForTimeout(1500);
+    // Wait for main-process persistence, rather than guessing how long a
+    // provider fallback and multi-tool risk analysis will take.
+    const deadline = Date.now() + 60_000;
+    let persisted = false;
+    while (!persisted && Date.now() < deadline) {
+      persisted = await page.evaluate(async (prompt) => {
+        const snapshot = await window.electronAPI.kernel.hydrate();
+        if (!snapshot.ok) return false;
+        for (const session of snapshot.data.sessions) {
+          const runs = await window.electronAPI.kernel.listRuns(session.id);
+          if (!runs.ok) continue;
+          const run = runs.data.find((entry) => entry.input === prompt);
+          if (run?.status === 'failed' || run?.status === 'cancelled') {
+            throw new Error(`Documentation example ${run.status}: ${prompt}`);
+          }
+          if (run?.status !== 'completed') continue;
+          // The terminal run record is saved before its assistant message.
+          const messages = await window.electronAPI.kernel.getMessages(session.id);
+          return messages.ok && messages.data.some((message) =>
+            message.role === 'assistant' && message.content.includes('felix-block'));
+        }
+        return false;
+      }, prompt);
+      if (!persisted) await page.waitForTimeout(300);
+    }
+    if (!persisted) throw new Error(`Documentation answer did not persist: ${prompt}`);
     await page.reload({ waitUntil: 'domcontentloaded' });
     await page.locator('[data-testid="agent-input"]').waitFor();
     const block = page.locator(`[data-testid="agent-panel"] [data-block-type="${type}"]`).first();
@@ -121,6 +150,7 @@ try {
       console.error('Agent panel:', await page.locator('[data-testid="agent-panel"]').innerText());
       throw error;
     }
+    await page.locator('[data-testid="today-view"] .felix-stitch-card').filter({ hasText: 'TOTAL VALUE' }).getByText('Sample data', { exact: true }).first().waitFor();
     await block.scrollIntoViewIfNeeded();
     await capture(name);
     if (name === 'agent-typed-blocks-quote') {
@@ -140,7 +170,9 @@ try {
       await page.locator('[data-testid="source-inspector"]').waitFor({ state: 'detached' });
     }
   }
-  console.log('Updated all 12 documentation screenshots and 3 citation screenshots using local demo data.');
+  console.log(process.argv.includes('--agent-only')
+    ? 'Updated 3 answer screenshots and 3 citation screenshots using local demo data.'
+    : 'Updated all 12 documentation screenshots and 3 citation screenshots using local demo data.');
 } finally {
   await browser?.close().catch(() => {});
   proc.kill();

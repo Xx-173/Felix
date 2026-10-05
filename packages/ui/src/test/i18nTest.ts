@@ -8,6 +8,8 @@
  */
 import { createInstance, type i18n as I18nInstance } from 'i18next'
 import { initReactI18next, I18nextProvider } from 'react-i18next'
+import { connections as enConnections } from '../../../i18n/src/locales/en-US/connections'
+import { connections as zhConnections } from '../../../i18n/src/locales/zh-CN/connections'
 import { common as enCommon } from '../../../i18n/src/locales/en-US/common'
 import { navigation as enNavigation } from '../../../i18n/src/locales/en-US/navigation'
 import { today as enToday } from '../../../i18n/src/locales/en-US/today'
@@ -27,10 +29,11 @@ import { profile as zhProfile } from '../../../i18n/src/locales/zh-CN/profile'
 import { demo as zhDemo } from '../../../i18n/src/locales/zh-CN/demo'
 import { agent as zhAgent } from '../../../i18n/src/locales/zh-CN/agent'
 
-const NAMESPACES = ['common', 'navigation', 'today', 'discover', 'portfolio', 'events', 'profile', 'demo', 'agent'] as const
+const NAMESPACES = ['connections', 'common', 'navigation', 'today', 'discover', 'portfolio', 'events', 'profile', 'demo', 'agent'] as const
 
 const resources = {
   'en-US': {
+    connections: enConnections,
     common: enCommon,
     navigation: enNavigation,
     today: enToday,
@@ -42,6 +45,7 @@ const resources = {
     agent: enAgent,
   },
   'zh-CN': {
+    connections: zhConnections,
     common: zhCommon,
     navigation: zhNavigation,
     today: zhToday,

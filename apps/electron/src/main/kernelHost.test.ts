@@ -6,6 +6,7 @@ let lastKernelOptions: Record<string, unknown> | null = null;
 let lastMarketData: FakeMarketDataService | null = null;
 let lastAutomationContext: unknown = null;
 let forwardedEvents: unknown[] = [];
+let healthQuoteRecord: Record<string, unknown> = { status: 'unavailable' };
 const routerFetchers = { getQuote: async () => ({ symbol: 'AAPL.US' }) };
 
 class FakeMarketDataService {
@@ -120,8 +121,8 @@ mock.module('@finagent/shared', () => ({
   JsonFileStore: noopStore,
   createCodeError: (code: string, message: string, action?: string) =>
     action === undefined ? { code, message } : { code, message, action },
-  createFullRegistry: () => ({ list: () => [] }),
-  CapabilityExecutor: class {},
+  createFullRegistry: () => ({ list: () => [], get: () => ({ id: 'market.quote' }) }),
+  CapabilityExecutor: class { run = async () => ({ record: healthQuoteRecord }); },
   ResearchService: class {
     start = async () => undefined;
     cancel = async () => undefined;
@@ -352,6 +353,7 @@ beforeEach(() => {
   lastMarketData = null;
   lastAutomationContext = null;
   forwardedEvents = [];
+  healthQuoteRecord = { status: 'unavailable' };
 });
 
 afterEach(() => {
@@ -363,6 +365,44 @@ afterEach(() => {
 });
 
 describe('AgentKernelHost', () => {
+  it('distinguishes demo quotes from an actual provider connection', async () => {
+    const host = new AgentKernelHost();
+    try {
+      healthQuoteRecord = { status: 'success', provenance: { provider: 'longbridge', providerId: 'demo', stale: false } };
+      expect((await host.checkHealth()).marketData).toMatchObject({ ok: true, mode: 'demo' });
+      healthQuoteRecord = { status: 'success', provenance: { provider: 'massive', providerId: 'massive', stale: false } };
+      const report = await host.checkHealth();
+      expect(report.marketData.ok).toBe(true);
+      expect(report.marketData.mode).toBeUndefined();
+      expect(report.marketData.detail).toContain('massive');
+    } finally { host.dispose(); }
+  });
+
+  it('does not pass a market-data health check with missing or stale provenance', async () => {
+    const host = new AgentKernelHost();
+    try {
+      for (const provenance of [undefined, { provider: 'massive', stale: true }]) {
+        healthQuoteRecord = { status: 'success', provenance };
+        expect((await host.checkHealth()).marketData).toMatchObject({ ok: false, error: { code: 'QUOTE_UNVERIFIED' } });
+      }
+      healthQuoteRecord = { status: 'unavailable', error: 'Provider is offline' };
+      expect((await host.checkHealth()).marketData).toMatchObject({ ok: false, error: { code: 'QUOTE_FAILED' } });
+    } finally { host.dispose(); }
+  });
+
+  it('reports local rules without implying an AI model is connected', async () => {
+    const previous = process.env.FINAGENT_AGENT_PROVIDER;
+    process.env.FINAGENT_AGENT_PROVIDER = 'local';
+    const host = new AgentKernelHost();
+    try {
+      expect((await host.checkHealth()).ai).toMatchObject({ ok: true, mode: 'local' });
+    } finally {
+      host.dispose();
+      if (previous === undefined) delete process.env.FINAGENT_AGENT_PROVIDER;
+      else process.env.FINAGENT_AGENT_PROVIDER = previous;
+    }
+  });
+
   it('builds the kernel on the electron userData store', () => {
     const host = new AgentKernelHost();
 

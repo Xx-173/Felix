@@ -155,7 +155,10 @@ export class MarketDataService {
     return this.cached('portfolio', this.portfolioTTL, () => this.fetchers.getPortfolio());
   }
 
-  getLongBridgeStatus() {
+  getLongBridgeStatus(options: { refresh?: boolean } = {}) {
+    // Explicit checks must see a completed login immediately. Concurrent
+    // checks still share one in-flight probe.
+    if (options.refresh) this.cache.delete('longbridge-status');
     return this.cached('longbridge-status', this.statusTTL, () => this.fetchers.getLongBridgeStatus());
   }
 

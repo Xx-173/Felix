@@ -63,6 +63,21 @@ async function render(client: FinagentClient) {
 }
 
 describe('ProfileSecurityView', () => {
+  it('does not describe demo data and the local engine as connected services', async () => {
+    const health: HealthCheckReport = { ...HEALTH,
+      ai: { ok: true, detail: null, error: null, mode: 'local' },
+      marketData: { ok: true, detail: null, error: null, mode: 'demo' },
+    }
+    const { container, root } = await render({ ...fallbackClient, health: { check: async () => ({ ok: true, data: health }) } })
+    await flushAsync()
+    expect(container.textContent).toContain('Sample data only')
+    expect(container.textContent).toContain('Local rules only')
+    expect(container.textContent).toContain('does not confirm a real market-data connection')
+    expect(container.textContent).toContain('no AI model is connected')
+    await act(async () => root.unmount())
+    container.remove()
+  })
+
   it('renders connection and health state from existing client channels', async () => {
     const client: FinagentClient = {
       ...fallbackClient,

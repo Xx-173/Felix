@@ -4,6 +4,8 @@ import { spawn } from 'node:child_process';
 import { app, Notification, shell, type BrowserWindow } from 'electron';
 import type {
   AgentEvent,
+  HealthCheckItem,
+  HealthCheckReport,
   AlertRule,
   AlertTriggerEvent,
   ApiResult,
@@ -257,6 +259,7 @@ interface PendingEvalRun {
  * main process.
  */
 export class AgentKernelHost {
+  private readonly localRuntime: boolean;
   private readonly marketData: MarketDataService;
   private readonly kernel: AgentKernel;
   private readonly credentials: CredentialStore;
@@ -318,6 +321,7 @@ export class AgentKernelHost {
     });
 
     const provider = readAgentProvider();
+    this.localRuntime = provider === 'local';
     const userData = app.getPath('userData');
 
     // V8: main-owned app preferences (locale), resolved against the OS locale.
@@ -649,7 +653,7 @@ export class AgentKernelHost {
   }
 
   async getLongBridgeStatus() {
-    const status = await this.marketData.getLongBridgeStatus();
+    const status = await this.marketData.getLongBridgeStatus({ refresh: true });
     const message = status.available
       ? 'LongBridge CLI is installed and authenticated.'
       : status.error?.message ?? 'LongBridge CLI is not ready.';
@@ -1663,24 +1667,20 @@ export class AgentKernelHost {
   // Environment health check (onboarding step 4, spec §30)
   // -------------------------------------------------------------------------
 
-  async checkHealth(): Promise<{
-    ai: { ok: boolean; detail: string | null; error: { code: string; message: string } | null };
-    marketData: { ok: boolean; detail: string | null; error: { code: string; message: string } | null };
-    skills: { ok: boolean; detail: string | null; error: { code: string; message: string } | null };
-    agentRuntime: { ok: boolean; detail: string | null; error: { code: string; message: string } | null };
-  }> {
-    const item = (ok: boolean, detail: string | null, error: { code: string; message: string } | null = null) => ({
+  async checkHealth(): Promise<HealthCheckReport> {
+    const item = (ok: boolean, detail: string | null, error: HealthCheckItem['error'] = null, mode?: HealthCheckItem['mode']): HealthCheckItem => ({
       ok,
       detail,
       error,
+      ...(mode ? { mode } : {}),
     });
 
     let ai = item(false, null, { code: 'LLM_UNAVAILABLE', message: 'LLM control plane unavailable' });
     try {
-      const state = await this.requireLlm().getState();
-      if (state.runtimeProvider === 'local') {
-        ai = item(true, 'Local agent runtime (no LLM configured)');
-      } else if (state.model) {
+      const state = this.localRuntime ? undefined : await this.requireLlm().getState();
+      if (this.localRuntime || state?.runtimeProvider === 'local') {
+        ai = item(true, 'Local agent runtime (no LLM configured)', null, 'local');
+      } else if (state?.model) {
         ai = item(true, `${state.model.provider} · ${state.model.id}`);
       } else {
         ai = item(false, null, { code: 'LLM_NO_MODEL', message: 'No model selected' });
@@ -1696,10 +1696,16 @@ export class AgentKernelHost {
         marketData = item(false, null, { code: 'CAPABILITY_MISSING', message: 'market.quote capability missing' });
       } else {
         const outcome = await this.executor.run(quoteCapability, { symbol: 'AAPL.US' }, { timeoutMs: 20_000 });
-        marketData =
-          outcome.record.status === 'success'
-            ? item(true, 'Quote check passed (AAPL.US)')
-            : item(false, null, { code: 'QUOTE_FAILED', message: outcome.record.error ?? 'Quote check failed' });
+        const provenance = outcome.record.provenance;
+        if (outcome.record.status !== 'success') {
+          marketData = item(false, null, { code: 'QUOTE_FAILED', message: outcome.record.error ?? 'Quote check failed' });
+        } else if ((provenance?.providerId ?? provenance?.provider) === 'demo') {
+          marketData = item(true, 'Sample quotes only; real market data is not connected', null, 'demo');
+        } else if (!provenance || provenance.stale) {
+          marketData = item(false, null, { code: 'QUOTE_UNVERIFIED', message: 'Quote source is missing or stale' });
+        } else {
+          marketData = item(true, `Quote check passed (AAPL.US; ${provenance.providerName ?? provenance.provider})`);
+        }
       }
     } catch (error) {
       marketData = item(false, null, {

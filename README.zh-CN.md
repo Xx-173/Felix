@@ -253,6 +253,7 @@ Agent 工程评测（V7）已接入设置与评测中心：支持 LangSmith 连�
 
 ## 文档
 
+- [连接状态与演示模式改进](docs/usability-improvements.zh-CN.md) — 本轮修复、验证结果与后续优先事项
 - [`docs/architecture.zh-CN.md`](docs/architecture.zh-CN.md) — 系统架构与运行时边界 · [English](docs/architecture.md)
 - [`docs/PRD.md`](docs/PRD.md) — 产品需求与不变式（本文档为中文）
 - [`docs/UI-SYSTEM.zh-CN.md`](docs/UI-SYSTEM.zh-CN.md) — 视觉系统与组件规则 · [English](docs/UI-SYSTEM.md)
