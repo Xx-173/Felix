@@ -275,4 +275,11 @@ For UI changes, include a screenshot or a short visual QA note when the layout o
 
 Project: **Felix**. Maintainer account: **[Xx-173](https://github.com/Xx-173)**. Repository: **[Xx-173/Felix](https://github.com/Xx-173/Felix)**.
 
-Internal `@finagent/*` package names, `FINAGENT_*` environment variables, and the persisted `folio-agent-v1` benchmark ID remain compatibility identifiers. The desktop app, packages, interface, and documentation use Felix. Screenshots in `docs/screenshots/` document the interface before the rename. Third-party dependency and skill copyright notices remain in their respective directories.
+Internal `@finagent/*` package names, `FINAGENT_*` environment variables, and the persisted `folio-agent-v1` benchmark ID remain compatibility identifiers. The desktop app, packages, interface, and documentation use Felix. Screenshots in `docs/screenshots/` are generated from the current Felix app using an isolated demo-data profile. Third-party dependency and skill copyright notices remain in their respective directories.
+
+Regenerate the screenshots (requires the Electron runtime):
+
+```sh
+bun run build
+node apps/electron/e2e/docs-screenshots.mjs
+```

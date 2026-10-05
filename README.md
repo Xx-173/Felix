@@ -274,4 +274,11 @@ UI 改动请附上截图或简要的视觉 QA 说明（当布局或交互发生�
 
 项目名称：**Felix**。维护账号：**[Xx-173](https://github.com/Xx-173)**。仓库：**[Xx-173/Felix](https://github.com/Xx-173/Felix)**。
 
-内部 `@finagent/*` 包名、`FINAGENT_*` 环境变量和 `folio-agent-v1` 基准集 ID 保留为兼容标识；桌面应用、安装包、界面和文档统一使用 Felix。`docs/screenshots/` 中的截图记录了更名前的界面。第三方依赖和技能的原有版权声明保留在相应目录。
+内部 `@finagent/*` 包名、`FINAGENT_*` 环境变量和 `folio-agent-v1` 基准集 ID 保留为兼容标识；桌面应用、安装包、界面和文档统一使用 Felix。`docs/screenshots/` 中的截图由当前 Felix 应用在隔离的演示数据环境中生成。第三方依赖和技能的原有版权声明保留在相应目录。
+
+重新生成展示截图（需先安装 Electron 运行时）：
+
+```sh
+bun run build
+node apps/electron/e2e/docs-screenshots.mjs
+```

@@ -48,6 +48,10 @@ function createWindow() {
     titleBarStyle: 'hiddenInset',
     show: windowVisible,
     webPreferences: {
+      // Documentation capture uses an offscreen renderer so a hidden window
+      // keeps producing frames without opening a window on the desktop.
+      offscreen: process.env.FINAGENT_DOCS_SCREENSHOTS === '1',
+      backgroundThrottling: process.env.FINAGENT_DOCS_SCREENSHOTS !== '1',
       preload: join(__dirname, '../preload/index.cjs'),
       contextIsolation: true,
       nodeIntegration: false,
