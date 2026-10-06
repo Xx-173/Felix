@@ -1,3 +1,4 @@
+import type { FinagentClient } from '../client';
 import { atom } from 'jotai';
 import type { SkillReadiness, SkillReadinessStatus } from '@finagent/core';
 import { unwrapIpcResult } from '../client/unwrap';
@@ -26,9 +27,9 @@ interface SkillReadinessElectronApi {
  * Load readiness from the main process. Returns [] (graceful) when the IPC
  * channel is absent or fails, so the UI never crashes before wiring.
  */
-export async function loadSkillReadiness(): Promise<SkillReadiness[]> {
+export async function loadSkillReadiness(client?: FinagentClient): Promise<SkillReadiness[]> {
   try {
-    const api = (window as { electronAPI?: SkillReadinessElectronApi }).electronAPI;
+    const api = client ?? (window as { electronAPI?: SkillReadinessElectronApi }).electronAPI;
     const loader = api?.skills?.readiness;
     if (typeof loader !== 'function') return [];
     const result = await loader();

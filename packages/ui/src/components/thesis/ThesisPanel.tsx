@@ -1,3 +1,4 @@
+import { useOptionalFinagentClient } from '../../client';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
@@ -107,6 +108,7 @@ const PointList: React.FC<{ title: string; points: string[]; tone: string }> = (
 /** Thesis cards for the active symbol + "Save as Thesis" when a report exists. */
 export const ThesisPanel: React.FC = () => {
   const { t } = useTranslation();
+  const client = useOptionalFinagentClient();
   const symbol = useAtomValue(activeSymbolAtom);
   const setNavSection = useSetAtom(navSectionAtom);
   const [theses, setTheses] = useAtom(thesesAtom);
@@ -121,9 +123,9 @@ export const ThesisPanel: React.FC = () => {
     if (!symbol) return;
     setLoading(true);
     const [loadedTheses, loadedImpacts, loadedReport] = await Promise.all([
-      loadTheses(symbol),
-      loadImpacts(symbol),
-      loadResearchReport(symbol),
+      loadTheses(symbol, client),
+      loadImpacts(symbol, client),
+      loadResearchReport(symbol, client),
     ]);
     setTheses(loadedTheses);
     setImpacts((current) => ({ ...current, [symbol]: loadedImpacts }));
@@ -157,7 +159,7 @@ export const ThesisPanel: React.FC = () => {
   const symbolImpacts = getImpactsForSymbol(impacts, symbol);
 
   const handleSaveFromReport = async () => {
-    const created = await saveThesisFromReport(symbol);
+    const created = await saveThesisFromReport(symbol, client);
     if (created) {
       setTheses((current) => [created, ...current.filter((t) => t.id !== created.id)]);
       setJustSaved(true);
@@ -165,7 +167,7 @@ export const ThesisPanel: React.FC = () => {
   };
 
   const handleReEvaluate = async (thesis: InvestmentThesis) => {
-    const impact = await reEvaluateThesis(symbol);
+    const impact = await reEvaluateThesis(symbol, client);
     if (!impact) return;
     setImpacts((current) => ({
       ...current,

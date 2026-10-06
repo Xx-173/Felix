@@ -1,3 +1,4 @@
+import { uiTerm } from '../../i18n/displayNames';
 import React from 'react';
 import { useAtom } from 'jotai';
 import { toast } from 'sonner';
@@ -18,10 +19,10 @@ export const GeneralTab: React.FC = () => {
 
   const rows: Array<{ label: string; value: string }> = [
     { label: t('settings.rows.application'), value: 'Felix' },
-    { label: t('settings.rows.agentRuntime'), value: state.runtimeProvider },
+    { label: t('settings.rows.agentRuntime'), value: uiTerm(state.runtimeProvider) },
     { label: t('settings.rows.streaming'), value: state.isStreaming ? t('settings.enabled') : t('settings.disabled') },
     { label: t('settings.rows.activeModel'), value: model ? (model.name || `${model.provider}/${model.id}`) : '—' },
-    { label: t('settings.rows.thinkingLevel'), value: state.thinkingLevel },
+    { label: t('settings.rows.thinkingLevel'), value: uiTerm(state.thinkingLevel) },
   ];
 
   const changeLanguagePreference = async (next: LocalePreference) => {
@@ -57,8 +58,8 @@ export const GeneralTab: React.FC = () => {
               <SelectTrigger aria-label={t('settings.language')}><SelectValue /></SelectTrigger>
               <SelectContent>
                 <SelectItem value="system">{t('settings.languageSystem')}</SelectItem>
-                <SelectItem value="zh-CN">{LOCALE_LABELS['zh-CN']}</SelectItem>
-                <SelectItem value="en-US">{LOCALE_LABELS['en-US']}</SelectItem>
+                <SelectItem value="zh-CN">中文（Simplified Chinese）</SelectItem>
+                <SelectItem value="en-US">英文（English）</SelectItem>
               </SelectContent>
             </Select>
           </div>

@@ -73,7 +73,7 @@ describe('AnswerContent', () => {
   it('renders a valid metric_grid block deterministically with evidence hooks', async () => {
     const container = await renderContent(`Quote below.\n\n${METRIC_GRID}\n\nDone.`);
     expect(container.querySelector('[data-block-type="metric_grid"]')).not.toBeNull();
-    expect(container.textContent).toContain('AAPL.US key metrics');
+    expect(container.textContent).toContain('AAPL.US 关键指标（key metrics）');
     expect(container.textContent).toContain('$123.45');
     expect(container.textContent).toContain('+0.98%');
     const evidence = container.querySelector('[data-evidence-id="get_quote-1"]');

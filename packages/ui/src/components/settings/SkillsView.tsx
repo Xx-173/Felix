@@ -49,7 +49,7 @@ export const SkillsView: React.FC = () => {
   }, [loadSkills]);
 
   useEffect(() => {
-    void loadSkillReadiness().then(setSkillReadiness);
+    void loadSkillReadiness(client).then(setSkillReadiness);
   }, [setSkillReadiness]);
 
   const filtered = useMemo(

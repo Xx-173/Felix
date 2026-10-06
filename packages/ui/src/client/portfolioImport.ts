@@ -1,3 +1,4 @@
+import type { FinagentClient } from '../client';
 import type { ImportSource, ManualPortfolio, PortfolioImportDraft } from '@finagent/core';
 import { unwrapIpcResult } from './unwrap';
 
@@ -33,10 +34,10 @@ export interface PortfolioImportElectronApi {
 /** Parse import text in the main process; null when the channel is absent. */
 export async function parsePortfolioImport(
   source: ImportSource,
-  text: string
+  text: string, client?: FinagentClient
 ): Promise<PortfolioImportDraft | null> {
   try {
-    const api = (window as { electronAPI?: PortfolioImportElectronApi }).electronAPI;
+    const api = client ?? (window as { electronAPI?: PortfolioImportElectronApi }).electronAPI;
     const parse = api?.portfolioImport?.parse;
     if (typeof parse !== 'function') return null;
     return unwrapIpcResult<PortfolioImportDraft>(await parse({ source, text }));
@@ -48,10 +49,10 @@ export async function parsePortfolioImport(
 /** Confirm a draft in the main process (persists a manual portfolio). */
 export async function confirmPortfolioImport(
   draft: PortfolioImportDraft,
-  name: string
+  name: string, client?: FinagentClient
 ): Promise<ManualPortfolio | null> {
   try {
-    const api = (window as { electronAPI?: PortfolioImportElectronApi }).electronAPI;
+    const api = client ?? (window as { electronAPI?: PortfolioImportElectronApi }).electronAPI;
     const confirm = api?.portfolioImport?.confirm;
     if (typeof confirm !== 'function') return null;
     return unwrapIpcResult<ManualPortfolio>(await confirm({ draft, name }));
@@ -61,9 +62,9 @@ export async function confirmPortfolioImport(
 }
 
 /** List manual portfolios; [] when the channel is absent or fails. */
-export async function listManualPortfolios(): Promise<ManualPortfolio[]> {
+export async function listManualPortfolios(client?: FinagentClient): Promise<ManualPortfolio[]> {
   try {
-    const api = (window as { electronAPI?: PortfolioImportElectronApi }).electronAPI;
+    const api = client ?? (window as { electronAPI?: PortfolioImportElectronApi }).electronAPI;
     const listManual = api?.portfolioImport?.listManual;
     if (typeof listManual !== 'function') return [];
     return unwrapIpcResult<ManualPortfolio[]>(await listManual()) ?? [];

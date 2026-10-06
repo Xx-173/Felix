@@ -1,3 +1,4 @@
+import { useOptionalFinagentClient } from '../../client';
 import React, { useEffect } from 'react';
 import { useTranslation } from 'react-i18next';
 import { useAtom, useSetAtom } from 'jotai';
@@ -52,12 +53,13 @@ function skillLabel(skillId: string): string {
 
 export const PerformanceView: React.FC = () => {
   const { t } = useTranslation();
+  const client = useOptionalFinagentClient();
   const [state] = useAtom(performanceAtom);
   const [horizon, setHorizon] = useAtom(performanceHorizonAtom);
   const refresh = useSetAtom(refreshPerformanceAtom);
 
   useEffect(() => {
-    void refresh(horizon);
+    void refresh(horizon, client);
   }, [refresh, horizon]);
 
   const skillRows: PerformanceRowView[] = state.skills.map((s) => ({

@@ -1,3 +1,4 @@
+import { metricDisplayLabel } from '../../../i18n/displayNames';
 import React from 'react';
 import type { ComparisonTableBlock } from '@finagent/core';
 import { formatBlockValue } from './blockFormat';
@@ -20,20 +21,20 @@ export const ComparisonTableBlockView: React.FC<{ block: ComparisonTableBlock; s
                   key={column.id}
                   className="whitespace-nowrap border-b mac-section-divider px-2 py-1.5 text-right font-semibold text-foreground/72"
                 >
-                  {column.label}
+                  {metricDisplayLabel(column.label)}
                 </th>
               ))}
             </tr>
           </thead>
           <tbody>
             {block.rows.map((row) => (
-              <tr key={row.label} className="hover:bg-foreground/[0.03]">
+              <tr key={metricDisplayLabel(row.label)} className="hover:bg-foreground/[0.03]">
                 <td className="whitespace-nowrap border-b mac-section-divider px-2 py-1.5 align-top font-medium text-foreground/82">
-                  {row.label}
+                  {metricDisplayLabel(row.label)}
                 </td>
                 {row.values.map((value, index) => (
                   <td
-                    key={`${row.label}-${block.columns[index]?.id ?? index}`}
+                    key={`${metricDisplayLabel(row.label)}-${block.columns[index]?.id ?? index}`}
                     className="whitespace-nowrap border-b mac-section-divider px-2 py-1.5 text-right align-top font-mono text-foreground/78"
                   >
                     {value === null || typeof value === 'string'

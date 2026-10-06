@@ -9,6 +9,7 @@ import { ClaimVerification } from './ClaimVerification';
 import { ExportMenu } from './ExportMenu';
 import { WhatChangedSection } from './WhatChangedSection';
 import { MarkdownContent } from '../chat/MarkdownContent';
+import { useFinagentClient } from '../../client';
 
 const STANCE_TONE: Record<ResearchReport['stance'], string> = {
   bullish: 'text-positive',
@@ -29,6 +30,7 @@ export const ResearchReportView: React.FC<{
   nextAction?: React.ReactNode;
 }> = ({ report, nextAction }) => {
   const { t } = useTranslation();
+  const client = useFinagentClient();
   const confidence = Math.round(report.confidence * 100);
   const [diffState, setDiffState] = useAtom(researchDiffAtom);
   const [previousReport, setPreviousReport] = useState<ResearchReport | null>(null);
@@ -40,11 +42,11 @@ export const ResearchReportView: React.FC<{
     let alive = true;
     setDiffState({ loading: true, diff: null });
     setPreviousReport(null);
-    void loadResearchDiff(report.symbol).then((diff) => {
+    void loadResearchDiff(report.symbol, client).then((diff) => {
       if (!alive) return;
       setDiffState({ loading: false, diff: diff ?? null });
       if (diff) {
-        void loadResearchReport(diff.previousReportId).then((prev) => {
+        void loadResearchReport(diff.previousReportId, client).then((prev) => {
           if (alive && prev) setPreviousReport(prev);
         });
       }
@@ -52,7 +54,7 @@ export const ResearchReportView: React.FC<{
     return () => {
       alive = false;
     };
-  }, [report.symbol, report.id, setDiffState]);
+  }, [report.symbol, report.id, setDiffState, client]);
 
   return (
     <div className="felix-pilot-report" data-testid="research-report">

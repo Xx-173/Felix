@@ -1,3 +1,4 @@
+import { useOptionalFinagentClient } from '../../client';
 import React, { useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ImportSource, PortfolioImportDraft } from '@finagent/core';
@@ -26,6 +27,7 @@ export interface ImportDialogProps {
 
 export const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImported }) => {
   const { t } = useTranslation();
+  const client = useOptionalFinagentClient();
   const [step, setStep] = useState<DialogStep>('pick');
   const [draft, setDraft] = useState<PortfolioImportDraft | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImp
 
   const runParse = async (source: ImportSource, text: string) => {
     setError(null);
-    const parsed = await parsePortfolioImport(source, text);
+    const parsed = await parsePortfolioImport(source, text, client);
     if (!parsed) {
       setError(t('portfolio.import.errorUnavailable'));
       return;
@@ -87,7 +89,7 @@ export const ImportDialog: React.FC<ImportDialogProps> = ({ open, onClose, onImp
     if (!draft) return;
     setConfirming(true);
     setConfirmError(null);
-    const portfolio = await confirmPortfolioImport(draft, name);
+    const portfolio = await confirmPortfolioImport(draft, name, client);
     setConfirming(false);
     if (!portfolio) {
       setConfirmError(t('portfolio.import.errorImportFailed'));

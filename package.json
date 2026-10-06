@@ -7,6 +7,13 @@
     "packages/*"
   ],
   "scripts": {
+    "web:dev": "bun run --cwd apps/web dev",
+    "web:build": "bun run --cwd apps/web build",
+    "web:server:build": "bun build apps/server/src/index.ts --target bun --outfile apps/server/dist/server.js",
+    "web:start": "bun apps/server/src/index.ts",
+    "web:server:dev": "bun --watch apps/server/src/index.ts",
+    "web:test": "bun test --isolate apps/server/src",
+    "web:e2e": "node apps/web/e2e/browser-smoke.mjs",
     "dev": "bun run vite:dev",
     "vite:dev": "cd apps/electron && bunx vite",
     "build": "bun run build:packages && bun run build:electron",

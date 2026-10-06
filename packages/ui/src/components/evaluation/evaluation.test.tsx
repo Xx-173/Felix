@@ -49,7 +49,7 @@ describe('EvaluationCenter', () => {
     const { container, root } = await render(<EvaluationCenter />);
     await act(async () => {});
     const buttons = Array.from(container.querySelectorAll('button'));
-    const modelTab = buttons.find((button) => button.textContent === 'Model Comparison');
+    const modelTab = buttons.find((button) => button.textContent === '模型对比（Model Comparison）');
     expect(modelTab).toBeDefined();
     await act(async () => {
       modelTab?.click();

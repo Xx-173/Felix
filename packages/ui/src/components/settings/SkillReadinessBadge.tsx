@@ -1,3 +1,4 @@
+import { uiTerm } from '../../i18n/displayNames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SkillReadiness } from '@finagent/core';
@@ -18,11 +19,11 @@ export const SkillReadinessBadge: React.FC<SkillReadinessBadgeProps> = ({ readin
   const visual = readinessVisual(readiness?.status);
 
   return (
-    <span className="flex shrink-0 items-center gap-1.5 text-[11px]" title={visual.label}>
+    <span className="flex shrink-0 items-center gap-1.5 text-[11px]" title={uiTerm(visual.label)}>
       <span aria-hidden="true" style={{ color: visual.color }}>
         {visual.icon}
       </span>
-      <span className="text-foreground/56">{readiness ? readiness.summary : t('settings.skills.unavailable')}</span>
+      <span className="text-foreground/56">{readiness ? readiness.summary.replace('capabilities', '项能力（capabilities）') : t('settings.skills.unavailable')}</span>
       {readiness && readiness.missing.length > 0 && (
         <span className="flex flex-wrap gap-1">
           {readiness.missing.map((capability) => (

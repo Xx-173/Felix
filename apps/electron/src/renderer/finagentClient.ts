@@ -163,6 +163,11 @@ function createElectronClient(): FinagentClient {
       listOutcomes: (input) => ipcResult(window.electronAPI.outcome.listOutcomes(input)),
       evaluateDue: () => ipcResult(window.electronAPI.outcome.evaluateDue()),
     },
+    portfolioImport: {
+      parse: (input) => ipcResult(window.electronAPI.portfolioImport.parse(input)),
+      confirm: (input) => ipcResult(window.electronAPI.portfolioImport.confirm(input)),
+      listManual: () => ipcResult(window.electronAPI.portfolioImport.listManual()),
+    },
     pulse: {
       snapshot: (input) => ipcResult(window.electronAPI.pulse.snapshot(input)),
     },

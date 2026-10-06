@@ -12,6 +12,7 @@ import {
   type PulsePersonalImpactItem,
 } from '../../client/pulse'
 import { formatPercent } from '../../lib/money'
+import { uiTerm } from '../../i18n/displayNames'
 import { DemoBadge } from '../primitives/DemoBadge'
 import { SectionState, TodaySection } from '../today/TodaySection'
 
@@ -66,8 +67,8 @@ function impactColor(impact: PulseImpactSign): string {
 }
 
 const IndexLine: React.FC<{ index: PulseMarketIndex }> = ({ index }) => (
-  <div className="flex min-w-0 items-baseline gap-2 px-3 py-2.5 text-[13px]" data-testid="pulse-index">
-    <span className="font-medium text-foreground/80">{index.name}</span>
+  <div className="flex min-w-0 flex-wrap items-baseline gap-2 px-3 py-2.5 text-[13px]" data-testid="pulse-index">
+    <span className="font-medium text-foreground/80">{uiTerm(index.name)}</span>
     <span className="text-foreground/42">{index.symbol}</span>
     <span className="ml-auto font-mono tabular-nums text-foreground/64">{formatPrice(index.lastPrice)}</span>
     <span className={`font-mono tabular-nums ${changeColor(index.changePercent)}`}>
@@ -78,7 +79,7 @@ const IndexLine: React.FC<{ index: PulseMarketIndex }> = ({ index }) => (
 
 const StatusLine: React.FC<{ statuses: { market: string; status: string }[] }> = ({ statuses }) => (
   <div className="flex flex-wrap gap-x-4 gap-y-1 text-[13px] text-foreground/64" data-testid="pulse-market-status">
-    {statuses.map((status) => `${status.market} · ${status.status}`).join('  ')}
+    {statuses.map((status) => `${status.market} · ${uiTerm(status.status)}`).join('  ')}
   </div>
 )
 

@@ -1,3 +1,4 @@
+import { metricDisplayLabel } from '../../../i18n/displayNames';
 import React, { useMemo, useRef, useState } from 'react';
 import type { TimeSeriesChartBlock } from '@finagent/core';
 import { formatBlockValue, formatIsoAxisTick, formatIsoDate } from './blockFormat';
@@ -35,7 +36,7 @@ export const TimeSeriesChartBlockView: React.FC<{ block: TimeSeriesChartBlock; s
     setHoverIndex(Math.max(0, Math.min(block.points.length - 1, index)));
   };
 
-  const unitLabel = block.currency ? `${block.unit} · ${block.currency}` : block.unit;
+  const unitLabel = block.currency ? `${metricDisplayLabel(block.unit)} · ${block.currency}` : metricDisplayLabel(block.unit);
 
   return (
     <AnswerBlockFrame block={block} streaming={streaming}>

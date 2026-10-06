@@ -1,3 +1,4 @@
+import type { FinagentClient } from '../client';
 import type {
   PerformanceHorizon,
   SkillCalibration,
@@ -27,15 +28,16 @@ interface PerformanceElectronApi {
   };
 }
 
-function api(): PerformanceElectronApi['performance'] {
+function api(client?: FinagentClient): PerformanceElectronApi['performance'] {
+  if (client) return client.performance;
   const electronApi = (window as { electronAPI?: PerformanceElectronApi }).electronAPI;
   return electronApi?.performance;
 }
 
 /** Per-skill aggregation for one horizon; [] when the channel is unwired or fails. */
-export async function loadSkillPerformance(horizon: PerformanceHorizon): Promise<SkillPerformance[]> {
+export async function loadSkillPerformance(horizon: PerformanceHorizon, client?: FinagentClient): Promise<SkillPerformance[]> {
   try {
-    const performance = api();
+    const performance = api(client);
     if (typeof performance?.skill !== 'function') return [];
     return unwrapIpcResult<SkillPerformance[]>(await performance.skill({ horizon })) ?? [];
   } catch {
@@ -44,9 +46,9 @@ export async function loadSkillPerformance(horizon: PerformanceHorizon): Promise
 }
 
 /** Per-strategy aggregation for one horizon; [] when the channel is unwired or fails. */
-export async function loadStrategyPerformance(horizon: PerformanceHorizon): Promise<StrategyPerformance[]> {
+export async function loadStrategyPerformance(horizon: PerformanceHorizon, client?: FinagentClient): Promise<StrategyPerformance[]> {
   try {
-    const performance = api();
+    const performance = api(client);
     if (typeof performance?.strategy !== 'function') return [];
     return unwrapIpcResult<StrategyPerformance[]>(await performance.strategy({ horizon })) ?? [];
   } catch {
@@ -55,9 +57,9 @@ export async function loadStrategyPerformance(horizon: PerformanceHorizon): Prom
 }
 
 /** Per-skill calibration for one horizon; [] when the channel is unwired or fails. */
-export async function loadSkillCalibration(horizon: PerformanceHorizon): Promise<SkillCalibration[]> {
+export async function loadSkillCalibration(horizon: PerformanceHorizon, client?: FinagentClient): Promise<SkillCalibration[]> {
   try {
-    const performance = api();
+    const performance = api(client);
     if (typeof performance?.calibration !== 'function') return [];
     return unwrapIpcResult<SkillCalibration[]>(await performance.calibration({ horizon })) ?? [];
   } catch {
@@ -67,10 +69,10 @@ export async function loadSkillCalibration(horizon: PerformanceHorizon): Promise
 
 /** Per-strategy calibration for one horizon; [] when the channel is unwired or fails. */
 export async function loadStrategyCalibration(
-  horizon: PerformanceHorizon
+  horizon: PerformanceHorizon, client?: FinagentClient
 ): Promise<StrategyCalibration[]> {
   try {
-    const performance = api();
+    const performance = api(client);
     if (typeof performance?.strategyCalibration !== 'function') return [];
     return unwrapIpcResult<StrategyCalibration[]>(await performance.strategyCalibration({ horizon })) ?? [];
   } catch {

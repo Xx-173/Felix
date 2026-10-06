@@ -1,3 +1,4 @@
+import { uiTerm } from '../../i18n/displayNames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AllocationItem, PortfolioRiskReport, RiskSignal } from '@finagent/core';
@@ -122,7 +123,7 @@ const SignalCard: React.FC<{ signal: RiskSignal }> = ({ signal }) => {
         />
         <span className="text-[13px] font-semibold text-foreground/88">{signal.title}</span>
         <span className="ml-auto text-[11px] uppercase tracking-wide" style={{ color: visual.color }}>
-          {visual.label}
+          {uiTerm(visual.label)}
         </span>
       </div>
       <div className="mt-1 text-[12px] leading-relaxed text-foreground/60">{signal.detail}</div>

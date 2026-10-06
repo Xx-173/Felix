@@ -1,3 +1,4 @@
+import { uiTerm } from '../../i18n/displayNames';
 import React, { useEffect, useMemo, useState } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import {
@@ -162,7 +163,7 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
           <div className="felix-research-asset-copy min-w-0">
             <div className="felix-research-asset-overline">
               <span className="felix-research-market-dot" aria-hidden="true" />
-              <span>{currency} · {quote ? t('research.workspace.live') : t('research.workspace.marketStatus')}</span>
+              <span>{currency} · {quote?.source === 'demo' ? t('demo.badge') : t('research.workspace.marketStatus')}</span>
             </div>
             <div className="felix-research-asset-identity">
               <h1 className="felix-research-symbol">{symbol}</h1>
@@ -217,7 +218,7 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
                   aria-pressed={period === value}
                   className={`felix-research-period ${period === value ? 'felix-research-period--active' : ''}`}
                 >
-                  {value.toUpperCase()}
+                  {uiTerm(value)}
                 </button>
               ))}
               </div>
@@ -248,7 +249,7 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
             <ResearchStat label={t('research.workspace.low')} value={formatPrice(quote?.low, currency)} />
             <ResearchStat label={t('research.workspace.prevClose')} value={formatPrice(quote?.prevClose, currency)} />
             <ResearchStat label={t('research.workspace.volume')} value={formatCompact(quote?.volume)} />
-            <ResearchStat label={t('research.workspace.marketStatus')} value={quote ? t('research.workspace.live') : '—'} />
+            <ResearchStat label={t('research.workspace.marketStatus')} value={quote?.source === 'demo' ? t('demo.badge') : quote ? t('research.workspace.marketStatus') : '—'} />
           </div>
         </div>
 

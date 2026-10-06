@@ -1,6 +1,7 @@
 import { atom } from 'jotai';
 import type { ResearchReport, ResearchRunSummary, ResearchRunStatus } from '@finagent/core';
 import { unwrapIpcResult } from '../client/unwrap';
+import type { FinagentClient } from '../client';
 
 /**
  * Deep Research view state.
@@ -36,7 +37,8 @@ interface ResearchElectronApi {
   };
 }
 
-function api(): ResearchElectronApi['research'] {
+function api(client?: FinagentClient): ResearchElectronApi['research'] {
+  if (client?.research) return client.research;
   const electronApi = (window as { electronAPI?: ResearchElectronApi }).electronAPI;
   return electronApi?.research;
 }
@@ -52,10 +54,10 @@ export interface ResearchStartInput {
  * Returns undefined when unwired.
  */
 export async function startResearch(
-  input: ResearchStartInput
+  input: ResearchStartInput, client?: FinagentClient
 ): Promise<ResearchRunSummary | undefined> {
   try {
-    const research = api();
+    const research = api(client);
     if (!research?.start) return undefined;
     return (
       unwrapIpcResult<ResearchRunSummary>(
@@ -68,18 +70,18 @@ export async function startResearch(
 }
 
 /** Cancel an active run. */
-export async function cancelResearch(runId: string): Promise<void> {
+export async function cancelResearch(runId: string, client?: FinagentClient): Promise<void> {
   try {
-    await api()?.cancel?.({ runId });
+    await api(client)?.cancel?.({ runId });
   } catch {
     // Graceful: the main process settles the run either way.
   }
 }
 
 /** Hydrate the recent run list. */
-export async function loadResearchRuns(): Promise<ResearchRunSummary[]> {
+export async function loadResearchRuns(client?: FinagentClient): Promise<ResearchRunSummary[]> {
   try {
-    const research = api();
+    const research = api(client);
     if (!research?.listRuns) return [];
     return unwrapIpcResult<ResearchRunSummary[]>(await research.listRuns()) ?? [];
   } catch {
@@ -88,18 +90,18 @@ export async function loadResearchRuns(): Promise<ResearchRunSummary[]> {
 }
 
 /** Fetch one run's latest summary (progress polling). */
-export async function loadResearchRun(runId: string): Promise<ResearchRunSummary | undefined> {
+export async function loadResearchRun(runId: string, client?: FinagentClient): Promise<ResearchRunSummary | undefined> {
   try {
-    return unwrapIpcResult<ResearchRunSummary | undefined>(await api()?.getRun?.({ runId })) ?? undefined;
+    return unwrapIpcResult<ResearchRunSummary | undefined>(await api(client)?.getRun?.({ runId })) ?? undefined;
   } catch {
     return undefined;
   }
 }
 
 /** Hydrate reports for a symbol (or all when symbol is undefined). */
-export async function loadSymbolReports(symbol?: string): Promise<ResearchReport[]> {
+export async function loadSymbolReports(symbol?: string, client?: FinagentClient): Promise<ResearchReport[]> {
   try {
-    const research = api();
+    const research = api(client);
     if (!research?.listReports) return [];
     return unwrapIpcResult<ResearchReport[]>(await research.listReports({ symbol })) ?? [];
   } catch {
@@ -108,9 +110,9 @@ export async function loadSymbolReports(symbol?: string): Promise<ResearchReport
 }
 
 /** Fetch a full report by id. */
-export async function loadResearchReport(reportId: string): Promise<ResearchReport | undefined> {
+export async function loadResearchReport(reportId: string, client?: FinagentClient): Promise<ResearchReport | undefined> {
   try {
-    return unwrapIpcResult<ResearchReport | undefined>(await api()?.getReport?.({ reportId })) ?? undefined;
+    return unwrapIpcResult<ResearchReport | undefined>(await api(client)?.getReport?.({ reportId })) ?? undefined;
   } catch {
     return undefined;
   }

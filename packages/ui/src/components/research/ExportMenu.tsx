@@ -2,6 +2,7 @@ import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { ResearchReport } from '@finagent/core';
 import { loadExportMarkdown, loadShareCard } from '../../atoms/exportAtoms';
+import { useFinagentClient } from '../../client';
 
 /**
  * Export & share menu for a research report (spec §54–55).
@@ -54,6 +55,7 @@ async function copyText(text: string): Promise<boolean> {
 
 export const ExportMenu: React.FC<ExportMenuProps> = ({ report }) => {
   const { t } = useTranslation();
+  const client = useFinagentClient();
   const [open, setOpen] = useState(false);
   const [busy, setBusy] = useState<MenuAction | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -97,12 +99,12 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({ report }) => {
   const handleAction = (action: MenuAction): void => {
     void runAction(action, async () => {
       if (action === 'markdown-copy' || action === 'markdown-download') {
-        const markdown = await loadExportMarkdown(report.id);
+        const markdown = await loadExportMarkdown(report.id, client);
         if (markdown == null) return false;
         if (action === 'markdown-copy') return copyText(markdown);
         return downloadFile(`${safeFileName(report)}-research.md`, markdown, 'text/markdown');
       }
-      const card = await loadShareCard(report.id);
+      const card = await loadShareCard(report.id, client);
       if (card == null) return false;
       if (action === 'share-copy') return copyText(card.text);
       return downloadFile(`${safeFileName(report)}-share-card.svg`, card.svg, 'image/svg+xml');

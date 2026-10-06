@@ -1,3 +1,4 @@
+import { uiTerm } from '../../i18n/displayNames';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAtom, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
@@ -11,6 +12,8 @@ import type {
 } from '@finagent/core';
 import {
   groupModelsByProvider,
+  hydrateLlmAtom,
+  refreshLlmModelsAtom,
   llmModelsAtom,
   llmStateAtom,
   refreshLlmProvidersAtom,
@@ -75,6 +78,8 @@ export const ModelsTab: React.FC = () => {
   const client = useFinagentClient();
   const [llmState] = useAtom(llmStateAtom);
   const [models] = useAtom(llmModelsAtom);
+  const hydrate = useSetAtom(hydrateLlmAtom);
+  const refreshModels = useSetAtom(refreshLlmModelsAtom);
   const refreshProviders = useSetAtom(refreshLlmProvidersAtom);
 
   const [providers, setProviders] = useState<ProviderStatus[]>([]);
@@ -127,6 +132,7 @@ export const ModelsTab: React.FC = () => {
     if (result.ok) {
       setCredentialInputs((i) => ({ ...i, [provider]: '' }));
       await loadProviders();
+      await Promise.all([hydrate(client), refreshModels(client)]);
     } else {
       setCredentialErrors((e) => ({ ...e, [provider]: result.error.message }));
     }
@@ -138,6 +144,7 @@ export const ModelsTab: React.FC = () => {
     setCredentialBusy((b) => ({ ...b, [provider]: false }));
     if (result.ok) {
       await loadProviders();
+      await Promise.all([hydrate(client), refreshModels(client)]);
     } else {
       setCredentialErrors((e) => ({ ...e, [provider]: result.error.message }));
     }
@@ -189,6 +196,7 @@ export const ModelsTab: React.FC = () => {
       setCustomForm(emptyCustomForm);
       setCustomSuccess(t('settings.model.customProviderAdded'));
       await loadProviders();
+      await Promise.all([hydrate(client), refreshModels(client)]);
       void refreshProviders(client);
     } else {
       setCustomError(result.error.message);
@@ -199,6 +207,7 @@ export const ModelsTab: React.FC = () => {
     const result = await client.llm.removeCustomProvider(name);
     if (result.ok) {
       await loadProviders();
+      await Promise.all([hydrate(client), refreshModels(client)]);
       void refreshProviders(client);
     }
   };
@@ -208,11 +217,12 @@ export const ModelsTab: React.FC = () => {
 
   return (
     <div className="max-w-4xl space-y-7">
+      {client.deployment && <p className="rounded-lg border border-border bg-surface-muted p-3 text-xs leading-6">使用自己的模型密钥，费用由你的模型服务商账户承担。密钥按访客加密保存；可随时移除。自定义接口需使用管理员允许的 HTTPS 服务商域名（Bring your own key; billed to your provider account; encrypted per visitor; approved HTTPS domains only）。</p>}
       <Section title={t('settings.model.runtimeDefaultModel')}>
         <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">
             <span className="text-[12px] text-foreground/54">{t('settings.model.agentRuntime')}</span>
-            <span className="text-[12px] font-semibold text-foreground">{llmState.runtimeProvider}</span>
+            <span className="text-[12px] font-semibold text-foreground">{uiTerm(llmState.runtimeProvider)}</span>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <ModelSelector />
@@ -303,9 +313,10 @@ export const ModelsTab: React.FC = () => {
                       <input
                         type="password"
                         value={credentialInputs[id] ?? ''}
-                        onChange={(e) =>
-                          setCredentialInputs((i) => ({ ...i, [id]: e.target.value }))
-                        }
+                        onChange={(e) => {
+                          const value = e.currentTarget.value;
+                          setCredentialInputs((inputs) => ({ ...inputs, [id]: value }));
+                        }}
                         placeholder={t('settings.model.apiKey')}
                         className="h-9 flex-1 rounded-[8px] border border-input bg-background px-3 text-[12px] text-foreground placeholder:text-foreground/38 focus:outline-none focus:ring-2 focus:ring-ring"
                       />
@@ -373,7 +384,7 @@ export const ModelsTab: React.FC = () => {
             <input
               type="checkbox"
               checked={customForm.reasoning}
-              onChange={(e) => setCustomForm((f) => ({ ...f, reasoning: e.target.checked }))}
+              onChange={(e) => { const reasoning = e.currentTarget.checked; setCustomForm((f) => ({ ...f, reasoning })); }}
               className="accent-accent"
             />
             {t('settings.model.reasoningModel')}

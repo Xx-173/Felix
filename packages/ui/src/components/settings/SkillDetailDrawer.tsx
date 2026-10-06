@@ -1,3 +1,4 @@
+import { skillDisplayName, skillDisplayDescription, uiTerm } from '../../i18n/displayNames';
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
@@ -147,13 +148,13 @@ export const SkillDetailDrawer: React.FC<SkillDetailDrawerProps> = ({
       <aside
         role="dialog"
         aria-modal="true"
-        aria-label={`${skill.name} ${t('settings.skills.details')}`}
+        aria-label={`${skillDisplayName(skill.id, skill.name)} ${t('settings.skills.details')}`}
         data-testid="skill-detail-drawer"
         className="absolute right-0 top-0 flex h-full w-full max-w-[420px] flex-col border-l border-[var(--mac-border-strong)] bg-background shadow-middle"
       >
         <header className="flex items-start gap-3 border-b mac-section-divider px-5 py-4">
           <div className="min-w-0 flex-1">
-            <h2 className="truncate text-[15px] font-semibold text-foreground">{skill.name}</h2>
+            <h2 className="truncate text-[15px] font-semibold text-foreground">{skillDisplayName(skill.id, skill.name)}</h2>
             <div className="mt-1.5">
               <SkillReadinessBadge readiness={readiness} />
             </div>
@@ -176,7 +177,7 @@ export const SkillDetailDrawer: React.FC<SkillDetailDrawerProps> = ({
             <section>
               <SectionLabel>{t('settings.skills.description')}</SectionLabel>
               <p className="mt-1.5 text-[13px] leading-relaxed text-foreground/72">
-                {skill.description || '—'}
+                {skillDisplayDescription(skill.id, skill.description) || '—'}
               </p>
             </section>
 
@@ -281,7 +282,7 @@ export const SkillDetailDrawer: React.FC<SkillDetailDrawerProps> = ({
                   onChange={() => onToggle(skill)}
                   disabled={togglingId !== null}
                   loading={togglingId === skill.id}
-                  label={`${skill.enabled ? t('settings.skills.disable') : t('settings.skills.enable')} ${skill.name}`}
+                  label={`${skill.enabled ? t('settings.skills.disable') : t('settings.skills.enable')} ${skillDisplayName(skill.id, skill.name)}`}
                 />
               </div>
               {drawerError && (

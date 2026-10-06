@@ -1,3 +1,4 @@
+import { metricDisplayLabel } from '../../../i18n/displayNames';
 import React from 'react';
 import type { MetricGridBlock } from '@finagent/core';
 import { formatBlockChange, formatBlockValue, formatIsoDate } from './blockFormat';
@@ -29,11 +30,11 @@ export const MetricGridBlockView: React.FC<{ block: MetricGridBlock; streaming?:
                   : '';
           return (
             <div
-              key={`${metric.label}-${index}`}
+              key={`${metricDisplayLabel(metric.label)}-${index}`}
               className="rounded-[8px] border mac-section-divider bg-surface px-2.5 py-2"
             >
-              <div className="truncate text-[10.5px] font-medium uppercase tracking-wide text-foreground/44" title={metric.label}>
-                {metric.label}
+              <div className="truncate text-[10.5px] font-medium uppercase tracking-wide text-foreground/44" title={metricDisplayLabel(metric.label)}>
+                {metricDisplayLabel(metric.label)}
               </div>
               <div className="mt-0.5 text-[15px] font-semibold tracking-tight text-foreground">
                 {formatBlockValue(metric.value, metric.unit, metric.currency)}

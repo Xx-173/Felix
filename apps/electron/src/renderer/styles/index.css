@@ -1587,3 +1587,17 @@ button:disabled { cursor: not-allowed; }
   color: var(--primary-foreground) !important;
   box-shadow: 0 1px 3px rgba(var(--foreground-rgb), .18);
 }
+
+/* Bilingual labels share the same layout in desktop and browser. */
+.felix-sidebar-nav-label { min-width: 0; overflow-wrap: anywhere; line-height: 1.45; }
+.felix-sidebar-nav { overflow-y: auto; }
+
+/* Bilingual selectors keep their own row so all controls remain readable. */
+.felix-agent-panel .felix-agent-header {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) 1.85rem;
+  gap: .5rem;
+}
+.felix-agent-panel .felix-agent-title { grid-column: 1 / -1; white-space: normal; }
+.felix-agent-header > div:not(.felix-agent-title) { min-width: 0; }
+.felix-agent-header > div > button { width: 100%; max-width: 100%; }

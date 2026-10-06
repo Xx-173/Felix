@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import { Allotment } from 'allotment';
 import 'allotment/dist/style.css';
 import { useAtomValue } from 'jotai';
-import { agentPanelVisibleAtom } from '../../atoms';
+import { agentPanelVisibleAtom, activeSessionIdAtom } from '../../atoms';
+import { useFinagentClient } from '../../client';
 import { readPersisted, writePersisted } from '../../lib/persistedPrefs';
 import { ErrorBoundary } from '../primitives/ErrorBoundary';
 import { Sidebar } from './Sidebar';
@@ -14,6 +15,9 @@ const SIZES_KEY = 'allotmentSizes';
 const DEFAULT_SIZES = [240, 640, 400];
 
 export const WorkbenchShell: React.FC = () => {
+  const client = useFinagentClient();
+  const sessionId = useAtomValue(activeSessionIdAtom);
+  const [mobileAgent, setMobileAgent] = useState(false);
   const agentPanelVisible = useAtomValue(agentPanelVisibleAtom);
   const [sizes, setSizes] = useState<number[]>(() => readPersisted<number[]>(SIZES_KEY, DEFAULT_SIZES));
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
@@ -23,6 +27,8 @@ export const WorkbenchShell: React.FC = () => {
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, []);
+
+  useEffect(() => { if (client.deployment && isNarrow && sessionId) setMobileAgent(true); }, [client, isNarrow, sessionId]);
 
   // Keep persisted sizes sane: always three panes, positive values.
   const normalized = sizes.length === 3 && sizes.every((s) => Number.isFinite(s) && s > 0)
@@ -44,6 +50,19 @@ export const WorkbenchShell: React.FC = () => {
   // When the agent panel toggles off and back on, Allotment restores its
   // remembered width automatically; no extra state required.
   const showAgent = agentPanelVisible && !isNarrow;
+
+  if (client.deployment && isNarrow) return (
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <nav aria-label="视图切换" className="flex shrink-0 gap-2 border-b border-border p-2">
+        <button className="rounded border border-border px-3 py-1 text-xs" aria-pressed={!mobileAgent} onClick={() => setMobileAgent(false)}>工作台（Workspace）</button>
+        <button className="rounded border border-border px-3 py-1 text-xs" aria-pressed={mobileAgent} onClick={() => setMobileAgent(true)}>研究助手（Copilot）</button>
+      </nav>
+      <div className="flex min-h-0 flex-1 overflow-hidden">
+        <aside className="w-14 shrink-0"><Sidebar /></aside>
+        <div className="min-w-0 flex-1 overflow-hidden"><ErrorBoundary>{mobileAgent ? <AgentPanel /> : <FinanceWorkspace />}</ErrorBoundary></div>
+      </div>
+    </div>
+  );
 
   return (
     <div className="relative h-full flex-1 overflow-hidden">

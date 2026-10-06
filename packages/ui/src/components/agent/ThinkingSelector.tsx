@@ -1,3 +1,4 @@
+import { uiTerm } from '../../i18n/displayNames';
 import React, { useEffect, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, ChevronDown, Brain, LoaderCircle } from 'lucide-react';
@@ -27,15 +28,16 @@ export const ThinkingSelector: React.FC<ThinkingSelectorProps> = ({ disabled = f
     setBusy(false);
     if (!result.ok) setError(result.error.message); else setOpen(false);
   };
+
   return <div>
     <DropdownMenu open={open} onOpenChange={setOpen}>
       <DropdownMenuTrigger asChild>
         <button type="button" disabled={effectiveDisabled} aria-label={t('agent.reasoning.label')} title={levels.length === 0 ? t('agent.reasoning.unavailable') : undefined} className="flex max-w-[145px] items-center gap-1.5 rounded-[8px] border border-border bg-surface px-2.5 py-1.5 text-[12px] font-medium text-foreground/72 transition-colors hover:bg-surface-hover disabled:pointer-events-none disabled:opacity-45">
-          {busy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-accent" /> : <Brain className="h-3.5 w-3.5 text-foreground/42" />}<span className="truncate">{t('agent.reasoning.withLevel', { level: capitalize(state.thinkingLevel) })}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 text-foreground/42" />
+          {busy ? <LoaderCircle className="h-3.5 w-3.5 animate-spin text-accent" /> : <Brain className="h-3.5 w-3.5 text-foreground/42" />}<span className="truncate">{t('agent.reasoning.label')}：{uiTerm(capitalize(state.thinkingLevel))}</span><ChevronDown className="h-3.5 w-3.5 shrink-0 text-foreground/42" />
         </button>
       </DropdownMenuTrigger>
       <DropdownMenuContent align="start" className="w-44">
-        {levels.map((level) => <DropdownMenuItem key={level} onSelect={() => void handleSelect(level)}><span className="flex-1">{capitalize(level)}</span>{level === state.thinkingLevel && <Check className="h-3.5 w-3.5 text-accent" />}</DropdownMenuItem>)}
+        {levels.map((level) => <DropdownMenuItem key={level} onSelect={() => void handleSelect(level)}><span className="flex-1">{uiTerm(capitalize(level))}</span>{level === state.thinkingLevel && <Check className="h-3.5 w-3.5 text-accent" />}</DropdownMenuItem>)}
       </DropdownMenuContent>
     </DropdownMenu>
     {error && <div className="mt-1 text-[11px] text-destructive">{error}</div>}

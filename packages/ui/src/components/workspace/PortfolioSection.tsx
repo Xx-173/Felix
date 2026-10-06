@@ -69,7 +69,7 @@ export const PortfolioSection: React.FC = () => {
     fetchPortfolio(client).catch(() => {
       /* error surfaced via portfolioCacheAtom.failure */
     });
-    refreshManualPortfolios().catch(() => {
+    refreshManualPortfolios(client).catch(() => {
       /* error surfaced via manualPortfoliosAtom.error */
     });
   }, [client, fetchPortfolio, refreshManualPortfolios]);
@@ -81,7 +81,7 @@ export const PortfolioSection: React.FC = () => {
       <Button
         variant="secondary"
         size="sm"
-        onClick={() => void analyzeRisk().catch(() => {})}
+        onClick={() => void analyzeRisk(client).catch(() => {})}
         disabled={riskCache.loading}
       >
         {riskCache.loading ? t('portfolio.analyzing') : t('portfolio.analyzePortfolio')}
@@ -228,7 +228,7 @@ export const PortfolioSection: React.FC = () => {
         open={importOpen}
         onClose={() => setImportOpen(false)}
         onImported={() => {
-          void refreshManualPortfolios().catch(() => {})
+          void refreshManualPortfolios(client).catch(() => {})
         }}
       />
     </div>

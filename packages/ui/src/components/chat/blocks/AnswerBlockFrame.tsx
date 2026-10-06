@@ -1,3 +1,4 @@
+import { blockDisplayTitle } from '../../../i18n/displayNames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { AnswerBlock } from '@finagent/core';
@@ -34,7 +35,7 @@ export const AnswerBlockFrame: React.FC<{
     >
       {showCaption && (
         <figcaption className="flex items-center gap-1.5 border-b mac-section-divider px-3 py-1.5 text-[11px] font-semibold uppercase tracking-wide text-foreground/48">
-          <span className="min-w-0 truncate">{block.title ?? t(`agent.blocks.titles.${block.type}`)}</span>
+          <span className="min-w-0 truncate">{block.title ? blockDisplayTitle(block.title) : t(`agent.blocks.titles.${block.type}`)}</span>
           {streaming && <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-accent" aria-label={t('agent.blocks.loading')} />}
           {headerAction && <span className="ml-auto shrink-0">{headerAction}</span>}
         </figcaption>

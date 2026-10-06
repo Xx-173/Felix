@@ -1,0 +1,6 @@
+{$FELIX_DOMAIN} {
+  encode zstd gzip
+  reverse_proxy felix:8787 {
+    flush_interval -1
+  }
+}

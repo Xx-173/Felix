@@ -1,3 +1,4 @@
+import { useOptionalFinagentClient } from '../../client';
 import React, { useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import type { InvestmentThesis, ThesisStance } from '@finagent/core';
@@ -40,6 +41,7 @@ export const ThesisEditor: React.FC<{
   onSaved: (thesis: InvestmentThesis) => void;
 }> = ({ thesis, onCancel, onSaved }) => {
   const { t } = useTranslation();
+  const client = useOptionalFinagentClient();
   const [stance, setStance] = useState<ThesisStance>(thesis.stance);
   const [summary, setSummary] = useState(thesis.summary);
   const [bullCase, setBullCase] = useState(thesis.bullCase.join('\n'));
@@ -62,7 +64,7 @@ export const ThesisEditor: React.FC<{
       risks: splitLines(risks),
       ...(Number.isFinite(parsedPrice) && targetPrice.trim() !== '' ? { targetPrice: parsedPrice } : {}),
     };
-    const saved = await updateThesis(edited);
+    const saved = await updateThesis(edited, client);
     setSaving(false);
     // Channel absent → keep the local edit so the editor still behaves gracefully.
     onSaved(saved ?? edited);

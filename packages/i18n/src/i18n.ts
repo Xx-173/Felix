@@ -11,6 +11,7 @@ import { createInstance, type i18n as I18nInstance, type InitOptions } from 'i18
 import { resolveLocale, toSupportedLocale, type LocalePreference, type SupportedLocale } from './locales.ts';
 import { i18nSetCurrentLocale } from './format.ts';
 import { resources, SUPPORTED_NAMESPACES } from './resources.ts';
+import { bilingualResources } from './bilingual.ts';
 
 function isDevelopment(): boolean {
   if (typeof process === 'undefined') return false;
@@ -20,11 +21,12 @@ function isDevelopment(): boolean {
 export interface I18nOptions {
   /** Effective UI locale (already resolved against system). */
   locale: SupportedLocale;
+  bilingual?: boolean;
 }
 
 export function buildI18nOptions(opts: I18nOptions): InitOptions {
   return {
-    resources,
+    resources: opts.bilingual ? bilingualResources : resources,
     lng: opts.locale,
     fallbackLng: 'en-US',
     supportedLngs: ['en-US', 'zh-CN'],

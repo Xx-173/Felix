@@ -1,4 +1,5 @@
 import { unwrapIpcResult } from '../client/unwrap';
+import type { FinagentClient } from '../client';
 
 /**
  * Export & share loaders (spec §54–55).
@@ -30,9 +31,9 @@ function api(): ExportElectronApi['export'] {
 }
 
 /** Render the report as Markdown; null when unwired or failing. */
-export async function loadExportMarkdown(reportId: string): Promise<string | null> {
+export async function loadExportMarkdown(reportId: string, client?: FinagentClient): Promise<string | null> {
   try {
-    const channel = api();
+    const channel = client?.export ?? api();
     if (!channel?.markdown) return null;
     return unwrapIpcResult<string>(await channel.markdown({ reportId })) ?? null;
   } catch {
@@ -41,9 +42,9 @@ export async function loadExportMarkdown(reportId: string): Promise<string | nul
 }
 
 /** Render the share card (SVG + text); null when unwired or failing. */
-export async function loadShareCard(reportId: string): Promise<ShareCardPayload | null> {
+export async function loadShareCard(reportId: string, client?: FinagentClient): Promise<ShareCardPayload | null> {
   try {
-    const channel = api();
+    const channel = client?.export ?? api();
     if (!channel?.shareCard) return null;
     return unwrapIpcResult<ShareCardPayload>(await channel.shareCard({ reportId })) ?? null;
   } catch {

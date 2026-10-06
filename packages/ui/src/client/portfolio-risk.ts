@@ -1,3 +1,4 @@
+import type { FinagentClient } from '../client';
 import type { PortfolioRiskReport } from '@finagent/core';
 import { unwrapIpcResult } from './unwrap';
 
@@ -15,9 +16,9 @@ interface PortfolioRiskElectronApi {
   };
 }
 
-export async function loadPortfolioRiskReport(): Promise<PortfolioRiskReport | null> {
+export async function loadPortfolioRiskReport(client?: FinagentClient): Promise<PortfolioRiskReport | null> {
   try {
-    const api = (window as { electronAPI?: PortfolioRiskElectronApi }).electronAPI;
+    const api = client ?? (window as { electronAPI?: PortfolioRiskElectronApi }).electronAPI;
     const analyze = api?.portfolioRisk?.analyze;
     if (typeof analyze !== 'function') return null;
     return unwrapIpcResult<PortfolioRiskReport>(await analyze());

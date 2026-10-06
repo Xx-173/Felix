@@ -1,3 +1,4 @@
+import type { FinagentClient } from '../client';
 import { atom } from 'jotai';
 import type {
   PerformanceHorizon,
@@ -45,13 +46,13 @@ export const performanceHorizonAtom = atom<PerformanceHorizon>('1m');
 /** Refresh all four aggregations for a horizon; results land in `performanceAtom`. */
 export const refreshPerformanceAtom = atom(
   null,
-  async (_get, set, horizon: PerformanceHorizon) => {
+  async (_get, set, horizon: PerformanceHorizon, client?: FinagentClient) => {
     set(performanceAtom, (state) => ({ ...state, loading: true }));
     const [skills, strategies, calibrations, strategyCalibrations] = await Promise.all([
-      loadSkillPerformance(horizon),
-      loadStrategyPerformance(horizon),
-      loadSkillCalibration(horizon),
-      loadStrategyCalibration(horizon),
+      loadSkillPerformance(horizon, client),
+      loadStrategyPerformance(horizon, client),
+      loadSkillCalibration(horizon, client),
+      loadStrategyCalibration(horizon, client),
     ]);
     set(performanceAtom, {
       loading: false,

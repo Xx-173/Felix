@@ -15,7 +15,7 @@ export const events = {
   noDescription: '暂无描述。',
   openResearch: '打开 {{symbol}} 的研究',
   catalystEyebrow: '催化剂综合',
-  catalystTitle: 'Felix Agent',
+  catalystTitle: 'Felix 研究助手',
   catalystEmpty: '选择带有标的的事件，即可将其上下文带入研究或 Copilot。',
   catalystHint: '当底层事件或研究数据不可用时，Felix 不会编造催化剂摘要。',
 } satisfies SameKeysAs<typeof enEvents>;

@@ -6,10 +6,12 @@ import { loadComparison } from '../../client/compare';
 import { Button } from '../primitives/Button';
 import { DataFreshness } from '../primitives/DataFreshness';
 import { CompareTable } from './CompareTable';
+import { useFinagentClient } from '../../client';
 
 /** Symbol picker (2–4) + comparison table + agent-context note. */
 export const CompareWorkspace: React.FC = () => {
   const { t } = useTranslation();
+  const client = useFinagentClient();
   const [symbols, setSymbols] = useAtom(compareSymbolsAtom);
   const [state, setState] = useAtom(comparisonStateAtom);
   const [input, setInput] = useState('');
@@ -17,14 +19,14 @@ export const CompareWorkspace: React.FC = () => {
   const build = useCallback(
     async (list: string[]) => {
       setState({ data: null, loading: true, error: null });
-      const data = await loadComparison(list);
+      const data = await loadComparison(list, client);
       if (data) {
         setState({ data, loading: false, error: null });
       } else {
         setState({ data: null, loading: false, error: t('compare.unavailable') });
       }
     },
-    [setState, t]
+    [setState, t, client]
   );
 
   useEffect(() => {
@@ -51,7 +53,7 @@ export const CompareWorkspace: React.FC = () => {
           <p className="felix-compare-subtitle">{t('compare.agentContext')}</p>
         </div>
         <DataFreshness
-          providerName="Longbridge"
+          providerName={client.deployment ? (client.deployment.demoData ? '示例 / 服务端行情' : '服务端行情') : 'Longbridge'}
           updatedAtMs={state.data?.generatedAt}
           className="shrink-0 pt-0.5"
         />

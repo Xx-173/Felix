@@ -1,3 +1,4 @@
+import type { FinagentClient } from '../client';
 import { atom } from 'jotai';
 import type { PortfolioRiskReport, RiskSeverity } from '@finagent/core';
 import { loadPortfolioRiskReport } from '../client/portfolio-risk';
@@ -24,10 +25,10 @@ export const portfolioRiskCacheAtom = atom<PortfolioRiskCache>({
 });
 
 /** Trigger a fresh analysis; results land in `portfolioRiskCacheAtom`. */
-export const analyzePortfolioRiskAtom = atom(null, async (_get, set) => {
+export const analyzePortfolioRiskAtom = atom(null, async (_get, set, client?: FinagentClient) => {
   set(portfolioRiskCacheAtom, (cache) => ({ ...cache, loading: true, error: null }));
   try {
-    const report = await loadPortfolioRiskReport();
+    const report = await loadPortfolioRiskReport(client);
     set(portfolioRiskCacheAtom, { report, loading: false, error: null });
     return report;
   } catch (error) {

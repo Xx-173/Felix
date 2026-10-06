@@ -1,3 +1,4 @@
+import { skillDisplayName, skillDisplayDescription } from '../../i18n/displayNames';
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import type { SkillReadiness } from '@finagent/core';
@@ -53,9 +54,9 @@ export const SkillRow: React.FC<SkillRowProps> = ({
         className="flex w-full cursor-pointer items-center gap-3 px-5 py-4 text-left transition-smooth hover:bg-surface-hover focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-accent"
       >
         <div className="min-w-0 flex-1">
-          <div className="truncate text-[13px] font-semibold text-foreground">{skill.name}</div>
+          <div className="truncate text-[13px] font-semibold text-foreground">{skillDisplayName(skill.id, skill.name)}</div>
           {skill.description && (
-            <div className="truncate text-[12px] text-foreground/54">{skill.description}</div>
+            <div className="truncate text-[12px] text-foreground/54">{skillDisplayDescription(skill.id, skill.description)}</div>
           )}
         </div>
         <SkillReadinessBadge readiness={readiness} />
@@ -68,7 +69,7 @@ export const SkillRow: React.FC<SkillRowProps> = ({
             onChange={() => onToggle(skill)}
             disabled={toggleBusy}
             loading={isToggling}
-            label={`${skill.enabled ? t('settings.skills.disable') : t('settings.skills.enable')} ${skill.name}`}
+            label={`${skill.enabled ? t('settings.skills.disable') : t('settings.skills.enable')} ${skillDisplayName(skill.id, skill.name)}`}
           />
         </span>
       </div>

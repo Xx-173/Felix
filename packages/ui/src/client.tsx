@@ -175,6 +175,16 @@ export interface EvaluationChannel {
 }
 
 export interface FinagentClient {
+  portfolioImport?: {
+    parse: (input: import('./client/portfolioImport').PortfolioImportParseInput) => Promise<ApiResult<import('@finagent/core').PortfolioImportDraft>>;
+    confirm: (input: import('./client/portfolioImport').PortfolioImportConfirmInput) => Promise<ApiResult<import('@finagent/core').ManualPortfolio>>;
+    listManual: () => Promise<ApiResult<import('@finagent/core').ManualPortfolio[]>>;
+  };
+  deployment?: { kind: 'web'; demoData: boolean; notice: string };
+  export?: {
+    markdown: (input: { reportId: string }) => Promise<ApiResult<string>>;
+    shareCard: (input: { reportId: string }) => Promise<ApiResult<{ svg: string; text: string }>>;
+  };
   window?: WindowControlsClient;
   kernel: {
     hydrate: () => Promise<ApiResult<KernelHydrate>>;
@@ -480,3 +490,5 @@ export function useFinagentClient(): FinagentClient {
 }
 
 export type { Skill } from '@finagent/core';
+
+export function useOptionalFinagentClient(): FinagentClient | undefined { const client = useContext(FinagentClientContext); return client === fallbackClient ? undefined : client; }

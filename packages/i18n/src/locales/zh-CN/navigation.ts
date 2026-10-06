@@ -18,11 +18,11 @@ export const navigation = {
   preferences: '偏好设置',
   settings: '设置',
   configure: '在不离开金融工作台的情况下配置 Felix。',
-  agentPanel: 'Agent',
+  agentPanel: '研究助手',
   // ── Sidebar rail / shell chrome (spec §24) ──────────────────────────────
   globalNavAria: '全局导航',
   homeAria: 'Felix 首页',
-  agentPanelLabel: 'Agent 面板',
+  agentPanelLabel: '研究助手面板',
   subtitle: 'Felix 金融工作台',
   institutionalResearch: '机构研究',
   support: '支持',

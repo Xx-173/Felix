@@ -1,0 +1,49 @@
+services:
+  felix:
+    build:
+      context: ..
+      dockerfile: apps/server/Dockerfile
+    restart: unless-stopped
+    init: true
+    env_file: web.env
+    environment:
+      NODE_ENV: production
+      HOST: 0.0.0.0
+      FELIX_PUBLIC_ORIGIN: https://${FELIX_DOMAIN:?Set FELIX_DOMAIN in deploy/web.env}
+    volumes:
+      - felix-data:/data
+    mem_limit: 768m
+    cpus: 1.0
+    stop_grace_period: 30s
+    security_opt:
+      - no-new-privileges:true
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - '80:80'
+      - '443:443'
+      - '443:443/udp'
+    environment:
+      FELIX_DOMAIN: ${FELIX_DOMAIN:?Set FELIX_DOMAIN in deploy/web.env}
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      felix:
+        condition: service_healthy
+    logging:
+      driver: json-file
+      options:
+        max-size: 10m
+        max-file: '3'
+volumes:
+  felix-data:
+  caddy-data:
+  caddy-config:

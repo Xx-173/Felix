@@ -73,7 +73,7 @@ export const ResearchPanel: React.FC = () => {
 
   useEffect(() => {
     let alive = true;
-    void loadResearchRuns().then((loaded) => {
+    void loadResearchRuns(client).then((loaded) => {
       if (!alive) return;
       setRuns(loaded);
       const validRuns = loaded.filter((run) => SYMBOL_REGEX.test(run.symbol));
@@ -81,7 +81,7 @@ export const ResearchPanel: React.FC = () => {
       if (recent) setActiveSymbol((current) => current ?? recent.symbol);
     });
     return () => { alive = false; };
-  }, [setRuns, setActiveSymbol]);
+  }, [setRuns, setActiveSymbol, client]);
 
   useEffect(() => {
     if (!symbol) {
@@ -91,14 +91,14 @@ export const ResearchPanel: React.FC = () => {
       return;
     }
     setThesisSaved(false);
-    void loadSymbolReports(symbol).then(setReports);
+    void loadSymbolReports(symbol, client).then(setReports);
     const latest = runs.find((run) => run.symbol === symbol && run.reportId);
     if (latest?.reportId && !report) {
-      void loadResearchReport(latest.reportId).then((loaded) => {
+      void loadResearchReport(latest.reportId, client).then((loaded) => {
         if (loaded) setReport(loaded);
       });
     }
-  }, [symbol, setReport, setReports, runs, report]);
+  }, [symbol, setReport, setReports, runs, report, client]);
 
   // Poll the newest active run for this symbol while it is non-terminal.
   const activeRun = runs.find(
@@ -108,17 +108,17 @@ export const ResearchPanel: React.FC = () => {
     if (!activeRun) return;
     let alive = true;
     const timer = setInterval(async () => {
-      const updated = await loadResearchRun(activeRun.id);
+      const updated = await loadResearchRun(activeRun.id, client);
       if (!alive || !updated) return;
       setRuns((current) => {
         const next = [updated, ...current.filter((run) => run.id !== updated.id)];
         return next;
       });
       if (updated.status in TERMINAL_RUN_STATUSES && updated.reportId) {
-        const loaded = await loadResearchReport(updated.reportId);
+        const loaded = await loadResearchReport(updated.reportId, client);
         if (alive && loaded) {
           setReport(loaded);
-          void loadSymbolReports(updated.symbol).then(setReports);
+          void loadSymbolReports(updated.symbol, client).then(setReports);
         }
       }
     }, POLL_MS);
@@ -126,14 +126,14 @@ export const ResearchPanel: React.FC = () => {
       alive = false;
       clearInterval(timer);
     };
-  }, [activeRun?.id, setRuns, setReport]);
+  }, [activeRun?.id, setRuns, setReport, client]);
 
   const handleStart = async (targetSymbol = symbol) => {
     if (!targetSymbol || loading || activeRun) return;
     setLoading(true);
     setError(null);
     try {
-      const started = await startResearch({ symbol: targetSymbol, strategyId });
+      const started = await startResearch({ symbol: targetSymbol, strategyId }, client);
       if (started) {
         setRuns((current) => [started, ...current.filter((run) => run.id !== started.id)]);
         // Remember this strategy for the symbol so the next run defaults to it.
@@ -168,13 +168,13 @@ export const ResearchPanel: React.FC = () => {
 
   const handleCancel = async () => {
     if (!activeRun) return;
-    await cancelResearch(activeRun.id);
+    await cancelResearch(activeRun.id, client);
   };
 
   /** V9: research complete → one-click save as investment thesis. */
   const handleSaveThesis = async () => {
     if (!symbol) return;
-    const created = await saveThesisFromReport(symbol);
+    const created = await saveThesisFromReport(symbol, client);
     if (created) {
       setThesisSaved(true);
     } else {
@@ -205,7 +205,7 @@ export const ResearchPanel: React.FC = () => {
       if (action !== 'discard' && result.data) {
         setActiveSymbol((result.data as ResearchRunSummary).symbol);
       }
-      setRuns(await loadResearchRuns());
+      setRuns(await loadResearchRuns(client));
     } catch (caught) {
       setError(caught instanceof Error ? caught.message : String(caught));
     } finally { setLoading(false); }
@@ -366,7 +366,7 @@ export const ResearchPanel: React.FC = () => {
           <RunHistory
             runs={symbolRuns}
             onSelect={async (reportId) => {
-              const loaded = await loadResearchReport(reportId);
+              const loaded = await loadResearchReport(reportId, client);
               if (loaded) setReport(loaded);
             }}
           />

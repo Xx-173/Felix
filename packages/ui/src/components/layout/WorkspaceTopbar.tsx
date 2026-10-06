@@ -26,11 +26,11 @@ export const WorkspaceTopbar: React.FC = () => {
   };
 
   return (
-    <header className="felix-workspace-topbar flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface px-6">
-      <div className="flex min-w-0 items-center gap-7">
-        <div className="felix-workspace-topbar-title shrink-0">Felix Research</div>
+    <header className="felix-workspace-topbar flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface px-4">
+      <div className="flex min-w-0 items-center gap-3">
+        <div className="felix-workspace-topbar-title min-w-0 max-w-40">Felix 研究（Felix Research）</div>
         {showAssetTabs && (
-          <nav aria-label={t('navigation.workspaceTabs')} className="felix-workspace-topbar-tabs flex h-full items-center gap-5">
+          <nav aria-label={t('navigation.workspaceTabs')} className="felix-workspace-topbar-tabs flex h-full items-center gap-3">
             {TABS.map((tab) => (
               <button
                 key={tab.labelKey}

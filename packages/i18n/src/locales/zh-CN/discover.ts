@@ -50,7 +50,7 @@ export const discover = {
     volume: '成交量',
     pe: '市盈率',
     pb: '市净率',
-    roe: 'ROE',
+    roe: '净资产收益率',
     dividendYield: '股息率',
     revenueGrowth: '营收增长',
     momentum: '动量',

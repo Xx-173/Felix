@@ -26,8 +26,8 @@ import { useFinagentClient } from '../client';
 /** Build the renderer-level i18next instance (plugin wired before init). */
 function createRendererI18n(): I18nInstance {
   const instance = createInstance();
-  instance.use(initReactI18next).init(buildI18nOptions({ locale: 'en-US' }));
-  i18nSetCurrentLocale('en-US');
+  instance.use(initReactI18next).init(buildI18nOptions({ locale: 'zh-CN', bilingual: true }));
+  i18nSetCurrentLocale('zh-CN');
   instance.on('languageChanged', (lng: string) => {
     i18nSetCurrentLocale(toSupportedLocale(lng));
   });

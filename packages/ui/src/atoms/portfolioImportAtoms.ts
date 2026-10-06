@@ -1,3 +1,4 @@
+import type { FinagentClient } from '../client';
 import { atom } from 'jotai';
 import type { ManualPortfolio } from '@finagent/core';
 import { listManualPortfolios } from '../client/portfolioImport';
@@ -25,10 +26,10 @@ export const manualPortfoliosAtom = atom<ManualPortfoliosState>({
 });
 
 /** Fetch manual portfolios; results land in `manualPortfoliosAtom`. */
-export const refreshManualPortfoliosAtom = atom(null, async (_get, set) => {
+export const refreshManualPortfoliosAtom = atom(null, async (_get, set, client?: FinagentClient) => {
   set(manualPortfoliosAtom, (state) => ({ ...state, loading: true, error: null }));
   try {
-    const portfolios = await listManualPortfolios();
+    const portfolios = await listManualPortfolios(client);
     set(manualPortfoliosAtom, { portfolios, loading: false, error: null });
     return portfolios;
   } catch (error) {

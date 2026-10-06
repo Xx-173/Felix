@@ -1,3 +1,4 @@
+import { uiTerm } from '../../i18n/displayNames';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
 import { useTranslation } from 'react-i18next';
@@ -113,7 +114,7 @@ export function ChartView() {
       <div className="flex items-center gap-1 rounded-[12px] border border-[var(--mac-border)] bg-white px-2 py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
         {PERIODS.map((value) => (
           <button
-            key={value}
+            key={uiTerm(value)}
             onClick={() => setPeriod(value)}
             aria-pressed={period === value}
             className={`h-6 rounded-[6px] px-2.5 text-[11.5px] font-medium tabular-nums transition-smooth ${
@@ -122,12 +123,12 @@ export function ChartView() {
                 : 'text-text-muted hover:bg-[#f0f2f5] hover:text-foreground'
             }`}
           >
-            {value}
+            {uiTerm(value)}
           </button>
         ))}
         <div className="ml-auto">
           <DataFreshness
-            providerName="Longbridge"
+            providerName={client.deployment ? t(client.deployment.demoData ? 'demo.badge' : 'security.header.marketStatus') : '长桥（Longbridge）'}
             updatedAtMs={
               bars.length > 0 ? bars[bars.length - 1]!.timestamp * 1000 : undefined
             }

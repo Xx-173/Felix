@@ -50,8 +50,8 @@ export const WelcomeStep: React.FC = () => {
             </SelectTrigger>
             <SelectContent>
               <SelectItem value="system">{t('settings.languageSystem')}</SelectItem>
-              <SelectItem value="zh-CN">{LOCALE_LABELS['zh-CN']}</SelectItem>
-              <SelectItem value="en-US">{LOCALE_LABELS['en-US']}</SelectItem>
+              <SelectItem value="zh-CN">中文（Simplified Chinese）</SelectItem>
+              <SelectItem value="en-US">英文（English）</SelectItem>
             </SelectContent>
           </Select>
         </div>

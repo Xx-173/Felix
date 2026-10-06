@@ -8,6 +8,8 @@ apps/electron/build
 apps/electron/src/main/index.js
 
 # Local environment
+.felix-web-data/
+deploy/web.env
 .env
 .env.*
 

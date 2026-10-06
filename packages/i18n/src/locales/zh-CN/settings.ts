@@ -4,7 +4,7 @@ import type { settings as enSettings } from '../en-US/settings.ts';
 /** Settings surface — Simplified Chinese. */
 export const settings = {
   language: '语言',
-  languageDescription: '选择 Felix 的界面语言。',
+  languageDescription: '界面始终采用中文在前、英文括号标注；此设置调整日期格式和模型回答语言。',
   languageSystem: '系统默认',
   languageChanged: '语言已切换',
   theme: '主题',
@@ -19,7 +19,7 @@ export const settings = {
   },
   rows: {
     application: '应用',
-    agentRuntime: 'Agent 运行时',
+    agentRuntime: '智能体运行时',
     streaming: '流式输出',
     activeModel: '当前模型',
     thinkingLevel: '思考等级',
@@ -31,7 +31,7 @@ export const settings = {
   subtitle: '无需离开金融工作台即可配置 Felix。',
   tabs: {
     general: '通用',
-    llm: 'LLM',
+    llm: '大语言模型',
     connections: '连接',
     skills: '技能',
     diagnostics: '诊断',
@@ -41,7 +41,7 @@ export const settings = {
   },
   model: {
     runtimeDefaultModel: '运行时与默认模型',
-    agentRuntime: 'Agent 运行时',
+    agentRuntime: '智能体运行时',
     activeModel: '当前模型',
     providerStatus: '提供方状态',
     loadingProviders: '正在加载提供方…',
@@ -57,14 +57,14 @@ export const settings = {
     customProviders: '自定义提供方',
     name: '名称',
     displayName: '显示名称',
-    baseUrl: 'Base URL',
+    baseUrl: '接口基础地址',
     contextWindowOptional: '上下文窗口（可选）',
     modelId: '模型 ID',
     modelDisplayName: '模型显示名称',
     reasoningModel: '推理模型',
     addCustomProvider: '添加自定义提供方',
     existingCustomProviders: '已有自定义提供方',
-    customProviderRequired: '名称、Base URL 和模型 ID 为必填项。',
+    customProviderRequired: '名称、接口基础地址和模型标识为必填项。',
     customProviderAdded: '已添加自定义提供方。',
     statusConnected: '已连接',
     statusMissingCredential: '缺少凭据',

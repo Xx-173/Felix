@@ -4,7 +4,7 @@ import type { agent as enAgent } from '../en-US/agent.ts';
 /** Agent panel + chat chrome — Simplified Chinese. */
 export const agent = {
   panel: {
-    title: 'Agent Copilot',
+    title: '研究助手',
     collapsePanel: '收起面板',
     inputPlaceholder: '向 Copilot 提问…',
     inputRunningPlaceholder: 'Agent 运行中…',

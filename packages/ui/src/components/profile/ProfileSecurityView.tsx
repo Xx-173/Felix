@@ -62,7 +62,7 @@ export const ProfileSecurityView: React.FC = () => {
         <div>
           <div className="felix-eyebrow"><UserRound className="h-3.5 w-3.5" />{t('profile.eyebrow')}</div>
           <h1 className="felix-page-title">{t('profile.title')}</h1>
-          <p className="felix-page-subtitle">{t('profile.subtitle')}</p>
+          <p className="felix-page-subtitle">{client.deployment ? '查看访客工作区、数据连接和运行状态（Visitor workspace, connections and runtime status）。' : t('profile.subtitle')}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loadState === 'loading'}>
           {t('common.refresh')}
@@ -75,8 +75,8 @@ export const ProfileSecurityView: React.FC = () => {
             <div className="flex items-center gap-4">
               <div className="felix-profile-avatar"><ShieldCheck className="h-6 w-6" /></div>
               <div className="min-w-0">
-                <h2>{t('profile.localWorkspace')}</h2>
-                <p>{t('profile.localWorkspaceDescription')}</p>
+                <h2>{client.deployment ? '访客工作区（Visitor workspace）' : t('profile.localWorkspace')}</h2>
+                <p>{client.deployment ? '会话与密钥按浏览器访客隔离存储在服务器；密钥加密保存，可在设置中移除。清除 Cookie 后无法找回原工作区（Server storage per browser visitor; encrypted keys; removing cookies loses workspace access）。' : t('profile.localWorkspaceDescription')}</p>
               </div>
             </div>
             <dl className="felix-definition-grid mt-5">

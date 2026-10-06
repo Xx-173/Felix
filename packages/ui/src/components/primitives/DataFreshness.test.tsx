@@ -27,12 +27,12 @@ function renderText(element: React.ReactElement): string {
 describe('DataFreshness', () => {
   it('renders provider + updated time when a timestamp is present', () => {
     const text = renderText(<DataFreshness providerName="Longbridge" updatedAtMs={1_700_000_000_000} />);
-    expect(text).toMatch(/Longbridge · Updated/);
+    expect(text).toMatch(/Longbridge · 更新于（Updated）/);
   });
 
   it('appends a Delayed marker when flagged', () => {
     const text = renderText(<DataFreshness providerName="Massive" updatedAtMs={1_700_000_000_000} delayed />);
-    expect(text).toContain('· Delayed');
+    expect(text).toContain('· 延迟行情（Delayed）');
   });
 
   it('renders nothing without a valid timestamp', () => {

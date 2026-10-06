@@ -1,3 +1,4 @@
+import { metricDisplayLabel } from '../../../i18n/displayNames';
 import React, { useMemo, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
 import { Check, Copy } from 'lucide-react';
@@ -61,7 +62,7 @@ export const DataTableBlockView: React.FC<{ block: DataTableBlock; streaming?: b
                     }`}
                     title={t('agent.blocks.sortHint')}
                   >
-                    {column.label}
+                    {metricDisplayLabel(column.label)}
                     <span className="ml-0.5 text-[9px] text-foreground/38">{active ? (sort.dir === 'asc' ? '↑' : '↓') : ''}</span>
                   </th>
                 );

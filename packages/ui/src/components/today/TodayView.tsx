@@ -113,8 +113,8 @@ export const TodayView: React.FC = () => {
       setQuotesLoading(false)
 
       const [nextReports, nextTheses, nextEvents] = await Promise.all([
-        loadSymbolReports(),
-        loadTheses(),
+        loadSymbolReports(undefined, client),
+        loadTheses(undefined, client),
         loadUpcomingEvents(client, watchlist),
       ])
       if (cancelled) return
@@ -141,7 +141,7 @@ export const TodayView: React.FC = () => {
 
   const handleAnalyzePortfolio = (): void => {
     setNavSection('portfolio')
-    void analyzeRisk().catch(() => undefined)
+    void analyzeRisk(client).catch(() => undefined)
   }
 
   const handleCompare = (): void => {
@@ -275,7 +275,7 @@ export const TodayView: React.FC = () => {
           <li key={report.id} className="flex items-start justify-between gap-3 py-2 first:pt-0 last:pb-0">
             <div className="min-w-0">
               <div className="truncate text-[12.5px] font-medium text-foreground">
-                {report.symbol} · <span className="capitalize">{report.stance}</span>
+                {report.symbol} · <span className="capitalize">{t(`research.stance.${report.stance}`)}</span>
               </div>
               <div className="truncate text-[12px] text-foreground/54">{report.summary}</div>
             </div>
@@ -308,7 +308,7 @@ export const TodayView: React.FC = () => {
           <li key={thesis.id} className="flex items-start justify-between gap-3 py-2 first:pt-0 last:pb-0">
             <div className="min-w-0">
               <div className="truncate text-[12.5px] font-medium text-foreground">
-                {thesis.symbol} · <span className="capitalize">{thesis.stance}</span>
+                {thesis.symbol} · <span className="capitalize">{t(`thesis.stance.${thesis.stance}`)}</span>
               </div>
               <div className="truncate text-[12px] text-foreground/54">{thesis.summary}</div>
             </div>

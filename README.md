@@ -296,3 +296,16 @@ $env:FINAGENT_AGENT_PROVIDER = "local"
 $env:FINAGENT_DEMO_DATA = "1"
 bun run --cwd apps/electron start
 ```
+
+
+## 网页试用与桌面下载
+
+Felix 现在提供共用桌面界面与完整导航的网页入口，两端界面使用“中文（English）”。网页版访客在设置中填写自己的模型密钥，工作区与凭据按访客隔离；默认也可以先体验示例行情和本地规则。
+
+```sh
+bun install --frozen-lockfile --ignore-scripts
+bun run web:build
+bun run web:start
+```
+
+本地访问 http://127.0.0.1:8787 。[部署、BYOK、持久化与平台差异说明](docs/web-deployment.md)介绍域名、HTTPS、容器及试用配置。原有 Electron 构建和打包流程继续保留；已发布桌面包见 [GitHub Releases](https://github.com/Xx-173/Felix/releases)。源码推送不会自动生成新版安装包。

@@ -1,6 +1,7 @@
 import { atom } from 'jotai';
 import type { ResearchDiff } from '@finagent/core';
 import { unwrapIpcResult } from '../client/unwrap';
+import type { FinagentClient } from '../client';
 
 /**
  * Research diff view state (What Changed section).
@@ -34,9 +35,9 @@ function api(): DiffElectronApi['research'] {
  * Fetch the latest diff for a symbol. Returns undefined when unwired or when
  * the symbol has no previous report (the What Changed section then hides).
  */
-export async function loadResearchDiff(symbol: string): Promise<ResearchDiff | undefined> {
+export async function loadResearchDiff(symbol: string, client?: FinagentClient): Promise<ResearchDiff | undefined> {
   try {
-    const research = api();
+    const research = client?.research ?? api();
     if (!research?.getDiff) return undefined;
     return (
       unwrapIpcResult<ResearchDiff | undefined>(await research.getDiff({ symbol: symbol.toUpperCase() })) ??
