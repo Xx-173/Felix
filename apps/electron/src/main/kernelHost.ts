@@ -316,9 +316,11 @@ export class AgentKernelHost {
     // --extension without duplicating the default arg list.
     process.env.FINAGENT_PI_EXTENSION = getPiExtensionEntry();
     this.credentials = new CredentialStore(join(app.getPath('userData'), 'credentials.json'));
+    const skillStore = new JsonFileStore(app.getPath('userData'));
     this.skillHub = new SkillHub({
       skillsDirectory: getSkillsDir(),
       stateFile: join(app.getPath('userData'), 'skills-state.json'),
+      stateStorage: { read: () => skillStore.read('skills-state.json', { enabled: {} }), write: (state) => skillStore.write('skills-state.json', state) },
     });
 
     const provider = readAgentProvider();

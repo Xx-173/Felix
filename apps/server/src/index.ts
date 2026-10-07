@@ -1,5 +1,6 @@
 import { resolve } from 'node:path';
 import { createWebApplication } from './app.ts';
+import { databaseOptions } from './database.ts';
 
 const env = process.env;
 const repositoryRoot = resolve(import.meta.dirname, '../../..');
@@ -9,6 +10,7 @@ function positiveInteger(name: string, fallback: number) {
   return value;
 }
 const app = await createWebApplication({
+  database: databaseOptions(env),
   dataDir: resolve(env.FELIX_DATA_DIR ?? resolve(repositoryRoot, '.felix-web-data')),
   staticDir: resolve(env.FELIX_STATIC_DIR ?? resolve(repositoryRoot, 'apps/web/dist')),
   secret: env.FELIX_COOKIE_SECRET,

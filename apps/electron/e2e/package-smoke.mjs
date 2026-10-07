@@ -13,6 +13,7 @@ import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { createRequire } from 'node:module';
+import { DatabaseSync } from 'node:sqlite';
 
 const require = createRequire(import.meta.url);
 const { chromium } = require('playwright-core');
@@ -216,7 +217,11 @@ async function main() {
     try {
       const saved = await page.evaluate(() => window.electronAPI.workspace.update({ watchlist: ['MSFT.US'] }));
       if (!saved.ok) throw new Error('Desktop workspace write failed');
-      if (JSON.parse(readFileSync(join(userDataDir, 'workspace.json'), 'utf8')).watchlist.join(',') !== 'MSFT.US') throw new Error('Watchlist was not saved to local userData');
+      const database = new DatabaseSync(join(userDataDir, 'felix.sqlite'), { readOnly: true });
+      try {
+        const row = database.prepare("SELECT value FROM documents WHERE key='workspace.json'").get();
+        if (!row || JSON.parse(row.value).watchlist.join(',') !== 'MSFT.US') throw new Error('Watchlist was not saved to desktop SQLite');
+      } finally { database.close(); }
       await page.reload({ waitUntil: 'domcontentloaded' });
       await page.getByTestId('sidebar').waitFor();
       const restored = await page.evaluate(() => window.electronAPI.workspace.get());

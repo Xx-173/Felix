@@ -27,4 +27,4 @@ execFileSync('docker', ['kill', 'felix-ci'], { stdio: 'inherit' });
 execFileSync('docker', ['start', 'felix-ci'], { stdio: 'inherit' });
 await healthy();
 assert.deepEqual((await rpc('workspace.get')).watchlist, ['MSFT.US']);
-console.log('Linux container: startup, shared UI, SQLite persistence, graceful and crash restart passed.');
+console.log('Linux container: startup, shared UI, database persistence, graceful and crash restart passed.');

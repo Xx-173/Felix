@@ -6,6 +6,7 @@ import { registerAboutIpc } from './about.ts';
 import { writeSupportBundle } from '@finagent/shared/diagnostics';
 import { loadFinagentEnv } from './loadEnv.ts';
 import { getRuntimeRoot } from '@finagent/shared/resources';
+import { DesktopDatabase } from './desktop-database.ts';
 app.setName('Felix');
 let mainWindow: BrowserWindow | null = null;
 const __dirname = dirname(fileURLToPath(import.meta.url));
@@ -29,7 +30,8 @@ app.on('second-instance', () => {
   if (mainWindow?.isMinimized()) mainWindow.restore();
   mainWindow?.focus();
 });
-const agentKernelHost = new AgentKernelHost();
+let agentKernelHost: AgentKernelHost;
+let desktopDatabase: DesktopDatabase | undefined;
 registerAboutIpc();
 const isDev = !app.isPackaged;
 
@@ -78,7 +80,16 @@ function createWindow() {
   });
 }
 
-app.whenReady().then(createWindow);
+app.whenReady().then(async () => {
+  desktopDatabase = await DesktopDatabase.open(app.getPath('userData'));
+  agentKernelHost = new AgentKernelHost();
+  createWindow();
+}).catch((error) => {
+  console.error('Desktop storage startup failed:', error);
+  dialog.showErrorBox('启动失败（Startup failed）', '无法打开本机资料，请检查数据目录权限和磁盘空间（Check data directory permissions and disk space）。');
+  desktopDatabase?.close();
+  app.exit(1);
+});
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -86,12 +97,19 @@ app.on('window-all-closed', () => {
   }
 });
 
-app.on('before-quit', () => {
-  void agentKernelHost.dispose();
+let disposed = false;
+app.on('before-quit', (event) => {
+  if (disposed || !agentKernelHost) return;
+  event.preventDefault();
+  disposed = true;
+  void Promise.resolve(agentKernelHost.dispose()).finally(() => {
+    desktopDatabase?.close();
+    app.quit();
+  });
 });
 
 app.on('activate', () => {
-  if (BrowserWindow.getAllWindows().length === 0) {
+  if (agentKernelHost && BrowserWindow.getAllWindows().length === 0) {
     createWindow();
   }
 });

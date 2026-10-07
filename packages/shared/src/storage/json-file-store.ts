@@ -1,4 +1,4 @@
-import { mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
+import { mkdir, open, readFile, readdir, rename, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
 import { dirname, join, resolve, sep } from 'node:path';
 import { createCodeError } from '../agent/errors.ts';
@@ -7,9 +7,10 @@ export interface JsonStoreBackend {
   read<T>(path: string, fallback: T): Promise<T>;
   write(path: string, data: unknown): Promise<void>;
   remove(path: string): Promise<void>;
+  listFiles?(directory: string): Promise<string[]>;
 }
 const backends = new Map<string, JsonStoreBackend>();
-/** Server-owned storage boundary; Electron continues using atomic local files. */
+/** Register the desktop/server database boundary; standalone stores use atomic files. */
 export function registerJsonStoreBackend(root: string, backend: JsonStoreBackend): () => void {
   const prefix = resolve(root) + sep;
   if (backends.has(prefix)) throw new Error('Storage root already registered');
@@ -43,12 +44,11 @@ async function publish(target: string, tmp: string): Promise<void> {
 }
 
 /**
- * Minimal atomic JSON persistence backed by a directory of files.
+ * Repository persistence routed to a registered database or atomic JSON files.
  *
  * Writes go to an exclusively created, per-write temporary file in the target
  * directory and are renamed into place, so concurrent writers never share a
- * staging file. This is the V1 storage substrate; repositories can later be
- * swapped for SQLite without touching callers.
+ * staging file. Database-backed repositories keep the same document interface.
  */
 export class JsonFileStore {
   private readonly rootDir: string;
@@ -59,6 +59,18 @@ export class JsonFileStore {
 
   resolve(file: string): string {
     return join(this.rootDir, file);
+  }
+
+  isBackendManaged(file: string): boolean { return !!backendFor(this.resolve(file)); }
+
+  async listFiles(directory: string): Promise<string[]> {
+    const backend = backendFor(this.resolve(join(directory, '.listing')));
+    if (backend) {
+      if (!backend.listFiles) throw new Error('Storage backend does not support file listing.');
+      return backend.listFiles(this.resolve(directory));
+    }
+    try { return await readdir(this.resolve(directory)); }
+    catch (error) { if ((error as NodeJS.ErrnoException).code === 'ENOENT') return []; throw error; }
   }
 
   async read<T>(file: string, fallback: T): Promise<T> {

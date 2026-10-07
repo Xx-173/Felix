@@ -22,6 +22,11 @@ export interface SkillHubConfig {
   skillsDirectory: string;
   /** Persisted enable/disable state (JSON map of skillId → boolean). */
   stateFile: string;
+  /** Optional durable backend supplied by a deployment host. */
+  stateStorage?: {
+    read(): Promise<{ enabled: Record<string, boolean> }>;
+    write(state: { enabled: Record<string, boolean> }): Promise<void>;
+  };
 }
 
 interface SkillState {
@@ -76,6 +81,7 @@ export class SkillHub {
       skillsDirectory:
         config.skillsDirectory ?? join(homedir(), '.finagent', 'skills'),
       stateFile: config.stateFile ?? join(homedir(), '.finagent', 'skills-state.json'),
+      stateStorage: config.stateStorage,
     };
   }
 
@@ -314,6 +320,7 @@ export class SkillHub {
   }
 
   private async loadState(): Promise<SkillState> {
+    if (this.config.stateStorage) return this.config.stateStorage.read();
     try {
       const contents = await readFile(this.config.stateFile, 'utf8');
       const parsed = JSON.parse(contents) as Partial<SkillState>;
@@ -324,6 +331,7 @@ export class SkillHub {
   }
 
   private async saveState(state: SkillState): Promise<void> {
+    if (this.config.stateStorage) return this.config.stateStorage.write(state);
     await mkdir(resolve(this.config.stateFile, '..'), { recursive: true });
     await writeFile(this.config.stateFile, JSON.stringify(state, null, 2), 'utf8');
   }

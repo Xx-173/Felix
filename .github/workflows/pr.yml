@@ -119,6 +119,58 @@ jobs:
       - name: Run full unit suite
         run: bun test --isolate
 
+  postgresql-storage:
+    name: PostgreSQL storage and migration
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:17-alpine
+        env:
+          POSTGRES_USER: felix_test
+          POSTGRES_PASSWORD: ci-database-password-only
+          POSTGRES_DB: felix_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U felix_test -d felix_test"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      FELIX_TEST_POSTGRES_URL: postgres://felix_test:ci-database-password-only@127.0.0.1:5432/felix_test
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run web:test
+      - run: bun run web:build
+      - name: Browser flows with PostgreSQL
+        shell: bash
+        run: |
+          FELIX_DATABASE_TYPE=postgresql FELIX_DATABASE_URL="$FELIX_TEST_POSTGRES_URL" bun run web:start > /tmp/felix-postgresql.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in {1..40}; do
+            if curl --fail --silent http://127.0.0.1:8787/healthz; then break; fi
+            sleep 1
+          done
+          bun run web:e2e
+      - name: PostgreSQL container persistence and crash recovery
+        shell: bash
+        run: |
+          docker build -f apps/server/Dockerfile -t felix-postgresql-ci .
+          docker volume create felix-postgresql-ci-data
+          trap 'docker rm -f felix-ci || true; docker volume rm felix-postgresql-ci-data || true' EXIT
+          docker run -d --name felix-ci -p 127.0.0.1:8790:8787 \
+            --add-host host.docker.internal:host-gateway \
+            -v felix-postgresql-ci-data:/data \
+            -e FELIX_PUBLIC_ORIGIN=https://felix.example.com \
+            -e FELIX_DATABASE_TYPE=postgresql \
+            -e FELIX_DATABASE_URL=postgres://felix_test:ci-database-password-only@host.docker.internal:5432/felix_test \
+            felix-postgresql-ci
+          bun scripts/container-smoke.ts
+
   secret-scan:
     name: Secret scan
     runs-on: ubuntu-latest

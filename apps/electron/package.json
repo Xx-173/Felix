@@ -22,6 +22,7 @@
     "test:skills-interactions": "node e2e/skills-interactions.mjs",
     "test:fresh-install": "node e2e/fresh-install.mjs",
     "test:package-smoke": "node e2e/package-smoke.mjs",
+    "test:storage-smoke": "node e2e/storage-smoke.mjs",
     "build:preload": "bun build src/preload/index.ts --outfile src/preload/index.cjs --target node --format cjs --external electron",
     "build:main": "bun build src/main/index.ts --outfile src/main/index.js --bundle --target node --format esm --external electron",
     "build:extension": "bun build ../../.pi/extensions/finagent/index.ts --outfile build/extensions/finagent/index.js --bundle --target node --format esm && bun build ../../.pi/extensions/langsmith/index.ts --outfile build/extensions/langsmith/index.js --bundle --target node --format esm",

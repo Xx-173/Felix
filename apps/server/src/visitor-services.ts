@@ -70,7 +70,10 @@ export class VisitorServices {
     this.automation = new AutomationRuleRepository(store); this.automationRuns = new AutomationRunRepository(store);
     this.diffs = new ResearchDiffRepository(store); this.portfolios = new ManualPortfolioRepository(store);
     this.evaluation = new EvaluationStore(store);
-    this.skills = new SkillHub({ skillsDirectory: skillsDir ?? resolve(import.meta.dirname, '../../../skills'), stateFile: join(root, 'skills-state.json') });
+    this.skills = new SkillHub({
+      skillsDirectory: skillsDir ?? resolve(import.meta.dirname, '../../../skills'), stateFile: join(root, 'skills-state.json'),
+      stateStorage: { read: () => store.read('skills-state.json', { enabled: {} }), write: (state) => store.write('skills-state.json', state) },
+    });
   }
   async initialize() {
     await this.skills.loadSkills();

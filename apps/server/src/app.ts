@@ -14,7 +14,7 @@ import {
 import { VisitorServices } from './visitor-services.ts';
 import { ModelRuntime } from './model-runtime.ts';
 import { VisitorModels } from './visitor-models.ts';
-import { WorkspaceDatabase } from './database.ts';
+import { WorkspaceDatabase, type DatabaseOptions } from './database.ts';
 import { lockDataDirectory } from './data-lock.ts';
 import { Accounts } from './accounts.ts';
 import { registerJsonStoreBackend } from '@finagent/shared';
@@ -25,6 +25,7 @@ import { reportToMarkdown, reportToShareCard, redactForShare } from '../../../pa
 
 export interface ServerOptions {
   dataDir: string;
+  database?: DatabaseOptions;
   staticDir?: string;
   secret?: string;
   publicOrigin?: string;
@@ -91,10 +92,10 @@ export async function createWebApplication(options: ServerOptions) {
   }
   const unlock = await lockDataDirectory(dataDir);
   let database: WorkspaceDatabase;
-  try { database = new WorkspaceDatabase(dataDir); } catch (error) { await unlock(); throw error; }
+  try { database = await WorkspaceDatabase.open(dataDir, options.database); } catch (error) { await unlock(); throw error; }
   let unregisterStorage: () => void;
   try { await database.migrateFiles(); unregisterStorage = registerJsonStoreBackend(dataDir, database); }
-  catch (error) { database.close(); await unlock(); throw error; }
+  catch (error) { await database.close(); await unlock(); throw error; }
   const accounts = new Accounts(database, options.inviteCode);
   const publicOrigin = options.publicOrigin ? new URL(options.publicOrigin).origin : undefined;
   const demo = options.demoData ?? true;
@@ -130,15 +131,15 @@ export async function createWebApplication(options: ServerOptions) {
   const cookieValue = (request: Request, name: string) => request.headers.get('cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith(name + '='))?.slice(name.length + 1);
   const visitorCookie = (id: string) => `felix_visitor=${id}.${signature(id)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${options.production ? '; Secure' : ''}`;
   const accountCookie = (token: string, clear = false) => `felix_account=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear ? 0 : 2592000}${options.production ? '; Secure' : ''}`;
-  function identity(request: Request) {
+  async function identity(request: Request) {
     const sessionToken = cookieValue(request, 'felix_account');
-    const user = accounts.resolve(sessionToken);
+    const user = await accounts.resolve(sessionToken);
     if (user) return { id: user.workspaceId, setCookie: undefined, user, sessionToken };
     const cookie = cookieValue(request, 'felix_visitor');
     if (cookie) {
       const [id, mac] = cookie.split('.');
       if (/^[a-f0-9]{32}$/.test(id ?? '') && /^[a-f0-9]{64}$/.test(mac ?? '') &&
-        timingSafeEqual(Buffer.from(mac, 'hex'), Buffer.from(signature(id), 'hex')) && !accounts.workspaceClaimed(id)) return { id, setCookie: undefined, user: undefined, sessionToken };
+        timingSafeEqual(Buffer.from(mac, 'hex'), Buffer.from(signature(id), 'hex')) && !await accounts.workspaceClaimed(id)) return { id, setCookie: undefined, user: undefined, sessionToken };
     }
     const id = randomBytes(16).toString('hex');
     return { id, setCookie: visitorCookie(id), user: undefined, sessionToken };
@@ -346,9 +347,7 @@ export async function createWebApplication(options: ServerOptions) {
         const result = { watchlist: [...new Set(value.watchlist)] }; await visitor.store.write('workspace.json', result); return result;
       }
       case 'workspace.exportData': {
-        const documents = database.documents(`visitors/${visitor.id}/`).filter((row) => !row.key.endsWith('/model-vault.json') && !/credential|vault/i.test(row.key)).map((row) => ({ ...row, key: row.key.split('/').slice(2).join('/') }));
-        try { documents.push({ key: 'skills-state.json', value: JSON.parse(await readFile(join(dataDir, 'visitors', visitor.id, 'skills-state.json'), 'utf8')) }); }
-        catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+        const documents = (await database.documents(`visitors/${visitor.id}/`)).filter((row) => !row.key.endsWith('/model-vault.json') && !/credential|vault/i.test(row.key)).map((row) => ({ ...row, key: row.key.split('/').slice(2).join('/') }));
         return { version: 1, exportedAt: new Date().toISOString(), documents };
       }
       case 'onboarding.getCompleted': return true;
@@ -388,7 +387,7 @@ export async function createWebApplication(options: ServerOptions) {
         agentRuntime: { ok: true, detail: '网页研究运行时（Web research runtime）', error: null },
       };
       case 'diagnostics.collect': return diagnostics(visitor);
-      case 'diagnostics.export': return JSON.stringify(diagnostics(visitor), null, 2);
+      case 'diagnostics.export': return JSON.stringify(await diagnostics(visitor), null, 2);
       case 'diagnostics.restartRuntime': {
         if (queue.busyVisitors.has(visitor.id)) throw createCodeError('RUN_ACTIVE', '请等待当前研究结束（Wait for the active run）。');
         return;
@@ -409,9 +408,9 @@ export async function createWebApplication(options: ServerOptions) {
     return [{ providerId: 'massive', kind: 'financial-data', name: 'Massive (Polygon.io)', status: health.status, health, coverage: { providerId: 'massive', capabilities: visitor.financial.capabilities(), markets: ['US'] }, configurable: true, configured: !!visitor.models.marketKey(), hasAccount: false, accountLabel: null, error: null },
       { providerId: 'longbridge', kind: 'financial-data', name: '长桥（Longbridge）', status: 'not-installed', health: null, coverage: null, configurable: false, configured: false, hasAccount: false, accountLabel: null, error: { code: 'DESKTOP_CONNECTION_REQUIRED', message: '本地 CLI 登录请使用桌面版（Local CLI login requires desktop）。' } }];
   }
-  function diagnostics(visitor: Visitor) {
+  async function diagnostics(visitor: Visitor) {
     const model = visitor.models.state().model;
-    return { collectedAt: new Date().toISOString(), app: { version: '0.4.0-beta.2-web', platform: { os: 'web', arch: 'browser', electron: null } }, runtime: { agent: { providerId: model ? 'web-api' : 'local', state: visitor.kernel.runs.isRunning() ? 'running' : 'idle' } }, providers: { llm: { id: model?.provider ?? null, model: model?.id ?? null }, financial: [{ id: 'massive', status: visitor.models.marketKey() ? 'configured' : 'not-connected', coverage: { capabilities: visitor.financial.capabilities(), markets: ['US'] } }], broker: { connected: false, accountCount: 0 }, longbridgeCliVersion: null }, skills: { loaded: visitor.services.skills.listSkills().length }, capabilities: { available: demo ? visitor.registry.list().map((entry) => entry.id) : visitor.models.marketKey() ? visitor.financial.capabilities() : [] }, resources: { dev: false, root: 'visitor-workspace' }, pi: { status: 'idle', command: null, cwd: null, extensions: [], providersConfigured: model ? [model.provider] : [], model: model?.id ?? null, lastExitCode: null, lastExitSignal: null, stderrTail: null, observabilityDegraded: false }, errors: (database.sql.query("SELECT status, updated_at FROM scheduled_jobs WHERE workspace_id=? AND status IN ('failed', 'interrupted') ORDER BY updated_at DESC LIMIT 10").all(visitor.id) as Array<{ status: string; updated_at: number }>).map((job) => ({ at: job.updated_at, source: 'scheduler', message: `后台任务${job.status === 'interrupted' ? '因重启中断' : '执行失败'}，可在自动研究页面手动重试（Scheduled job ${job.status}; retry manually）。`, stack: null })), redaction: { policy: 'No keys, account data or server paths', applied: true } };
+    return { collectedAt: new Date().toISOString(), app: { version: '0.4.0-beta.2-web', platform: { os: 'web', arch: 'browser', electron: null } }, runtime: { agent: { providerId: model ? 'web-api' : 'local', state: visitor.kernel.runs.isRunning() ? 'running' : 'idle' } }, providers: { llm: { id: model?.provider ?? null, model: model?.id ?? null }, financial: [{ id: 'massive', status: visitor.models.marketKey() ? 'configured' : 'not-connected', coverage: { capabilities: visitor.financial.capabilities(), markets: ['US'] } }], broker: { connected: false, accountCount: 0 }, longbridgeCliVersion: null }, skills: { loaded: visitor.services.skills.listSkills().length }, capabilities: { available: demo ? visitor.registry.list().map((entry) => entry.id) : visitor.models.marketKey() ? visitor.financial.capabilities() : [] }, resources: { dev: false, root: 'visitor-workspace' }, pi: { status: 'idle', command: null, cwd: null, extensions: [], providersConfigured: model ? [model.provider] : [], model: model?.id ?? null, lastExitCode: null, lastExitSignal: null, stderrTail: null, observabilityDegraded: false }, errors: (await database.jobErrors(visitor.id)).map((job) => ({ at: job.updated_at, source: 'scheduler', message: `后台任务${job.status === 'interrupted' ? '因重启中断' : '执行失败'}，可在自动研究页面手动重试（Scheduled job ${job.status}; retry manually）。`, stack: null })), redaction: { policy: 'No keys, account data or server paths', applied: true } };
   }
 
   let ticking = false;
@@ -420,7 +419,7 @@ export async function createWebApplication(options: ServerOptions) {
     ticking = true;
     void (async () => {
       // Enabled durable rules are loaded after restart, even with no open browser.
-      for (const id of database.scheduledWorkspaceIds()) {
+      for (const id of await database.scheduledWorkspaceIds()) {
         if (queue.busyVisitors.has(id)) continue;
         const visitor = await getVisitor(id);
         const recent = await visitor.services.automationRuns.list();
@@ -428,11 +427,11 @@ export async function createWebApplication(options: ServerOptions) {
           const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
           if (recent.some((run) => run.ruleId === rule.id && run.ranAt >= midnight.getTime())) continue;
           const day = `${midnight.getFullYear()}-${midnight.getMonth() + 1}-${midnight.getDate()}`;
-          if (!database.claimJob(id, rule.id, day)) continue;
+          if (!await database.claimJob(id, rule.id, day)) continue;
           try {
             const result = await queue.submit(visitor.id, () => visitor.services.dispatch('automation.runRule', [{ ruleId: rule.id }]), async () => {}, new AbortController().signal) as { failures?: string[] };
-            database.finishJob(id, rule.id, day, result.failures?.length ? 'failed' : 'completed');
-          } catch { database.finishJob(id, rule.id, day, 'failed'); }
+            await database.finishJob(id, rule.id, day, result.failures?.length ? 'failed' : 'completed');
+          } catch { await database.finishJob(id, rule.id, day, 'failed'); }
         }
       }
     })().catch(() => undefined).finally(() => { ticking = false; });
@@ -454,7 +453,11 @@ export async function createWebApplication(options: ServerOptions) {
 
   async function fetchRequest(request: Request, remoteAddress = 'local'): Promise<Response> {
     const url = new URL(request.url);
-    if (url.pathname === '/healthz') return json({ ok: !closed, service: 'felix-web', demoData: demo, modelConfigured: false });
+    if (url.pathname === '/healthz') {
+      let ok = !closed;
+      if (ok) try { await database.query('SELECT 1'); } catch { ok = false; }
+      return json({ ok, service: 'felix-web', database: database.kind, demoData: demo, modelConfigured: false }, ok ? 200 : 503);
+    }
     if (!url.pathname.startsWith('/api/')) {
       if (!options.staticDir || !['GET', 'HEAD'].includes(request.method)) return new Response('Not found', { status: 404 });
       let path: string;
@@ -479,7 +482,9 @@ export async function createWebApplication(options: ServerOptions) {
     if (!rate && rates.size >= 2048) return json({ ok: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } }, 429);
     if (rate && rate.resetAt > now && ++rate.count > 2000) return json({ ok: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Try again shortly.' } }, 429);
     if (!rate || rate.resetAt <= now) rates.set(remoteAddress, { count: 1, resetAt: now + 60000 });
-    const auth = identity(request);
+    let auth: Awaited<ReturnType<typeof identity>>;
+    try { auth = await identity(request); }
+    catch { return json({ ok: false, error: { code: 'STORAGE_UNAVAILABLE', message: '数据服务暂不可用，请稍后重试（Storage unavailable; retry shortly）。' } }, 503); }
     for (const [id, value] of workspaceRates) if (value.resetAt <= now) workspaceRates.delete(id);
     const personalRate = workspaceRates.get(auth.id);
     if (personalRate && ++personalRate.count > 600) return json({ ok: false, error: { code: 'RATE_LIMITED', message: '个人请求过多，请稍后重试（Too many workspace requests）。' } }, 429, auth.setCookie);
@@ -493,7 +498,7 @@ export async function createWebApplication(options: ServerOptions) {
         const input = z.object({ action: z.enum(['state', 'register', 'login', 'logout', 'changePassword', 'resetPassword', 'deleteAccount']), input: z.unknown().optional() }).parse(JSON.parse(await request.text().then((raw) => { if (Buffer.byteLength(raw) > 65536) throw createCodeError('INVALID_ARGUMENT', 'Request body is too large.'); return raw; })));
         if (input.action === 'state') return json({ ok: true, data: accounts.state(auth.user) }, 200, auth.setCookie);
         if (input.action === 'logout') {
-          accounts.logout(auth.sessionToken);
+          await accounts.logout(auth.sessionToken);
           closeStreams(auth.id);
           const id = randomBytes(16).toString('hex');
           return json({ ok: true, data: accounts.state() }, 200, [accountCookie('', true), visitorCookie(id)]);
@@ -505,7 +510,7 @@ export async function createWebApplication(options: ServerOptions) {
         if ('deleted' in result) {
           const visitor = visitors.get(auth.id);
           if (visitor) await evict(visitor);
-          accounts.delete(auth.user!, result.expectedPasswordHash);
+          await accounts.delete(auth.user!, result.expectedPasswordHash);
           const root = join(dataDir, 'visitors', auth.id);
           if (!/^[a-f0-9]{32}$/.test(auth.id) || !resolve(root).startsWith(resolve(dataDir, 'visitors') + sep)) throw new Error('Invalid deletion boundary');
           await rm(root, { recursive: true, force: true });
@@ -528,7 +533,15 @@ export async function createWebApplication(options: ServerOptions) {
             if (previous > 0) for (const event of visitor.events.filter((item) => item.id > previous)) {
               controller.enqueue(encoder.encode(`id: ${event.id}\nevent: ${event.channel}\ndata: ${JSON.stringify(event.data)}\n\n`));
             }
-            const heartbeat = setInterval(() => { if (auth.user && !accounts.resolve(auth.sessionToken)) { cleanup(); controller.close(); return; } try { controller.enqueue(encoder.encode(': heartbeat\n\n')); } catch { cleanup(); } }, 15000);
+            let heartbeatBusy = false;
+            const heartbeat = setInterval(() => {
+              if (heartbeatBusy) return;
+              heartbeatBusy = true;
+              void (async () => {
+                if (auth.user && !await accounts.resolve(auth.sessionToken)) { cleanup(); controller.close(); return; }
+                controller.enqueue(encoder.encode(': heartbeat\n\n'));
+              })().catch(cleanup).finally(() => { heartbeatBusy = false; });
+            }, 15000);
             cleanup = () => { clearInterval(heartbeat); visitor.streams.delete(controller); visitor.cleanups.delete(cleanup); request.signal.removeEventListener('abort', cleanup); };
             visitor.cleanups.add(cleanup);
             request.signal.addEventListener('abort', cleanup, { once: true });
@@ -575,7 +588,7 @@ export async function createWebApplication(options: ServerOptions) {
         while (visitor.kernel.runs.isRunning()) await sleep();
         await evict(visitor);
       }
-      unregisterStorage(); database.close(); await unlock();
+      unregisterStorage(); await database.close(); await unlock();
     },
   };
 }

@@ -34,6 +34,7 @@ jobs:
           FINAGENT_BUILD_SHA: ${{ github.sha }}
           FINAGENT_CHANNEL: internal
       - run: bun run test:package-smoke
+      - run: bun run --cwd apps/electron test:storage-smoke
       - uses: actions/upload-artifact@v4
         with:
           name: Felix-Windows-x64

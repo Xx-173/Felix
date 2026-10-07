@@ -59,6 +59,9 @@ export class ResearchReportRepository {
   }
 
   async listCheckpointIds(): Promise<string[]> {
+    if (this.store.isBackendManaged('research/checkpoints/.listing')) {
+      return (await this.store.listFiles('research/checkpoints')).filter((name) => /^[a-zA-Z0-9_-]+\.json$/.test(name)).map((name) => name.slice(0, -5));
+    }
     try {
       return (await readdir(this.store.resolve('research/checkpoints')))
         .filter((name) => /^[a-zA-Z0-9_-]+\.json$/.test(name)).map((name) => name.slice(0, -5));
@@ -70,6 +73,10 @@ export class ResearchReportRepository {
 
   async getCheckpoint(runId: string): Promise<ResearchCheckpoint | undefined> {
     const file = this.checkpointFile(runId);
+    if (this.store.isBackendManaged('research/checkpoints/' + runId + '.json')) {
+      const value = await this.store.read<unknown>('research/checkpoints/' + runId + '.json', undefined);
+      return value === undefined ? undefined : decodeCheckpoint(JSON.stringify(value), runId);
+    }
     try {
       return decodeCheckpoint(await readFile(file, 'utf8'), runId);
     } catch (error) {
@@ -82,6 +89,9 @@ export class ResearchReportRepository {
     // Serialize and validate now: workers must not mutate an enqueued snapshot.
     const data = encodeCheckpoint(cp);
     const file = this.checkpointFile(cp.summary.id);
+    if (this.store.isBackendManaged('research/checkpoints/' + cp.summary.id + '.json')) {
+      return this.serialize(() => this.store.write('research/checkpoints/' + cp.summary.id + '.json', JSON.parse(data)));
+    }
     return this.serialize(async () => {
       await mkdir(dirname(file), { recursive: true });
       const tmp = file + '.' + randomUUID() + '.tmp';
