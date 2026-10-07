@@ -10,10 +10,6 @@
 !apps/web/**
 !apps/electron/
 !apps/electron/package.json
-!apps/electron/src/
-!apps/electron/src/renderer/
-!apps/electron/src/renderer/styles/
-!apps/electron/src/renderer/styles/index.css
 !skills/
 !skills/**
 !packages/

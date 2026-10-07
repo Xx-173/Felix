@@ -4,7 +4,7 @@ import { Provider, createStore } from 'jotai';
 import { AppShell } from '@finagent/ui';
 import { navSectionAtom } from '../../../packages/ui/src/atoms';
 import { createWebClient } from './client';
-import '../../electron/src/renderer/styles/index.css';
+import '../../../packages/ui/src/styles/app.css';
 import './web.css';
 
 const root = createRoot(document.getElementById('root')!);

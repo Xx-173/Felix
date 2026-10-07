@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'bun:test'
-import { spawnSync } from 'node:child_process'
+import { execFile } from 'node:child_process'
+import { promisify } from 'node:util'
 import type { AutomationRule } from '@finagent/core'
 import {
   DEFAULT_BRIEF_HOUR,
@@ -48,6 +49,8 @@ describe('scheduler scheduleFor', () => {
   })
 })
 
+const execFileAsync = promisify(execFile)
+
 describe('scheduler nextRunAt', () => {
   // A child process keeps TZ changes isolated from other suites and the host.
   for (const scenario of [
@@ -56,7 +59,7 @@ describe('scheduler nextRunAt', () => {
     { name: 'next Saturday across New York fall-back', zone: 'America/New_York', now: '2026-10-31T00:30:00', expected: '2026-11-07T00:00:00', overrides: { days: [6], hour: 0 } },
     { name: 'Shanghai without DST', zone: 'Asia/Shanghai', now: '2026-03-07T23:30:00', expected: '2026-03-08T09:00:00', overrides: { type: 'weekly-thesis-review' } },
   ]) {
-    it(`scans local calendar days for ${scenario.name}`, () => {
+    it(`scans local calendar days for ${scenario.name}`, async () => {
       const script = `
         import { nextRunAt } from ${JSON.stringify(new URL('./scheduler.ts', import.meta.url).href)};
         const rule = ${JSON.stringify({ id: 'dst', type: 'watchlist-daily-review', enabled: true, notify: 'material-only', createdAt: 0, ...scenario.overrides })};
@@ -65,13 +68,12 @@ describe('scheduler nextRunAt', () => {
           expected: new Date(${JSON.stringify(scenario.expected)}).getTime(),
         }));
       `
-      const result = spawnSync(process.execPath, ['-e', script], {
+      const result = await execFileAsync(process.execPath, ['-e', script], {
         env: { ...process.env, TZ: scenario.zone },
         encoding: 'utf8',
-        timeout: 10_000,
+        timeout: 3_000,
+        windowsHide: true,
       })
-      expect(result.error).toBeUndefined()
-      expect(result.status).toBe(0)
       const { actual, expected } = JSON.parse(result.stdout)
       expect(actual).toBe(expected)
     })

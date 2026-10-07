@@ -50,7 +50,7 @@ const signingEnabled = Boolean(
   process.env.APPLE_CERTIFICATE_BASE64 && process.env.APPLE_CERT_PASSWORD
 );
 
-const builderArgs = [];
+const builderArgs = ['--publish', 'never'];
 const builderEnv = { ...process.env };
 if (signingEnabled) {
   // Override `identity=null` so electron-builder auto-discovers the Developer ID

@@ -451,7 +451,8 @@ describe('ExperimentService.runExperiment', () => {
 
     expect(experiment.status).toBe('completed');
     expect(experiment.id).toMatch(/^exp-\d+-[a-f0-9]{6}$/);
-    expect(experiment.metadata.gitSha).toBe(currentGitSha());
+    expect(experiment.metadata.gitSha).toMatch(/^[a-f0-9]{40}$/);
+    expect(experiment.metadata.gitSha).toBe(await currentGitSha());
     expect(experiment.metadata.runtimeVersion).toBe(process.version);
     expect(experiment.metadata.providerConfiguration).toMatchObject({ model: undefined });
 

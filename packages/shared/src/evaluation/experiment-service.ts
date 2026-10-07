@@ -12,7 +12,8 @@
 // with outcome-derived modes (timeout/runtime_error), then the
 // evaluator-returned failures (e.g. judge_error) are appended — the verdict
 // never depends on the evaluator pass, it is computed from the run record.
-import { execSync } from 'node:child_process';
+import { execFile } from 'node:child_process';
+import { promisify } from 'node:util';
 import { randomUUID } from 'node:crypto';
 import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -195,11 +196,16 @@ function findTerminalEvent(events: AgentEvent[], runId: string): AgentEvent | un
   return undefined;
 }
 
+const execFileAsync = promisify(execFile);
 /** Repo git sha; undefined when the command fails (e.g. not a git checkout). */
-export function currentGitSha(): string | undefined {
+export async function currentGitSha(): Promise<string | undefined> {
   try {
-    const sha = execSync('git rev-parse HEAD', { encoding: 'utf8', stdio: ['ignore', 'pipe', 'ignore'] }).trim();
-    return sha.length > 0 ? sha : undefined;
+    // Metadata must not block the server or hang an evaluation when Git is unavailable.
+    const { stdout } = await execFileAsync('git', ['rev-parse', 'HEAD'], {
+      encoding: 'utf8', timeout: 1_000, windowsHide: true,
+    });
+    const sha = stdout.trim();
+    return /^[a-f0-9]{40,64}$/i.test(sha) ? sha : undefined;
   } catch {
     return undefined;
   }
@@ -216,9 +222,9 @@ export function currentFelixVersion(): string | undefined {
   }
 }
 
-function buildMetadata(config: ExperimentConfig, startedAt: number): ExperimentMetadata {
+async function buildMetadata(config: ExperimentConfig, startedAt: number): Promise<ExperimentMetadata> {
   return {
-    gitSha: currentGitSha(),
+    gitSha: await currentGitSha(),
     folioVersion: currentFelixVersion(),
     runtimeVersion: process.version,
     piVersion: process.env.FINAGENT_PI_VERSION ?? undefined,
@@ -301,7 +307,7 @@ export class ExperimentService {
       status: 'running',
       mode: config.mode,
       config,
-      metadata: buildMetadata(config, startedAt),
+      metadata: await buildMetadata(config, startedAt),
       startedAt,
       runIds: [],
       resultIds: [],

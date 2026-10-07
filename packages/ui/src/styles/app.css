@@ -1,6 +1,6 @@
 @import "tailwindcss";
-@source "../../../../../packages/ui/src";
 @source "../";
+@source "../../../../apps";
 
 /* Felix UI V2 — Quiet Financial Workspace.
    Keep the palette intentionally restrained: surfaces and spacing carry the
