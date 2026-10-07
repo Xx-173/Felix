@@ -56,7 +56,10 @@ for (const kind of ['sqlite', 'postgresql'] as const) {
     afterEach(async () => {
       for (const app of apps.splice(0)) await app.close();
       for (const database of connections.splice(0)) await database.close();
-      if (admin) { await admin.unsafe(`DROP DATABASE ${name}`); await admin.close(); admin = undefined; }
+      if (admin) {
+        try { await admin.unsafe(`DROP DATABASE ${name}`); }
+        finally { await admin.close({ timeout: 0 }); admin = undefined; }
+      }
       for (const root of roots.splice(0)) {
         if (!resolve(root).startsWith(resolve(tmpdir()) + sep + 'felix-storage-test-')) throw new Error('Invalid cleanup boundary');
         await rm(root, { recursive: true, force: true });
@@ -104,6 +107,7 @@ for (const kind of ['sqlite', 'postgresql'] as const) {
       expect(registered.ok).toBe(true);
       expect((await owner.rpc('llm.setCredential', 'deepseek', 'dummy-storage-key')).ok).toBe(true);
       expect((await other.rpc('kernel.hydrate')).data.sessions).toEqual([]);
+      expect((await other.auth('register', { username: 'owner', password })).error.code).toBe('ACCOUNT_EXISTS');
       expect((await other.auth('login', { username: 'owner', password })).ok).toBe(true);
       expect((await other.rpc('workspace.get')).data.watchlist).toEqual(['MSFT.US']);
       const exported = await other.rpc('workspace.exportData'); expect(exported.ok).toBe(true);

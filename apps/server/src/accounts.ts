@@ -66,7 +66,8 @@ export class Accounts {
         const recoveryCode = fresh(), id = randomBytes(16).toString('hex');
         try { await this.database.query('INSERT INTO users VALUES ($1, $2, $3, $4, $5, $6)', [id, name, workspaceId, hash, tokenHash(recoveryCode), now]); }
         catch (error) {
-          const code = String((error as { code?: string }).code);
+          const failure = error as { errno?: string | number; code?: string };
+          const code = failure.code === 'ERR_POSTGRES_SERVER_ERROR' ? String(failure.errno) : String(failure.code);
           if (code === '23505' || code.startsWith('SQLITE_CONSTRAINT')) throw createCodeError('ACCOUNT_EXISTS', '用户名已被使用，请换一个（Username unavailable）。');
           throw error;
         }

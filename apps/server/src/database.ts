@@ -11,6 +11,18 @@ export interface QueryExecutor {
   query<T extends Row = Row>(statement: string, parameters?: Array<string | number>): Promise<T[]>;
 }
 interface Connection extends QueryExecutor { close(): Promise<void> }
+const numericColumns = new Set(['created_at', 'expires_at', 'updated_at', 'reset_at']);
+function normalizePostgresRows<T extends Row>(rows: Row[]): T[] {
+  // Bun returns BIGINT timestamps as strings; both drivers expose safe JS numbers.
+  return rows.map((row) => {
+    for (const key of Object.keys(row)) if (numericColumns.has(key)) {
+      const value = Number(row[key]);
+      if (!Number.isSafeInteger(value)) throw new Error('Database timestamp exceeds the supported integer range.');
+      row[key] = value;
+    }
+    return row as T;
+  });
+}
 
 export function databaseOptions(env: Record<string, string | undefined>): DatabaseOptions {
   const kind = env.FELIX_DATABASE_TYPE || 'sqlite';
@@ -70,19 +82,22 @@ export class WorkspaceDatabase implements JsonStoreBackend, QueryExecutor {
       };
     } else {
       const pool = new SQL(validated.url!, { max: 1, idleTimeout: 0, maxLifetime: 0, connectionTimeout: 10, bigint: false });
-      let client: ReservedSQL;
+      let client: ReservedSQL | undefined;
       try {
         client = await pool.reserve();
         const [lock] = await client.unsafe("SELECT pg_try_advisory_lock(hashtext('felix-single-server-v1')) AS acquired");
         if (!lock?.acquired) throw new Error('PostgreSQL database is in use by another Felix instance.');
       } catch (error) {
+        // A failed exclusivity check must release its reserved connection before closing.
+        client?.release();
         await pool.close({ timeout: 0 });
         if (error instanceof Error && error.message === 'PostgreSQL database is in use by another Felix instance.') throw error;
         throw new Error('Could not connect to PostgreSQL. Check the database URL, network, credentials and TLS configuration.');
       }
+      const reserved = client;
       connection = {
-        async query<T extends Row>(statement: string, parameters: Array<string | number> = []) { return await client.unsafe(statement, parameters) as T[]; },
-        async close() { client.release(); await pool.close({ timeout: 0 }); },
+        async query<T extends Row>(statement: string, parameters: Array<string | number> = []) { return normalizePostgresRows<T>(await reserved.unsafe(statement, parameters)); },
+        async close() { reserved.release(); await pool.close({ timeout: 0 }); },
       };
     }
     const database = new WorkspaceDatabase(root, kind, connection);
