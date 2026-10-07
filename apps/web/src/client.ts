@@ -1,11 +1,11 @@
 import type { AgentEvent, ApiResult, StreamEvent } from '@finagent/core';
 import type { FinagentClient } from '@finagent/ui';
 
-type Bootstrap = { deployment: NonNullable<FinagentClient['deployment']> };
+type Bootstrap = { deployment: NonNullable<FinagentClient['deployment']>; workspaceId: string };
 async function rpc<T>(method: string, ...args: unknown[]): Promise<ApiResult<T>> {
   try {
     const response = await fetch('/api/rpc', {
-      method: 'POST', credentials: 'same-origin',
+      method: 'POST', credentials: 'same-origin', keepalive: method === 'workspace.update',
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method, args }),
     });
     return await response.json() as ApiResult<T>;
@@ -26,6 +26,10 @@ export async function createWebClient(): Promise<FinagentClient> {
   const streams = new Set<(payload: { sessionId: string; event: StreamEvent }) => void>();
   const source = new EventSource('/api/events');
   source.addEventListener('reset', () => window.location.reload());
+  source.addEventListener('connected', (event) => {
+    const workspaceId = JSON.parse((event as MessageEvent).data).workspaceId;
+    if (workspaceId !== bootstrap.data.workspaceId) window.location.reload();
+  });
   source.addEventListener('agent', (event) => {
     const data = JSON.parse((event as MessageEvent<string>).data) as AgentEvent;
     agents.forEach((callback) => callback(data));
@@ -45,6 +49,11 @@ export async function createWebClient(): Promise<FinagentClient> {
   window.addEventListener('pageshow', (event) => { if (event.persisted) window.location.reload(); });
   return {
     deployment: bootstrap.data.deployment,
+    workspace: channel('workspace'),
+    account: { request: async (action, input) => {
+      try { return await (await fetch('/api/auth', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, input }) })).json(); }
+      catch { return { ok: false, error: { code: 'WEB_CONNECTION_FAILED', message: '连接失败，请稍后重试（Connection failed; retry shortly）。' } }; }
+    } },
     kernel: {
       hydrate: () => rpc('kernel.hydrate'),
       createSession: (title) => rpc('kernel.createSession', title),

@@ -2,5 +2,7 @@
   encode zstd gzip
   reverse_proxy felix:8787 {
     flush_interval -1
+    header_up X-Felix-Client-IP {remote_host}
+    header_up X-Felix-Proxy-Token {$FELIX_PROXY_SECRET}
   }
 }

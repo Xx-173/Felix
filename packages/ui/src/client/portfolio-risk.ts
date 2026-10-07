@@ -12,16 +12,16 @@ import { unwrapIpcResult } from './unwrap';
 
 interface PortfolioRiskElectronApi {
   portfolioRisk?: {
-    analyze?: () => Promise<unknown>;
+    analyze?: (input?: { accountId?: string }) => Promise<unknown>;
   };
 }
 
-export async function loadPortfolioRiskReport(client?: FinagentClient): Promise<PortfolioRiskReport | null> {
+export async function loadPortfolioRiskReport(client?: FinagentClient, accountId?: string): Promise<PortfolioRiskReport | null> {
   try {
     const api = client ?? (window as { electronAPI?: PortfolioRiskElectronApi }).electronAPI;
     const analyze = api?.portfolioRisk?.analyze;
     if (typeof analyze !== 'function') return null;
-    return unwrapIpcResult<PortfolioRiskReport>(await analyze());
+    return unwrapIpcResult<PortfolioRiskReport>(await analyze(accountId ? { accountId } : undefined));
   } catch {
     return null;
   }

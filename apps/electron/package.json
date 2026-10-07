@@ -39,7 +39,8 @@
     "@finagent/ui": "workspace:*",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "@finagent/i18n": "workspace:*"
+    "@finagent/i18n": "workspace:*",
+    "zod": "^3.23.0"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.2.4",
@@ -82,6 +83,24 @@
       ],
       "icon": "assets/icon.icns",
       "identity": null
+    },
+    "win": {
+      "target": [
+        {
+          "target": "nsis",
+          "arch": [
+            "x64"
+          ]
+        }
+      ],
+      "artifactName": "Felix-${version}-Windows-${arch}-Setup.${ext}"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "perMachine": false,
+      "deleteAppDataOnUninstall": false,
+      "shortcutName": "Felix"
     }
   },
   "author": "Xx-173",
@@ -92,5 +111,6 @@
   },
   "bugs": {
     "url": "https://github.com/Xx-173/Felix/issues"
-  }
+  },
+  "description": "Felix personal financial research workspace"
 }

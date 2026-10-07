@@ -16,8 +16,9 @@
 // are never logged or echoed; electron-builder consumes them from the process
 // environment only.
 
+import { createHash } from 'node:crypto';
 import { execFileSync } from 'node:child_process';
-import { copyFileSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs';
+import { copyFileSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -66,33 +67,29 @@ if (signingEnabled) {
 if (process.env.FINAGENT_BUILD_SHA) {
   builderArgs.push(`--config.extraMetadata.felix.buildSha=${process.env.FINAGENT_BUILD_SHA}`);
 }
-if (process.env.FINAGENT_CHANNEL) {
-  builderArgs.push(`--config.extraMetadata.felix.channel=${process.env.FINAGENT_CHANNEL}`);
-}
+builderArgs.push(`--config.extraMetadata.felix.channel=${process.env.FINAGENT_CHANNEL ?? (signingEnabled ? 'beta' : 'internal')}`);
 
 run('bun', ['run', 'package:builder', ...builderArgs], electronRoot, builderEnv);
 
-// 4. Stage DMG(s) + SHA256SUMS.txt under dist/release/.
+// 4. Stage the platform installers and portable SHA-256 checksums.
 mkdirSync(releaseDir, { recursive: true });
 
-const dmgs = readdirSync(electronDist).filter((name) => name.endsWith('.dmg'));
-if (dmgs.length === 0) {
-  console.error('\nrelease:package FAILED — electron-builder produced no .dmg under dist/electron/.');
+const extension = process.platform === 'win32' ? '.exe' : '.dmg';
+const installers = readdirSync(electronDist).filter((name) => name.endsWith(extension));
+if (installers.length === 0) {
+  console.error('\nrelease:package FAILED — electron-builder produced no installer under dist/electron/.');
   process.exit(1);
 }
 
-for (const dmg of dmgs) {
+for (const dmg of installers) {
   copyFileSync(join(electronDist, dmg), join(releaseDir, dmg));
 }
 
 // `shasum -a 256` output format (bare filenames, two-space separator) so the
 // manifest is verifiable with `shasum -c SHA256SUMS.txt` from dist/release/.
-const shasum = execFileSync('shasum', ['-a', '256', ...dmgs], {
-  cwd: releaseDir,
-  encoding: 'utf8',
-});
+const shasum = installers.map((name) => `${createHash('sha256').update(readFileSync(join(releaseDir, name))).digest('hex')}  ${name}\n`).join('');
 writeFileSync(join(releaseDir, 'SHA256SUMS.txt'), shasum);
 
-console.log(`\nrelease:package OK — ${dmgs.join(', ')} staged in ${releaseDir}`);
+console.log(`\nrelease:package OK — ${installers.join(', ')} staged in ${releaseDir}`);
 console.log(`Signing: ${signingEnabled ? 'enabled' : 'disabled (unsigned)'}`);
 console.log('Checksums:\n' + shasum);

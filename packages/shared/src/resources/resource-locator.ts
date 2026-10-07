@@ -1,4 +1,4 @@
-import { dirname, join, resolve } from 'node:path';
+import { basename, dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 /**
@@ -39,7 +39,7 @@ export function isPackaged(): boolean {
     process.env.FINAGENT_PACKAGED === '1' &&
     typeof resourcesPath === 'string' &&
     resourcesPath.length > 0 &&
-    resourcesPath.endsWith('Resources')
+    basename(resourcesPath).toLowerCase() === 'resources'
   );
 }
 

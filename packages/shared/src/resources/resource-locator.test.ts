@@ -39,3 +39,16 @@ describe('ResourceLocator (dev mode)', () => {
     expect(isPackaged()).toBe(false);
   });
 });
+
+it('accepts Windows lowercase resources and macOS Resources in packaged mode', () => {
+  const proc = process as NodeJS.Process & { resourcesPath?: string };
+  const previous = proc.resourcesPath;
+  try {
+    process.env[PACKAGED] = '1';
+    proc.resourcesPath = resolve('windows-package', 'resources');
+    expect(isPackaged()).toBe(true);
+    expect(getSkillsDir()).toBe(resolve(proc.resourcesPath, 'skills'));
+    proc.resourcesPath = resolve('mac-package', 'Resources');
+    expect(isPackaged()).toBe(true);
+  } finally { if (previous === undefined) Reflect.deleteProperty(proc, 'resourcesPath'); else proc.resourcesPath = previous; }
+});

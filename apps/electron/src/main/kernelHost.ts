@@ -1,3 +1,4 @@
+import { z } from 'zod';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
 import { spawn } from 'node:child_process';
@@ -648,6 +649,11 @@ export class AgentKernelHost {
     return this.marketData.getMarketStatus();
   }
 
+  getCalendarEvents(raw: unknown) {
+    const input = z.object({ eventType: z.enum(['financial', 'report', 'dividend', 'ipo', 'macrodata', 'closed']).default('financial'), symbols: z.array(z.string().regex(/^[A-Z0-9]{1,6}\.(US|HK|SG|SH|SZ|HAS)$/)).max(10).optional() }).parse(raw ?? {});
+    return this.marketData.getCalendarEvents(input);
+  }
+
   getNews(symbol: unknown) {
     return this.marketData.getNews(requireString(symbol, 'symbol').toUpperCase());
   }
@@ -807,7 +813,25 @@ export class AgentKernelHost {
 
   // -- Portfolio risk --------------------------------------------------------
 
-  async portfolioRiskAnalyze(): Promise<PortfolioRiskReport> {
+  async workspaceGet() { return new JsonFileStore(app.getPath('userData')).read('workspace.json', { watchlist: ['AAPL.US', 'TSLA.US', 'NVDA.US'] }); }
+  async workspaceUpdate(input: unknown) {
+    const value = z.object({ watchlist: z.array(z.string().regex(/^[A-Z0-9]{1,6}\.(US|HK|SG|SH|SZ|HAS)$/)).max(40) }).parse(input);
+    const result = { watchlist: [...new Set(value.watchlist)] };
+    await new JsonFileStore(app.getPath('userData')).write('workspace.json', result); return result;
+  }
+
+  async portfolioRiskAnalyze(input?: unknown): Promise<PortfolioRiskReport> {
+    const value = z.object({ accountId: z.string().max(140).optional() }).parse(input ?? {});
+    if (value.accountId?.startsWith('manual:')) {
+      const portfolio = await this.importRepository.get(value.accountId.slice(7));
+      if (!portfolio) throw createCodeError('PORTFOLIO_NOT_FOUND', '组合不存在（Portfolio not found）。');
+      return this.portfolioRisk.analyze(undefined, { accounts: [], holdings: portfolio.holdings, baseCurrency: portfolio.currency, fetchedAt: portfolio.updatedAt });
+    }
+    if (value.accountId) {
+      const portfolio = await this.marketData.getPortfolio();
+      if (!portfolio.accounts.some((account) => account.id === value.accountId)) throw createCodeError('PORTFOLIO_NOT_FOUND', '组合不存在（Portfolio not found）。');
+      return this.portfolioRisk.analyze(undefined, { ...portfolio, holdings: portfolio.holdings.filter((holding) => holding.symbol.split('.').at(-1) === portfolio.accounts.find((account) => account.id === value.accountId)?.market) });
+    }
     return this.portfolioRisk.analyze();
   }
 

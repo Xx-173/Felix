@@ -2,6 +2,7 @@ import { afterEach, expect, test, spyOn } from 'bun:test';
 import { mkdtemp, rm, readFile } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { join, resolve, sep } from 'node:path';
+import { JsonFileStore } from '@finagent/shared';
 import { createWebApplication, type ServerOptions } from './app.ts';
 
 const apps: Array<Awaited<ReturnType<typeof createWebApplication>>> = [];
@@ -141,7 +142,8 @@ test('demo research report, diff, comparison, and explicit live-mode failure', a
 });
 
 test('production requires HTTPS and emits Secure HttpOnly cookies', async () => {
-  const { dataDir } = await setup();
+  const { app: initial, dataDir } = await setup();
+  await initial.close();
   await expect(createWebApplication({ dataDir, production: true })).rejects.toThrow('HTTPS');
   const app = await createWebApplication({ dataDir, production: true, publicOrigin: 'https://felix.example.com' }); apps.push(app);
   const response = await app.fetch(new Request('https://felix.example.com/api/rpc', {
@@ -163,7 +165,7 @@ test('BYOK credentials are isolated, encrypted, retained across restart, and rem
   expect((await other.rpc('llm.listCredentials')).data.every((item: any) => !item.configured)).toBe(true);
   for (const method of ['llm.getState', 'llm.listModels', 'llm.getProviders', 'llm.listCredentials', 'diagnostics.collect']) expect(JSON.stringify(await user.rpc(method))).not.toContain(secret);
   const visitorId = user.cookie.split('=')[1].split('.')[0];
-  const sealed = await readFile(join(dataDir, 'visitors', visitorId, 'model-vault.json'), 'utf8');
+  const sealed = JSON.stringify(await new JsonFileStore(join(dataDir, 'visitors', visitorId)).read('model-vault.json', null));
   expect(sealed).not.toContain(secret);
   expect(JSON.parse(sealed).tag).toHaveLength(32);
   await app.close(); apps.splice(apps.indexOf(app), 1);
@@ -236,7 +238,8 @@ test('model thesis reviews cannot change persisted identity or select a storage 
   const started = await user.rpc('research.start', { symbol: 'AAPL.US', strategyId: 'technical' });
   await eventually(() => user.rpc('research.getRun', { runId: started.data.id }), (result) => !!result.data?.reportId);
   const thesis = (await user.rpc('thesis.saveFromReport', 'AAPL.US')).data;
-  await user.rpc('llm.setCredential', 'deepseek', 'test-review-only-key');
+  await eventually(() => user.rpc('llm.setCredential', 'deepseek', 'test-review-only-key'), (result) => result.ok);
+  expect((await user.rpc('llm.getState')).data.model.provider).toBe('deepseek');
   const answer = JSON.stringify({ kind: 'unchanged', summary: 'Test review', updatedThesis: { ...thesis, id: '../../model-vault', symbol: 'MSFT.US', createdAt: 0 } });
   spyOn(globalThis, 'fetch').mockImplementation((async (_url: RequestInfo | URL, _init?: RequestInit) => new Response('data: ' + JSON.stringify({ choices: [{ delta: { content: answer } }] }) + '\n\ndata: [DONE]\n\n', { headers: { 'Content-Type': 'text/event-stream' } })) as typeof fetch);
   const reviewed = await user.rpc('thesis.reEvaluate', 'AAPL.US');

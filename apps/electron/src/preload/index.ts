@@ -42,6 +42,7 @@ export interface ElectronAPI {
     getCalcIndex: (symbol: string) => Promise<unknown>;
     getMarketStatus: () => Promise<unknown>;
     getNews: (symbol: string) => Promise<unknown>;
+    getCalendarEvents: (input: { eventType?: string; symbols?: string[] }) => Promise<unknown>;
   };
   longbridge: {
     getStatus: () => Promise<unknown>;
@@ -79,8 +80,9 @@ export interface ElectronAPI {
   compare: {
     build: (symbols: string[]) => Promise<unknown>;
   };
+  workspace: { get: () => Promise<unknown>; update: (input: { watchlist: string[] }) => Promise<unknown> };
   portfolioRisk: {
-    analyze: () => Promise<unknown>;
+    analyze: (input?: { accountId?: string }) => Promise<unknown>;
   };
   llm: {
     getState: () => Promise<unknown>;
@@ -239,6 +241,7 @@ const electronAPI: ElectronAPI = {
     getCalcIndex: (symbol: string) => ipcRenderer.invoke('market:getCalcIndex', symbol),
     getMarketStatus: () => ipcRenderer.invoke('market:getMarketStatus'),
     getNews: (symbol: string) => ipcRenderer.invoke('market:getNews', symbol),
+    getCalendarEvents: (input: { eventType?: string; symbols?: string[] }) => ipcRenderer.invoke('market:getCalendarEvents', input),
   },
   longbridge: {
     getStatus: () => ipcRenderer.invoke('longbridge:getStatus'),
@@ -288,8 +291,9 @@ const electronAPI: ElectronAPI = {
   compare: {
     build: (symbols: string[]) => ipcRenderer.invoke('compare:build', { symbols }),
   },
+  workspace: { get: () => ipcRenderer.invoke('workspace:get'), update: (input: { watchlist: string[] }) => ipcRenderer.invoke('workspace:update', input) },
   portfolioRisk: {
-    analyze: () => ipcRenderer.invoke('portfolioRisk:analyze'),
+    analyze: (input?: { accountId?: string }) => ipcRenderer.invoke('portfolioRisk:analyze', input),
   },
   llm: {
     getState: () => ipcRenderer.invoke('llm:getState'),

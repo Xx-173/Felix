@@ -14,7 +14,7 @@ import {
   navSectionAtom,
 } from '../../atoms';
 import { manualPortfoliosAtom, refreshManualPortfoliosAtom } from '../../atoms/portfolioImportAtoms';
-import { portfolioRiskCacheAtom, analyzePortfolioRiskAtom } from '../../atoms/portfolioRiskAtoms';
+import { portfolioRiskCacheAtom, analyzePortfolioRiskAtom, resetPortfolioRiskAtom } from '../../atoms/portfolioRiskAtoms';
 import { researchOriginAtom } from '../../atoms/discoverAtoms';
 import { useFinagentClient } from '../../client';
 import { PortfolioCard } from '../portfolio/PortfolioCard';
@@ -61,6 +61,8 @@ export const PortfolioSection: React.FC = () => {
   const setResearchOrigin = useSetAtom(researchOriginAtom);
   const riskCache = useAtomValue(portfolioRiskCacheAtom);
   const analyzeRisk = useSetAtom(analyzePortfolioRiskAtom);
+  const resetRisk = useSetAtom(resetPortfolioRiskAtom);
+  useEffect(() => { resetRisk(); }, [selectedAccount, resetRisk]);
   const manualState = useAtomValue(manualPortfoliosAtom);
   const refreshManualPortfolios = useSetAtom(refreshManualPortfoliosAtom);
   const [importOpen, setImportOpen] = useState(false);

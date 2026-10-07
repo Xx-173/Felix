@@ -5,6 +5,7 @@ import type {
   AlertTriggerEvent,
   ApiResult,
   CalcIndex,
+  CalendarEvent,
   Comparison,
   CredentialInfo,
   CustomProviderConfig,
@@ -175,6 +176,14 @@ export interface EvaluationChannel {
 }
 
 export interface FinagentClient {
+  workspace?: {
+    get: () => Promise<ApiResult<{ watchlist: string[] }>>;
+    update: (input: { watchlist: string[] }) => Promise<ApiResult<{ watchlist: string[] }>>;
+    exportData?: () => Promise<ApiResult<unknown>>;
+  };
+  account?: {
+    request: (action: string, input?: Record<string, string>) => Promise<ApiResult<{ user?: { username: string }; recoveryCode?: string; inviteRequired?: boolean; deleted?: boolean }>>;
+  };
   portfolioImport?: {
     parse: (input: import('./client/portfolioImport').PortfolioImportParseInput) => Promise<ApiResult<import('@finagent/core').PortfolioImportDraft>>;
     confirm: (input: import('./client/portfolioImport').PortfolioImportConfirmInput) => Promise<ApiResult<import('@finagent/core').ManualPortfolio>>;
@@ -213,6 +222,7 @@ export interface FinagentClient {
     getCalcIndex: (symbol: string) => Promise<ApiResult<CalcIndex>>;
     getMarketStatus: () => Promise<ApiResult<MarketStatus[]>>;
     getNews: (symbol: string) => Promise<ApiResult<NewsItem[]>>;
+    getCalendarEvents?: (input: { eventType?: string; symbols?: string[] }) => Promise<ApiResult<CalendarEvent[]>>;
   };
   longbridge: {
     getStatus: () => Promise<ApiResult<LongBridgeStatus>>;
@@ -279,7 +289,7 @@ export interface FinagentClient {
     build: (symbols: string[]) => Promise<ApiResult<Comparison>>;
   };
   portfolioRisk?: {
-    analyze: () => Promise<ApiResult<PortfolioRiskReport>>;
+    analyze: (input?: { accountId?: string }) => Promise<ApiResult<PortfolioRiskReport>>;
   };
   llm: {
     getState: () => Promise<ApiResult<LlmRuntimeState>>;

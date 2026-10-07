@@ -71,7 +71,7 @@ export class PortfolioRiskService {
     this.now = options.now ?? Date.now;
   }
 
-  async analyze(signal?: AbortSignal): Promise<PortfolioRiskReport> {
+  async analyze(signal?: AbortSignal, portfolio?: PortfolioSnapshot): Promise<PortfolioRiskReport> {
     const runs: CapabilityRunEntry[] = [];
     const nowMs = this.now();
 
@@ -79,20 +79,20 @@ export class PortfolioRiskService {
     const summaryCap = this.registry.get('portfolio.summary');
     const positionsCap = this.registry.get('portfolio.positions');
 
-    const summaryOutcome = summaryCap
+    const summaryOutcome = !portfolio && summaryCap
       ? await this.executor.run(summaryCap, {}, { signal })
       : undefined;
-    const positionsOutcome = positionsCap
+    const positionsOutcome = !portfolio && positionsCap
       ? await this.executor.run(positionsCap, {}, { signal })
       : undefined;
 
     if (summaryOutcome) runs.push(toRunEntry(summaryOutcome.record));
-    else runs.push(missingRun('portfolio.summary'));
+    else if (!portfolio) runs.push(missingRun('portfolio.summary'));
     if (positionsOutcome) runs.push(toRunEntry(positionsOutcome.record));
-    else runs.push(missingRun('portfolio.positions'));
+    else if (!portfolio) runs.push(missingRun('portfolio.positions'));
 
     const summaryData = summaryOutcome?.result?.data;
-    const summaryPortfolio = isPortfolioSnapshot(summaryData) ? summaryData : undefined;
+    const summaryPortfolio = portfolio ?? (isPortfolioSnapshot(summaryData) ? summaryData : undefined);
     const rawPositions = resolvePositions(summaryPortfolio, positionsOutcome);
     const hasPositions = rawPositions.length > 0;
 

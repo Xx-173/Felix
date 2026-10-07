@@ -31,6 +31,7 @@ services:
       - '443:443/udp'
     environment:
       FELIX_DOMAIN: ${FELIX_DOMAIN:?Set FELIX_DOMAIN in deploy/web.env}
+      FELIX_PROXY_SECRET: ${FELIX_PROXY_SECRET:?Set FELIX_PROXY_SECRET in deploy/web.env}
     volumes:
       - ./Caddyfile:/etc/caddy/Caddyfile:ro
       - caddy-data:/data

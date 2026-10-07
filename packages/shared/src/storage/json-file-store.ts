@@ -1,7 +1,25 @@
 import { mkdir, open, readFile, rename, unlink } from 'node:fs/promises';
 import { randomUUID } from 'node:crypto';
-import { dirname, join } from 'node:path';
+import { dirname, join, resolve, sep } from 'node:path';
 import { createCodeError } from '../agent/errors.ts';
+
+export interface JsonStoreBackend {
+  read<T>(path: string, fallback: T): Promise<T>;
+  write(path: string, data: unknown): Promise<void>;
+  remove(path: string): Promise<void>;
+}
+const backends = new Map<string, JsonStoreBackend>();
+/** Server-owned storage boundary; Electron continues using atomic local files. */
+export function registerJsonStoreBackend(root: string, backend: JsonStoreBackend): () => void {
+  const prefix = resolve(root) + sep;
+  if (backends.has(prefix)) throw new Error('Storage root already registered');
+  backends.set(prefix, backend);
+  return () => { if (backends.get(prefix) === backend) backends.delete(prefix); };
+}
+function backendFor(path: string): JsonStoreBackend | undefined {
+  const target = resolve(path);
+  return [...backends.entries()].sort((a, b) => b[0].length - a[0].length).find(([prefix]) => target.startsWith(prefix))?.[1];
+}
 
 const publishLocks = new Map<string, Promise<void>>();
 
@@ -44,6 +62,8 @@ export class JsonFileStore {
   }
 
   async read<T>(file: string, fallback: T): Promise<T> {
+    const backend = backendFor(this.resolve(file));
+    if (backend) return backend.read(this.resolve(file), fallback);
     try {
       const contents = await readFile(join(this.rootDir, file), 'utf8');
       return JSON.parse(contents) as T;
@@ -63,7 +83,9 @@ export class JsonFileStore {
   }
 
   async write(file: string, data: unknown): Promise<void> {
-    const target = join(this.rootDir, file);
+    const target = this.resolve(file);
+    const backend = backendFor(target);
+    if (backend) return backend.write(target, data);
     const tmp = `${target}.${randomUUID()}.tmp`;
     let ownsTemp = false;
     try {
@@ -98,6 +120,8 @@ export class JsonFileStore {
   }
 
   async remove(file: string): Promise<void> {
+    const backend = backendFor(this.resolve(file));
+    if (backend) return backend.remove(this.resolve(file));
     try {
       await unlink(join(this.rootDir, file));
     } catch (error) {

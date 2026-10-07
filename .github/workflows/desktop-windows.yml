@@ -1,0 +1,41 @@
+name: Windows desktop
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - 'apps/electron/**'
+      - 'packages/**'
+      - 'scripts/release-package.mjs'
+      - 'bun.lock'
+      - '.github/workflows/desktop-windows.yml'
+  pull_request:
+    paths:
+      - 'apps/electron/**'
+      - 'packages/**'
+      - 'scripts/release-package.mjs'
+      - 'bun.lock'
+      - '.github/workflows/desktop-windows.yml'
+permissions:
+  contents: read
+jobs:
+  installer:
+    runs-on: windows-latest
+    timeout-minutes: 40
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.2'
+      - run: bun install --frozen-lockfile
+      - run: bun run typecheck
+      - run: bun run release:package
+        env:
+          FINAGENT_BUILD_SHA: ${{ github.sha }}
+          FINAGENT_CHANNEL: internal
+      - run: bun run test:package-smoke
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Felix-Windows-x64
+          path: dist/release/
+          if-no-files-found: error

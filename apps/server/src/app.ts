@@ -1,5 +1,5 @@
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
-import { mkdir, readFile, writeFile } from 'node:fs/promises';
+import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
 import { z } from 'zod';
 import type { AgentEvent, AppPreferencesSnapshot, KlineRequest, LocalePreference, StrategyId } from '@finagent/core';
@@ -14,6 +14,11 @@ import {
 import { VisitorServices } from './visitor-services.ts';
 import { ModelRuntime } from './model-runtime.ts';
 import { VisitorModels } from './visitor-models.ts';
+import { WorkspaceDatabase } from './database.ts';
+import { lockDataDirectory } from './data-lock.ts';
+import { Accounts } from './accounts.ts';
+import { registerJsonStoreBackend } from '@finagent/shared';
+import { isIP } from 'node:net';
 import { WorkQueue } from './queue.ts';
 import { buildDiff } from '../../../packages/shared/src/research-diff/diff-service.ts';
 import { reportToMarkdown, reportToShareCard, redactForShare } from '../../../packages/shared/src/export/index.ts';
@@ -27,6 +32,9 @@ export interface ServerOptions {
   demoData?: boolean;
   modelAllowedHosts?: string[];
   skillsDir?: string;
+  inviteCode?: string;
+  proxySecret?: string;
+  schedulerIntervalMs?: number;
   maxVisitors?: number;
   concurrency?: number;
   dailyRunLimit?: number;
@@ -81,12 +89,20 @@ export async function createWebApplication(options: ServerOptions) {
   if (options.production && !options.publicOrigin?.startsWith('https://')) {
     throw new Error('Production requires an HTTPS FELIX_PUBLIC_ORIGIN.');
   }
+  const unlock = await lockDataDirectory(dataDir);
+  let database: WorkspaceDatabase;
+  try { database = new WorkspaceDatabase(dataDir); } catch (error) { await unlock(); throw error; }
+  let unregisterStorage: () => void;
+  try { await database.migrateFiles(); unregisterStorage = registerJsonStoreBackend(dataDir, database); }
+  catch (error) { database.close(); await unlock(); throw error; }
+  const accounts = new Accounts(database, options.inviteCode);
   const publicOrigin = options.publicOrigin ? new URL(options.publicOrigin).origin : undefined;
   const demo = options.demoData ?? true;
   const queue = new WorkQueue(options.concurrency ?? 2);
   const visitors = new Map<string, Visitor>();
   const initializing = new Map<string, Promise<Visitor>>();
   const rates = new Map<string, { count: number; resetAt: number }>();
+  const workspaceRates = new Map<string, { count: number; resetAt: number }>();
   let closed = false;
   let allocations: Promise<unknown> = Promise.resolve();
   const quotaStore = new JsonFileStore(dataDir);
@@ -96,7 +112,7 @@ export async function createWebApplication(options: ServerOptions) {
     const work = quotaWrites.then(async () => {
       const day = new Date().toISOString().slice(0, 10);
       if (quotas.day !== day) quotas = { day, total: 0, visitors: {} };
-      if (quotas.total >= (options.dailyRunLimit ?? 100) || (quotas.visitors[visitorId] ?? 0) >= (options.visitorDailyRunLimit ?? 20)) {
+      if (quotas.total >= (options.dailyRunLimit ?? 1000) || (quotas.visitors[visitorId] ?? 0) >= (options.visitorDailyRunLimit ?? 20)) {
         throw createCodeError('DAILY_RUN_LIMIT', '今日研究次数已用完，请明天再试。');
       }
       quotas.total++;
@@ -111,15 +127,29 @@ export async function createWebApplication(options: ServerOptions) {
   const notice = demo ? '示例行情（Sample data） · 在设置中填写自己的模型密钥后可启用 AI（Bring your own key in Settings）。' : '行情权限取决于供应商；AI 使用自己的模型密钥（Bring your own key）。';
   const deployment = { kind: 'web' as const, demoData: demo, notice };
 
+  const cookieValue = (request: Request, name: string) => request.headers.get('cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith(name + '='))?.slice(name.length + 1);
+  const visitorCookie = (id: string) => `felix_visitor=${id}.${signature(id)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${options.production ? '; Secure' : ''}`;
+  const accountCookie = (token: string, clear = false) => `felix_account=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${clear ? 0 : 2592000}${options.production ? '; Secure' : ''}`;
   function identity(request: Request) {
-    const cookie = request.headers.get('cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith('felix_visitor='))?.slice(14);
+    const sessionToken = cookieValue(request, 'felix_account');
+    const user = accounts.resolve(sessionToken);
+    if (user) return { id: user.workspaceId, setCookie: undefined, user, sessionToken };
+    const cookie = cookieValue(request, 'felix_visitor');
     if (cookie) {
       const [id, mac] = cookie.split('.');
       if (/^[a-f0-9]{32}$/.test(id ?? '') && /^[a-f0-9]{64}$/.test(mac ?? '') &&
-        timingSafeEqual(Buffer.from(mac, 'hex'), Buffer.from(signature(id), 'hex'))) return { id, setCookie: undefined };
+        timingSafeEqual(Buffer.from(mac, 'hex'), Buffer.from(signature(id), 'hex')) && !accounts.workspaceClaimed(id)) return { id, setCookie: undefined, user: undefined, sessionToken };
     }
     const id = randomBytes(16).toString('hex');
-    return { id, setCookie: `felix_visitor=${id}.${signature(id)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=2592000${options.production ? '; Secure' : ''}` };
+    return { id, setCookie: visitorCookie(id), user: undefined, sessionToken };
+  }
+
+  function clientAddress(request: Request, remoteAddress: string) {
+    const supplied = request.headers.get('x-felix-proxy-token');
+    const address = request.headers.get('x-felix-client-ip');
+    if (options.proxySecret && supplied && address && isIP(address) &&
+        timingSafeEqual(createHmac('sha256', options.proxySecret).update(supplied).digest(), createHmac('sha256', options.proxySecret).update(options.proxySecret).digest())) return address;
+    return remoteAddress;
   }
 
   function publish(visitor: Visitor, channel: string, data: unknown) {
@@ -134,6 +164,14 @@ export async function createWebApplication(options: ServerOptions) {
     for (const stream of visitor.streams) {
       try { stream.enqueue(bytes); } catch { visitor.streams.delete(stream); }
     }
+  }
+
+  function closeStreams(id: string) {
+    const visitor = visitors.get(id);
+    if (!visitor) return;
+    for (const stream of visitor.streams) { try { stream.close(); } catch {} }
+    for (const cleanup of visitor.cleanups) cleanup();
+    visitor.streams.clear();
   }
 
   async function evict(visitor: Visitor) {
@@ -217,7 +255,7 @@ export async function createWebApplication(options: ServerOptions) {
     const { kernel, market, registry, tools } = visitor;
     if (method.startsWith('llm.')) return visitor.models.dispatch(method.slice(4), args, queue.busyVisitors.has(visitor.id));
     switch (method) {
-      case 'bootstrap': return { deployment, modelState: visitor.models.state() };
+      case 'bootstrap': return { deployment, workspaceId: visitor.id, modelState: visitor.models.state() };
       case 'kernel.hydrate': return { sessions: await kernel.sessions.listSessions() };
       case 'kernel.createSession': {
         if ((await kernel.sessions.listSessions()).length >= 100) throw createCodeError('SESSION_LIMIT', 'This visitor has reached the session limit.');
@@ -302,6 +340,17 @@ export async function createWebApplication(options: ServerOptions) {
         await visitor.store.write('preferences.json', visitor.preferences);
         return visitor.preferences;
       }
+      case 'workspace.get': return visitor.store.read('workspace.json', { watchlist: ['AAPL.US', 'TSLA.US', 'NVDA.US'] });
+      case 'workspace.update': {
+        const value = z.object({ watchlist: z.array(symbolSchema).max(40) }).parse(args[0]);
+        const result = { watchlist: [...new Set(value.watchlist)] }; await visitor.store.write('workspace.json', result); return result;
+      }
+      case 'workspace.exportData': {
+        const documents = database.documents(`visitors/${visitor.id}/`).filter((row) => !row.key.endsWith('/model-vault.json') && !/credential|vault/i.test(row.key)).map((row) => ({ ...row, key: row.key.split('/').slice(2).join('/') }));
+        try { documents.push({ key: 'skills-state.json', value: JSON.parse(await readFile(join(dataDir, 'visitors', visitor.id, 'skills-state.json'), 'utf8')) }); }
+        catch (error) { if ((error as NodeJS.ErrnoException).code !== 'ENOENT') throw error; }
+        return { version: 1, exportedAt: new Date().toISOString(), documents };
+      }
       case 'onboarding.getCompleted': return true;
       case 'longbridge.getStatus': return market.getLongBridgeStatus();
       case 'onboarding.setCompleted': return;
@@ -362,7 +411,7 @@ export async function createWebApplication(options: ServerOptions) {
   }
   function diagnostics(visitor: Visitor) {
     const model = visitor.models.state().model;
-    return { collectedAt: new Date().toISOString(), app: { version: '0.4.0-beta.2-web', platform: { os: 'web', arch: 'browser', electron: null } }, runtime: { agent: { providerId: model ? 'web-api' : 'local', state: visitor.kernel.runs.isRunning() ? 'running' : 'idle' } }, providers: { llm: { id: model?.provider ?? null, model: model?.id ?? null }, financial: [{ id: 'massive', status: visitor.models.marketKey() ? 'configured' : 'not-connected', coverage: { capabilities: visitor.financial.capabilities(), markets: ['US'] } }], broker: { connected: false, accountCount: 0 }, longbridgeCliVersion: null }, skills: { loaded: visitor.services.skills.listSkills().length }, capabilities: { available: visitor.registry.list().map((entry) => entry.id) }, resources: { dev: false, root: 'visitor-workspace' }, pi: { status: 'idle', command: null, cwd: null, extensions: [], providersConfigured: model ? [model.provider] : [], model: model?.id ?? null, lastExitCode: null, lastExitSignal: null, stderrTail: null, observabilityDegraded: false }, errors: [], redaction: { policy: 'No keys, account data or server paths', applied: true } };
+    return { collectedAt: new Date().toISOString(), app: { version: '0.4.0-beta.2-web', platform: { os: 'web', arch: 'browser', electron: null } }, runtime: { agent: { providerId: model ? 'web-api' : 'local', state: visitor.kernel.runs.isRunning() ? 'running' : 'idle' } }, providers: { llm: { id: model?.provider ?? null, model: model?.id ?? null }, financial: [{ id: 'massive', status: visitor.models.marketKey() ? 'configured' : 'not-connected', coverage: { capabilities: visitor.financial.capabilities(), markets: ['US'] } }], broker: { connected: false, accountCount: 0 }, longbridgeCliVersion: null }, skills: { loaded: visitor.services.skills.listSkills().length }, capabilities: { available: demo ? visitor.registry.list().map((entry) => entry.id) : visitor.models.marketKey() ? visitor.financial.capabilities() : [] }, resources: { dev: false, root: 'visitor-workspace' }, pi: { status: 'idle', command: null, cwd: null, extensions: [], providersConfigured: model ? [model.provider] : [], model: model?.id ?? null, lastExitCode: null, lastExitSignal: null, stderrTail: null, observabilityDegraded: false }, errors: (database.sql.query("SELECT status, updated_at FROM scheduled_jobs WHERE workspace_id=? AND status IN ('failed', 'interrupted') ORDER BY updated_at DESC LIMIT 10").all(visitor.id) as Array<{ status: string; updated_at: number }>).map((job) => ({ at: job.updated_at, source: 'scheduler', message: `后台任务${job.status === 'interrupted' ? '因重启中断' : '执行失败'}，可在自动研究页面手动重试（Scheduled job ${job.status}; retry manually）。`, stack: null })), redaction: { policy: 'No keys, account data or server paths', applied: true } };
   }
 
   let ticking = false;
@@ -370,18 +419,24 @@ export async function createWebApplication(options: ServerOptions) {
     if (ticking || closed) return;
     ticking = true;
     void (async () => {
-      // Trial automations are active while the visitor has an open browser connection.
-      for (const visitor of visitors.values()) {
-        if (!visitor.streams.size || queue.busyVisitors.has(visitor.id)) continue;
+      // Enabled durable rules are loaded after restart, even with no open browser.
+      for (const id of database.scheduledWorkspaceIds()) {
+        if (queue.busyVisitors.has(id)) continue;
+        const visitor = await getVisitor(id);
         const recent = await visitor.services.automationRuns.list();
         for (const rule of runDue(await visitor.services.automation.list())) {
           const midnight = new Date(); midnight.setHours(0, 0, 0, 0);
           if (recent.some((run) => run.ruleId === rule.id && run.ranAt >= midnight.getTime())) continue;
-          await queue.submit(visitor.id, () => visitor.services.dispatch('automation.runRule', [{ ruleId: rule.id }]), async () => {}, new AbortController().signal).catch(() => undefined);
+          const day = `${midnight.getFullYear()}-${midnight.getMonth() + 1}-${midnight.getDate()}`;
+          if (!database.claimJob(id, rule.id, day)) continue;
+          try {
+            const result = await queue.submit(visitor.id, () => visitor.services.dispatch('automation.runRule', [{ ruleId: rule.id }]), async () => {}, new AbortController().signal) as { failures?: string[] };
+            database.finishJob(id, rule.id, day, result.failures?.length ? 'failed' : 'completed');
+          } catch { database.finishJob(id, rule.id, day, 'failed'); }
         }
       }
     })().catch(() => undefined).finally(() => { ticking = false; });
-  }, 60000);
+  }, options.schedulerIntervalMs ?? 60000);
 
   function originAllowed(request: Request) {
     if (request.headers.get('sec-fetch-site') === 'cross-site') return false;
@@ -391,9 +446,11 @@ export async function createWebApplication(options: ServerOptions) {
     return !options.production && ['http://localhost:5174', 'http://127.0.0.1:5174'].includes(origin);
   }
 
-  const json = (value: unknown, status = 200, cookie?: string) => Response.json(value, {
-    status, headers: { 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff', ...(cookie ? { 'Set-Cookie': cookie } : {}) },
-  });
+  const json = (value: unknown, status = 200, cookie?: string | string[]) => {
+    const headers = new Headers({ 'Cache-Control': 'no-store', 'X-Content-Type-Options': 'nosniff' });
+    for (const item of Array.isArray(cookie) ? cookie : cookie ? [cookie] : []) headers.append('Set-Cookie', item);
+    return Response.json(value, { status, headers });
+  };
 
   async function fetchRequest(request: Request, remoteAddress = 'local'): Promise<Response> {
     const url = new URL(request.url);
@@ -417,12 +474,45 @@ export async function createWebApplication(options: ServerOptions) {
     if (!originAllowed(request)) return json({ ok: false, error: { code: 'ORIGIN_REJECTED', message: 'Cross-site requests are not allowed.' } }, 403);
     const now = Date.now();
     if (rates.size >= 2048) for (const [key, rate] of rates) if (rate.resetAt <= now) rates.delete(key);
+    remoteAddress = clientAddress(request, remoteAddress);
     const rate = rates.get(remoteAddress);
     if (!rate && rates.size >= 2048) return json({ ok: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } }, 429);
-    if (rate && rate.resetAt > now && ++rate.count > 240) return json({ ok: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Try again shortly.' } }, 429);
+    if (rate && rate.resetAt > now && ++rate.count > 2000) return json({ ok: false, error: { code: 'RATE_LIMITED', message: 'Too many requests. Try again shortly.' } }, 429);
     if (!rate || rate.resetAt <= now) rates.set(remoteAddress, { count: 1, resetAt: now + 60000 });
     const auth = identity(request);
+    for (const [id, value] of workspaceRates) if (value.resetAt <= now) workspaceRates.delete(id);
+    const personalRate = workspaceRates.get(auth.id);
+    if (personalRate && ++personalRate.count > 600) return json({ ok: false, error: { code: 'RATE_LIMITED', message: '个人请求过多，请稍后重试（Too many workspace requests）。' } }, 429, auth.setCookie);
+    if (!personalRate) {
+      if (workspaceRates.size >= 2048) return json({ ok: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } }, 429, auth.setCookie);
+      workspaceRates.set(auth.id, { count: 1, resetAt: now + 60000 });
+    }
     try {
+      if (url.pathname === '/api/auth' && request.method === 'POST') {
+        if (!request.headers.get('content-type')?.startsWith('application/json')) throw createCodeError('INVALID_ARGUMENT', 'JSON required');
+        const input = z.object({ action: z.enum(['state', 'register', 'login', 'logout', 'changePassword', 'resetPassword', 'deleteAccount']), input: z.unknown().optional() }).parse(JSON.parse(await request.text().then((raw) => { if (Buffer.byteLength(raw) > 65536) throw createCodeError('INVALID_ARGUMENT', 'Request body is too large.'); return raw; })));
+        if (input.action === 'state') return json({ ok: true, data: accounts.state(auth.user) }, 200, auth.setCookie);
+        if (input.action === 'logout') {
+          accounts.logout(auth.sessionToken);
+          closeStreams(auth.id);
+          const id = randomBytes(16).toString('hex');
+          return json({ ok: true, data: accounts.state() }, 200, [accountCookie('', true), visitorCookie(id)]);
+        }
+        if (['register', 'deleteAccount'].includes(input.action) && queue.busyVisitors.has(auth.id)) throw createCodeError('RUN_ACTIVE', '请等待当前研究结束（Wait for the active run）。');
+        const result = await accounts.execute(input.action, input.input, auth.id, auth.user, remoteAddress);
+        closeStreams(auth.id);
+        if ('user' in result) closeStreams(result.user.workspaceId);
+        if ('deleted' in result) {
+          const visitor = visitors.get(auth.id);
+          if (visitor) await evict(visitor);
+          accounts.delete(auth.user!, result.expectedPasswordHash);
+          const root = join(dataDir, 'visitors', auth.id);
+          if (!/^[a-f0-9]{32}$/.test(auth.id) || !resolve(root).startsWith(resolve(dataDir, 'visitors') + sep)) throw new Error('Invalid deletion boundary');
+          await rm(root, { recursive: true, force: true });
+          return json({ ok: true, data: { deleted: true } }, 200, [accountCookie('', true), visitorCookie(randomBytes(16).toString('hex'))]);
+        }
+        return json({ ok: true, data: { user: result.user, ...('recoveryCode' in result ? { recoveryCode: result.recoveryCode } : {}) } }, 200, [accountCookie(result.token), visitorCookie(result.user.workspaceId)]);
+      }
       const visitor = await getVisitor(auth.id);
       if (url.pathname === '/api/events' && request.method === 'GET') {
         if (visitor.streams.size >= 4) throw createCodeError('STREAM_LIMIT', 'Too many open browser tabs.');
@@ -430,7 +520,7 @@ export async function createWebApplication(options: ServerOptions) {
         const body = new ReadableStream<Uint8Array>({
           start(controller) {
             visitor.streams.add(controller);
-            controller.enqueue(encoder.encode('retry: 1500\nevent: connected\ndata: {}\n\n'));
+            controller.enqueue(encoder.encode(`retry: 1500\nevent: connected\ndata: ${JSON.stringify({ workspaceId: visitor.id })}\n\n`));
             const previous = Number(request.headers.get('last-event-id'));
             if (previous > visitor.sequence || (previous > 0 && visitor.events[0]?.id > previous + 1)) {
               controller.enqueue(encoder.encode('event: reset\ndata: {}\n\n'));
@@ -438,7 +528,7 @@ export async function createWebApplication(options: ServerOptions) {
             if (previous > 0) for (const event of visitor.events.filter((item) => item.id > previous)) {
               controller.enqueue(encoder.encode(`id: ${event.id}\nevent: ${event.channel}\ndata: ${JSON.stringify(event.data)}\n\n`));
             }
-            const heartbeat = setInterval(() => { try { controller.enqueue(encoder.encode(': heartbeat\n\n')); } catch { cleanup(); } }, 15000);
+            const heartbeat = setInterval(() => { if (auth.user && !accounts.resolve(auth.sessionToken)) { cleanup(); controller.close(); return; } try { controller.enqueue(encoder.encode(': heartbeat\n\n')); } catch { cleanup(); } }, 15000);
             cleanup = () => { clearInterval(heartbeat); visitor.streams.delete(controller); visitor.cleanups.delete(cleanup); request.signal.removeEventListener('abort', cleanup); };
             visitor.cleanups.add(cleanup);
             request.signal.addEventListener('abort', cleanup, { once: true });
@@ -463,17 +553,19 @@ export async function createWebApplication(options: ServerOptions) {
         : known ? String(error.code) : 'INTERNAL_ERROR';
       const message = known ? (error as Error).message : code === 'INVALID_ARGUMENT' ? 'Invalid request parameters.' : 'The server could not complete the request.';
       // Raw providers/errors can contain credentials or local paths. Only explicitly safe errors are sent.
-      const safeCodes = new Set(['SESSION_NOT_FOUND', 'SESSION_LIMIT', 'RUN_NOT_FOUND', 'QUEUE_FULL', 'SERVER_BUSY', 'STREAM_LIMIT', 'INVALID_ARGUMENT', 'WEB_METHOD_UNAVAILABLE', 'REQUEST_CANCELLED', 'RUN_IN_PROGRESS', 'DAILY_RUN_LIMIT', 'MODEL_ENDPOINT_NOT_ALLOWED', 'MODEL_KEY_REQUIRED', 'RUN_ACTIVE', 'REPORT_NOT_FOUND', 'THESIS_NOT_FOUND', 'IMPORT_LIMIT', 'INVALID_DRAFT', 'DESKTOP_CONNECTION_REQUIRED']);
+      const safeCodes = new Set(['SESSION_NOT_FOUND', 'SESSION_LIMIT', 'RUN_NOT_FOUND', 'QUEUE_FULL', 'SERVER_BUSY', 'STREAM_LIMIT', 'INVALID_ARGUMENT', 'WEB_METHOD_UNAVAILABLE', 'REQUEST_CANCELLED', 'RUN_IN_PROGRESS', 'DAILY_RUN_LIMIT', 'MODEL_ENDPOINT_NOT_ALLOWED', 'MODEL_KEY_REQUIRED', 'RUN_ACTIVE', 'REPORT_NOT_FOUND', 'THESIS_NOT_FOUND', 'IMPORT_LIMIT', 'INVALID_DRAFT', 'DESKTOP_CONNECTION_REQUIRED', 'AUTH_BUSY', 'AUTH_RATE_LIMIT', 'AUTH_ALREADY_SIGNED_IN', 'INVITE_REQUIRED', 'ACCOUNT_EXISTS', 'INVALID_CREDENTIALS', 'SIGN_IN_REQUIRED', 'PORTFOLIO_NOT_FOUND']);
       return json({ ok: false, error: { code, message: safeCodes.has(code) ? message : 'This operation is unavailable or failed. Check the server configuration.' } },
-        ['QUEUE_FULL', 'SERVER_BUSY', 'DAILY_RUN_LIMIT'].includes(code) ? 429 : code === 'INTERNAL_ERROR' ? 500 : 400, auth.setCookie);
+        ['QUEUE_FULL', 'SERVER_BUSY', 'DAILY_RUN_LIMIT', 'AUTH_BUSY', 'AUTH_RATE_LIMIT'].includes(code) ? 429 : code === 'INTERNAL_ERROR' ? 500 : 400, auth.setCookie);
     }
   }
 
   return {
     fetch: fetchRequest,
     async close() {
+      if (closed) return;
       closed = true;
       clearInterval(automationTimer);
+      while (ticking) await sleep();
       queue.close();
       await allocations;
       await quotaWrites;
@@ -483,6 +575,7 @@ export async function createWebApplication(options: ServerOptions) {
         while (visitor.kernel.runs.isRunning()) await sleep();
         await evict(visitor);
       }
+      unregisterStorage(); database.close(); await unlock();
     },
   };
 }

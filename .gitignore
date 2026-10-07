@@ -49,3 +49,6 @@ output/
 
 # Preload bundle is rebuilt from index.ts
 apps/electron/src/preload/index.cjs
+
+# Operator-created backups contain personal data and encryption material.
+private-backups/

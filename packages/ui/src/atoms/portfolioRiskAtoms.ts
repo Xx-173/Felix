@@ -1,6 +1,7 @@
 import type { FinagentClient } from '../client';
 import { atom } from 'jotai';
 import type { PortfolioRiskReport, RiskSeverity } from '@finagent/core';
+import { selectedAccountIdAtom } from './portfolioAtoms';
 import { loadPortfolioRiskReport } from '../client/portfolio-risk';
 
 /**
@@ -27,13 +28,14 @@ export const portfolioRiskCacheAtom = atom<PortfolioRiskCache>({
 /** Trigger a fresh analysis; results land in `portfolioRiskCacheAtom`. */
 export const analyzePortfolioRiskAtom = atom(null, async (_get, set, client?: FinagentClient) => {
   set(portfolioRiskCacheAtom, (cache) => ({ ...cache, loading: true, error: null }));
+  const accountId = _get(selectedAccountIdAtom);
   try {
-    const report = await loadPortfolioRiskReport(client);
-    set(portfolioRiskCacheAtom, { report, loading: false, error: null });
+    const report = await loadPortfolioRiskReport(client, accountId ?? undefined);
+    if (_get(selectedAccountIdAtom) === accountId) set(portfolioRiskCacheAtom, { report, loading: false, error: null });
     return report;
   } catch (error) {
     const message = error instanceof Error ? error.message : 'Portfolio risk analysis failed';
-    set(portfolioRiskCacheAtom, (cache) => ({ ...cache, loading: false, error: message }));
+    if (_get(selectedAccountIdAtom) === accountId) set(portfolioRiskCacheAtom, (cache) => ({ ...cache, loading: false, error: message }));
     throw error;
   }
 });

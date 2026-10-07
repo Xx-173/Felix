@@ -78,7 +78,7 @@ export function getStoragePath(filename: string): string {
 
 // Re-export storage utilities
 export {
-  JsonFileStore,
+  JsonFileStore, registerJsonStoreBackend, type JsonStoreBackend,
   SessionRepository,
   MessageRepository,
   RunRepository,

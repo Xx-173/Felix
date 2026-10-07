@@ -19,6 +19,7 @@ function createElectronClient(): FinagentClient {
   }
 
   return {
+    workspace: { get: () => ipcResult(window.electronAPI.workspace.get()), update: (input) => ipcResult(window.electronAPI.workspace.update(input)) },
     window: {
       minimize: () => window.electronAPI.window.minimize(),
       maximize: () => window.electronAPI.window.maximize(),
@@ -55,6 +56,7 @@ function createElectronClient(): FinagentClient {
       getCalcIndex: (symbol) => ipcResult(window.electronAPI.market.getCalcIndex(symbol)),
       getMarketStatus: () => ipcResult(window.electronAPI.market.getMarketStatus()),
       getNews: (symbol) => ipcResult(window.electronAPI.market.getNews(symbol)),
+      getCalendarEvents: (input) => ipcResult(window.electronAPI.market.getCalendarEvents(input)),
     },
     longbridge: {
       getStatus: () => ipcResult(window.electronAPI.longbridge.getStatus()),
@@ -95,7 +97,7 @@ function createElectronClient(): FinagentClient {
       build: (symbols) => ipcResult(window.electronAPI.compare.build(symbols)),
     },
     portfolioRisk: {
-      analyze: () => ipcResult(window.electronAPI.portfolioRisk.analyze()),
+      analyze: (input) => ipcResult(window.electronAPI.portfolioRisk.analyze(input)),
     },
     llm: {
       getState: () => ipcResult(window.electronAPI.llm.getState()),

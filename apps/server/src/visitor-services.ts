@@ -74,7 +74,7 @@ export class VisitorServices {
   }
   async initialize() {
     await this.skills.loadSkills();
-    if (!(await this.automation.list()).length) for (const type of automationTypes) await this.automation.save({ id: type, type, enabled: false, hour: 16, days: [1, 2, 3, 4, 5], symbols: type === 'watchlist-daily-review' ? ['AAPL.US', 'TSLA.US', 'NVDA.US'] : undefined, strategyId: type === 'weekly-thesis-review' ? 'risk-review' : 'comprehensive', notify: 'material-only', createdAt: Date.now() });
+    if (!(await this.automation.list()).length) for (const type of automationTypes) await this.automation.save({ id: type, type, enabled: false, hour: 16, days: [1, 2, 3, 4, 5], symbols: undefined, strategyId: type === 'weekly-thesis-review' ? 'risk-review' : 'comprehensive', notify: 'material-only', createdAt: Date.now() });
     this.alertEngine.start();
   }
   async onReport(report: ResearchReport) {
@@ -109,7 +109,18 @@ export class VisitorServices {
       case 'screening.listRuns': return this.screening.listRuns();
       case 'screening.getRun': return this.screening.getRun(z.object({ runId: id }).parse(args[0]).runId);
       case 'pulse.snapshot': return this.pulse.snapshot(z.object({ watchlist: z.array(z.object({ symbol, lastPrice: z.number().finite().nonnegative().optional() })).max(40), market: z.enum(['US', 'HK', 'SG']).optional() }).parse(args[0]));
-      case 'portfolioRisk.analyze': return this.risk.analyze();
+      case 'portfolioRisk.analyze': {
+        const input = z.object({ accountId: z.string().max(140).optional() }).parse(args[0] ?? {});
+        if (!input.accountId) return this.risk.analyze();
+        if (input.accountId.startsWith('manual:')) {
+          const portfolio = await this.portfolios.get(id.parse(input.accountId.slice(7)));
+          if (!portfolio) throw createCodeError('PORTFOLIO_NOT_FOUND', '组合不存在（Portfolio not found）。');
+          return this.risk.analyze(undefined, { holdings: portfolio.holdings, accounts: [], baseCurrency: portfolio.currency, fetchedAt: portfolio.updatedAt });
+        }
+        const portfolio = await this.market.getPortfolio();
+        if (!portfolio.accounts.some((account) => account.id === input.accountId)) throw createCodeError('PORTFOLIO_NOT_FOUND', '组合不存在（Portfolio not found）。');
+        return this.risk.analyze(undefined, { ...portfolio, holdings: portfolio.holdings.filter((holding) => holding.symbol.split('.').at(-1) === portfolio.accounts.find((account) => account.id === input.accountId)?.market) });
+      }
       case 'outcome.listOpinions': return this.opinions.listOpinions(z.object({ symbol: symbol.optional() }).parse(args[0] ?? {}).symbol);
       case 'outcome.listOutcomes': return this.opinions.listOutcomes(z.object({ symbol: symbol.optional() }).parse(args[0] ?? {}).symbol);
       case 'outcome.evaluateDue': return this.outcomes.evaluateDue(Date.now(), async (symbol) => { try { return await this.market.getKline({ symbol, period: '1d', limit: 200 }); } catch { return null; } });
@@ -131,7 +142,7 @@ export class VisitorServices {
       case 'automation.runRule': {
         const rule = await this.automation.get(z.object({ ruleId: id }).parse(args[0]).ruleId);
         if (!rule) throw createCodeError('INVALID_ARGUMENT', 'Unknown automation rule');
-        const result = await runAutomation(rule, { registry: this.registry, diffRepo: this.diffs, researchStart: this.startResearch, watchlistSymbols: () => rule.symbols ?? [], portfolioSymbols: async () => (await this.market.getPortfolio()).holdings.map((holding) => holding.symbol), thesisSymbols: async () => (await this.theses.list()).map((thesis) => thesis.symbol), locale: 'zh-CN' });
+        const result = await runAutomation(rule, { registry: this.registry, diffRepo: this.diffs, researchStart: this.startResearch, watchlistSymbols: async () => rule.symbols ?? (await this.store.read('workspace.json', { watchlist: ['AAPL.US', 'TSLA.US', 'NVDA.US'] })).watchlist, portfolioSymbols: async () => (await this.market.getPortfolio()).holdings.map((holding) => holding.symbol), thesisSymbols: async () => (await this.theses.list()).map((thesis) => thesis.symbol), locale: 'zh-CN' });
         await this.automationRuns.record(result); return result;
       }
       case 'automation.buildBrief': return buildBrief({ runs: await this.automationRuns.list(), alerts: await this.alertEvents.list(), diffs: await this.diffs.list(), portfolio: [], movers: [] });

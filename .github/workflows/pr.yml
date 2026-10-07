@@ -69,7 +69,7 @@ jobs:
           mapfile -t TARGETS < <(
             awk -F/ '
               /^packages\/[^/]+\// { print $1 "/" $2 }
-              /^apps\/electron\// { print "apps/electron" }
+              /^apps\/(electron|server|web)\// { print $1 "/" $2 }
             ' /tmp/changed-files.txt | sort -u
           )
 
@@ -145,3 +145,42 @@ jobs:
           fi
 
           echo 'No secret patterns found.'
+
+  web-deployment:
+    name: Web deployment and browser flows
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    steps:
+      - uses: actions/checkout@v4
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: ${{ env.BUN_VERSION }}
+      - run: bun install --frozen-lockfile
+      - run: bun run web:build
+      - run: bun run web:server:build
+      - name: Browser end-to-end flows
+        shell: bash
+        run: |
+          bun run web:start > /tmp/felix-web.log 2>&1 &
+          SERVER_PID=$!
+          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          for attempt in {1..40}; do
+            if curl --fail --silent http://127.0.0.1:8787/healthz; then break; fi
+            sleep 1
+          done
+          bun run web:e2e
+      - name: Build and verify Linux container restart
+        shell: bash
+        run: |
+          docker build -f apps/server/Dockerfile -t felix-ci .
+          docker volume create felix-ci-data
+          trap 'docker rm -f felix-ci || true; docker volume rm felix-ci-data || true' EXIT
+          docker run -d --name felix-ci -p 127.0.0.1:8790:8787 -v felix-ci-data:/data -e FELIX_PUBLIC_ORIGIN=https://felix.example.com felix-ci
+          bun scripts/container-smoke.ts
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: web-browser-results
+          path: |
+            artifacts/web/*.png
+            artifacts/web/browser-result.json

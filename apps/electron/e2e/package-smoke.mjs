@@ -7,8 +7,8 @@
 //
 // Prerequisite: `bun run package` must have produced dist/electron/mac*/Felix.app.
 
-import { execSync, spawn } from 'node:child_process';
-import { existsSync, mkdtempSync, readdirSync, statSync } from 'node:fs';
+import { spawn } from 'node:child_process';
+import { existsSync, mkdtempSync, readdirSync, statSync, readFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -52,6 +52,11 @@ function fail(name, error) {
 }
 
 function findAppBinary() {
+  if (process.env.FELIX_DESKTOP_BINARY) return process.env.FELIX_DESKTOP_BINARY;
+  if (process.platform === 'win32') {
+    const binary = join(distDir, 'win-unpacked', 'Felix.exe');
+    if (existsSync(binary)) return binary;
+  }
   if (!existsSync(distDir)) {
     throw new Error(`No dist output at ${distDir}. Run \`bun run package\` first.`);
   }
@@ -96,27 +101,25 @@ function evaluateIpC(page, expr) {
 async function main() {
   const appBinary = findAppBinary();
   console.log(`Launching ${appBinary}`);
-  // Stale instances from interrupted runs hold the CDP port — kill first.
-  try {
-    execSync("pkill -f 'remote-debugging-port=9334' || true", { stdio: 'ignore' });
-  } catch {
-    // Nothing to clean.
-  }
   const userDataDir = mkdtempSync(join(tmpdir(), 'felix-smoke-'));
 
   const appProcess = spawn(appBinary, [`--remote-debugging-port=${CDP_PORT}`, '--no-sandbox'], {
     cwd: tmpdir(),
     stdio: 'ignore',
+    windowsHide: true,
     env: {
       ...process.env,
       FINAGENT_AGENT_PROVIDER: 'local',
       FINAGENT_E2E: '1',
       FINAGENT_E2E_HIDDEN: '1',
+      FINAGENT_DEMO_DATA: '1',
+      FINAGENT_FORCE_PROD_LOAD: '1',
       FINAGENT_USER_DATA_DIR: userDataDir,
     },
   });
 
   let browser;
+  appProcess.on('error', (error) => { console.error(error.message); });
   try {
     await waitForCdp(60_000);
     browser = await chromium.connectOverCDP(CDP_URL, { timeout: 30_000 });
@@ -162,7 +165,9 @@ async function main() {
         }
       }
       console.log(`  tools: ${names.size} (${[...names].slice(0, 8).join(', ')}${names.size > 8 ? ', …' : ''})`);
-      pass('C: agent:getTools includes finance tools');
+      const calendar = await page.evaluate(() => window.electronAPI.market.getCalendarEvents({ eventType: 'financial' }));
+      if (!calendar.ok && !['CAPABILITY_UNAVAILABLE', 'PROVIDER_UNAVAILABLE', 'NO_CAPABLE_PROVIDER', 'PROVIDER_ERROR'].includes(calendar.error?.code)) throw new Error('Calendar IPC bridge failed: ' + JSON.stringify(calendar));
+      pass('C: finance tools and calendar IPC available; disconnected calendar reports a provider error');
     } catch (error) {
       fail('C: agent:getTools includes finance tools', error);
     }
@@ -184,12 +189,14 @@ async function main() {
 
       // Poll listRuns until the run settles (completed/failed/cancelled).
       const deadline = Date.now() + 30_000;
-      let run = null;
+      let run = null, lastResult = null;
+      console.log('  started test run: ' + JSON.stringify({ sessionId, runId, status: started.data.status }));
       while (Date.now() < deadline) {
         const runs = await evaluateIpC(
           page,
           `window.electronAPI.kernel.listRuns(${JSON.stringify(sessionId)})`
         );
+        lastResult = runs;
         const candidate = runs?.ok && Array.isArray(runs.data) ? runs.data.find((r) => r.id === runId) : undefined;
         if (candidate && candidate.status !== 'running') {
           run = candidate;
@@ -197,7 +204,7 @@ async function main() {
         }
         await new Promise((resolve) => setTimeout(resolve, 250));
       }
-      if (!run) throw new Error('run did not settle within 30s');
+      if (!run) throw new Error('run did not settle within 30s: ' + JSON.stringify(lastResult));
       if (run.status !== 'completed') {
         throw new Error(`run settled as ${run.status}: ${JSON.stringify(run.error ?? run.answer ?? '')}`);
       }
@@ -206,6 +213,22 @@ async function main() {
     } catch (error) {
       fail('D: sessions:create + local run completes', error);
     }
+    try {
+      const saved = await page.evaluate(() => window.electronAPI.workspace.update({ watchlist: ['MSFT.US'] }));
+      if (!saved.ok) throw new Error('Desktop workspace write failed');
+      if (JSON.parse(readFileSync(join(userDataDir, 'workspace.json'), 'utf8')).watchlist.join(',') !== 'MSFT.US') throw new Error('Watchlist was not saved to local userData');
+      await page.reload({ waitUntil: 'domcontentloaded' });
+      await page.getByTestId('sidebar').waitFor();
+      const restored = await page.evaluate(() => window.electronAPI.workspace.get());
+      if (!restored.ok || restored.data.watchlist.join(',') !== 'MSFT.US') throw new Error('Watchlist not restored after reload');
+      const parsed = await page.evaluate(() => window.electronAPI.portfolioImport.parse({ source: 'csv', text: 'symbol,quantity,cost_price,currency\nMSFT.US,10,100,USD' }));
+      if (!parsed.ok) throw new Error('Manual portfolio parse failed');
+      const portfolio = await page.evaluate((draft) => window.electronAPI.portfolioImport.confirm({ draft, name: 'Smoke manual' }), parsed.data);
+      if (!portfolio.ok) throw new Error('Manual portfolio confirmation failed');
+      const risk = await page.evaluate((id) => window.electronAPI.portfolioRisk.analyze({ accountId: 'manual:' + id }), portfolio.data.id);
+      if (!risk.ok || risk.data.allocation.map((item) => item.symbol).join(',') !== 'MSFT.US') throw new Error('Desktop risk used the wrong holdings: ' + JSON.stringify(risk));
+      pass('E: local watchlist persistence and selected manual-portfolio analysis');
+    } catch (error) { fail('E: persistent desktop workspace', error); }
   } catch (error) {
     fail('harness setup', error);
   } finally {

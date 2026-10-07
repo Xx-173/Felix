@@ -112,6 +112,9 @@ ipcMain.handle('window:close', () => mainWindow?.close());
 ipcMain.handle('window:isMaximized', () => mainWindow?.isMaximized());
 
 // Agent Kernel IPC
+ipcMain.handle('workspace:get', async () => toIpcResult(() => agentKernelHost.workspaceGet()));
+ipcMain.handle('workspace:update', async (_event, input: unknown) => toIpcResult(() => agentKernelHost.workspaceUpdate(input)));
+
 ipcMain.handle('kernel:hydrate', async () =>
   toIpcResult(() => agentKernelHost.hydrate())
 );
@@ -170,6 +173,8 @@ ipcMain.handle('market:getCalcIndex', async (_event, symbol: unknown) =>
 ipcMain.handle('market:getMarketStatus', async () =>
   toIpcResult(() => agentKernelHost.getMarketStatus())
 );
+
+ipcMain.handle('market:getCalendarEvents', async (_event, input: unknown) => toIpcResult(() => agentKernelHost.getCalendarEvents(input)));
 
 ipcMain.handle('market:getNews', async (_event, symbol: unknown) =>
   toIpcResult(() => agentKernelHost.getNews(symbol))
@@ -250,8 +255,8 @@ ipcMain.handle('compare:build', async (_event, input: unknown) =>
   toIpcResult(() => agentKernelHost.compareBuild(input))
 );
 
-ipcMain.handle('portfolioRisk:analyze', async () =>
-  toIpcResult(() => agentKernelHost.portfolioRiskAnalyze())
+ipcMain.handle('portfolioRisk:analyze', async (_event, input: unknown) =>
+  toIpcResult(() => agentKernelHost.portfolioRiskAnalyze(input))
 );
 
 ipcMain.handle('alerts:loadRules', async () =>
