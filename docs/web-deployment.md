@@ -208,6 +208,6 @@ bun run test:package-smoke
 
 本次存储修改的本机验证：全仓 1745 个测试通过、16 个测试跳过（8 个 PostgreSQL 用例转由真实数据库 CI 执行，另 8 个需要真实账户或符号链接权限）；类型检查通过。Chrome 覆盖全部导航、两轮对话、研究、投资论点、报告下载、模型密钥、自选股、账号注册/跨浏览器登录/导出/退出/删除及手机宽度。实际 Electron 进程已验证旧 JSON 迁移、SQLite 读写、会话和技能开关保留、关闭后重启，以及旧文件不会覆盖新数据。SQLite JSON 迁移、账号恢复、关闭浏览器后的定时调度、重启去重、跨库备份恢复均有自动测试。
 
-PostgreSQL CI 使用 PostgreSQL 17，执行全部服务器测试、浏览器流程、SQLite→PostgreSQL→SQLite 的资料恢复，以及正常／异常容器重启。Windows CI 构建当前修改的未签名 NSIS 包，并执行包内资源／IPC／本地运行和 SQLite 重启测试；安装包及 SHA-256 文件位于对应运行的 `Felix-Windows-x64` artifact。当前结果见 [GitHub Actions](https://github.com/Xx-173/Felix/actions)。
+PostgreSQL 17 的全部服务器测试、浏览器流程、SQLite→PostgreSQL→SQLite 资料恢复，以及正常／异常容器重启已在 [双数据库 CI](https://github.com/Xx-173/Felix/actions/runs/37651228410) 通过；同轮全仓测试、类型检查和 SQLite 浏览器／容器验收也通过。[Windows CI](https://github.com/Xx-173/Felix/actions/runs/37650398353) 已生成包含桌面 SQLite 的未签名 NSIS 包，包内资源／IPC／本地运行和实际 SQLite 重启测试通过；安装包及 SHA-256 文件位于该运行的 `Felix-Windows-x64` artifact。
 
-Linux x64 的完整单元测试、浏览器操作流程、镜像构建、SQLite 持久化、正常重启和异常退出后的重启测试已在 [GitHub Actions](https://github.com/Xx-173/Felix/actions/runs/37622696070) 通过。桌面版和网页版使用同一完整应用样式；构建安装包不会自动发布 GitHub Release。本机 Docker 引擎未运行，ARM 容器和目标服务器容量尚未验收。实际云主机、域名 DNS/HTTPS、真实供应商密钥和桌面外部 Pi 环境仍需在目标环境完成验收。
+桌面版和网页版使用同一完整应用样式；构建安装包不会自动发布 GitHub Release。本机 Docker 引擎未运行，容器验证使用 Linux x64 CI；ARM 容器和目标服务器容量尚未验收。实际云主机、域名 DNS/HTTPS、真实供应商密钥和桌面外部 Pi 环境仍需在目标环境完成验收。
