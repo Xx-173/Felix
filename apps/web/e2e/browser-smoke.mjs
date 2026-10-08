@@ -25,6 +25,39 @@ try {
   assert.match(await page.locator('body').innerText(), /示例行情/);
   assert.equal(await page.evaluate(() => Boolean(window.electronAPI)), false);
   await page.getByTestId('market-dashboard').waitFor();
+  const getWatchlist = () => page.evaluate(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"workspace.get"}' })).json()).data.watchlist);
+  const originalWatchlist = await getWatchlist();
+  await page.getByTestId('assistant-close').click();
+  for (const [code, first, second] of [['CN', '000001.SH', '399001.SZ'], ['HK', 'HSI.HK', 'HSTECH.HK'], ['US', 'SPX.US', 'NDX.US']]) {
+    await page.getByRole('tab', { name: code === 'CN' ? 'A 股（CN）' : code === 'HK' ? '港股（HK）' : '美股（US）', exact: true }).click();
+    await page.locator('.felix-index-card').first().getByRole('button').click();
+    await page.locator(`[data-testid=index-workspace][data-symbol="${first}"]`).waitFor();
+    await page.getByTestId('chart-canvas').waitFor();
+    await page.getByText(/^暂无可核验的指数分时数据/).waitFor();
+    await page.getByTestId(`index-item-${second}`).click();
+    await page.locator(`[data-testid=index-workspace][data-symbol="${second}"]`).waitFor();
+    await page.getByTestId('chart-canvas').waitFor();
+    assert.equal(await page.getByTestId('workspace-home').count(), 0, 'index selection opens its own page');
+    assert.deepEqual(await getWatchlist(), originalWatchlist, 'index browsing does not alter watchlists');
+    assert.doesNotMatch(await page.locator('.felix-indices-price strong').innerText(), /[$¥]/, 'index levels use points instead of stock currencies');
+    await page.screenshot({ path: resolve(artifacts, `indices-${code}.png`) });
+    if (code === 'CN') {
+      await page.getByRole('button', { name: '切换深色主题（Dark theme）', exact: true }).click();
+      await page.waitForTimeout(200);
+      await page.screenshot({ path: resolve(artifacts, 'indices-CN-dark.png') });
+      await page.getByRole('button', { name: '切换浅色主题（Light theme）', exact: true }).click();
+    }
+    await page.getByRole('button', { name: '返回市场看板（Back to market dashboard）', exact: true }).click();
+  }
+  await page.getByTestId('sidebar').getByRole('button', { name: '指数（Indices）', exact: true }).click();
+  await page.getByLabel('开始日期（Start date）', { exact: true }).fill('2099-01-01');
+  await page.getByLabel('结束日期（End date）', { exact: true }).fill('2099-01-02');
+  await page.getByText(/^所选范围暂无可用历史/).waitFor();
+  await page.getByLabel('结束日期（End date）', { exact: true }).fill('2098-01-01');
+  await page.getByRole('alert').getByText(/^请输入有效日期/).waitFor();
+  await page.getByRole('button', { name: '返回市场看板（Back to market dashboard）', exact: true }).click();
+  steps.push('三市场指数卡打开独立指数页，切换及日期筛选正常，不修改自选，分时缺失明确提示');
+  await page.getByTestId('new-session-fab').click();
   assert.equal(await page.locator('.felix-sidebar-new-analysis').count(), 0);
   for (const [code, label] of [['CN', 'A 股（CN）'], ['HK', '港股（HK）'], ['US', '美股（US）']]) {
     await page.getByRole('tab', { name: label, exact: true }).click();
@@ -237,13 +270,13 @@ try {
   await page.getByTestId('sidebar').getByRole('button', { name: /^投资逻辑（/ }).click();
   await page.getByTestId('thesis-card').waitFor();
   steps.push('研究报告可保存为投资论点，并在完整投资逻辑页面查看');
-  for (const label of ['市场看板', '机会发现', '自选', '投资组合', '对比', '提醒', '研究', '投资逻辑', '技能', '评测', '事件', '个人与安全', '设置']) {
+  for (const label of ['市场看板', '指数', '机会发现', '自选', '投资组合', '对比', '提醒', '研究', '投资逻辑', '技能', '评测', '事件', '个人与安全', '设置']) {
     const button = page.getByTestId('sidebar').getByRole('button', { name: new RegExp('^' + label + '（') });
     assert.equal(await button.count(), 1, label + ' navigation preserved');
     await button.click(); await page.waitForTimeout(180);
     assert.equal(await page.locator('body').getByText('Something went wrong', { exact: true }).count(), 0);
   }
-  steps.push('桌面全部 13 个导航入口保留，逐页打开无脚本错误');
+  steps.push('桌面全部 14 个导航入口保留，逐页打开无脚本错误');
   await page.getByRole('tab', { name: /^大语言模型（/ }).click();
   await page.screenshot({ path: resolve(artifacts, 'settings-models.png') });
   const credential = page.locator('input[type="password"]').first();
@@ -326,6 +359,12 @@ try {
   await page.getByTestId('market-dashboard').waitFor();
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'mobile dashboard fits the viewport');
   await page.screenshot({ path: resolve(artifacts, 'market-dashboard-mobile.png') });
+  await page.locator('.felix-index-card').first().getByRole('button').click();
+  await page.getByTestId('index-workspace').waitFor();
+  await page.getByTestId('chart-canvas').waitFor();
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'mobile index workspace fits the viewport');
+  await page.screenshot({ path: resolve(artifacts, 'indices-mobile.png') });
+  await page.getByRole('button', { name: '返回市场看板（Back to market dashboard）', exact: true }).click();
   const mobileFab = await page.getByTestId('new-session-fab').boundingBox();
   assert.ok(mobileFab.x >= 0 && mobileFab.x + mobileFab.width <= 390, 'floating button remains reachable after resizing');
   await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();

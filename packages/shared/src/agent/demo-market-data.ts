@@ -93,6 +93,8 @@ function demoKlinesFor(symbol: string, limit?: number): Kline[] {
     const open = index === 0 ? quote.open : round2(close * (1 + (seeded(symbol, index + 61) - 0.5) * 0.008));
     klines.push({
       symbol: quote.symbol,
+      source: 'demo',
+      providerName: 'Built-in sample',
       timestamp: todayUtc - index * daySeconds,
       open,
       high: index === 0 ? quote.high : round2(Math.max(open, close) * 1.006),

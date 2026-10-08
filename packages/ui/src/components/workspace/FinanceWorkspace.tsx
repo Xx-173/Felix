@@ -17,6 +17,7 @@ import { ResearchPanel } from '../research/ResearchPanel';
 import { ThesisPanel } from '../thesis/ThesisPanel';
 import { CompareWorkspace } from '../compare/CompareWorkspace';
 import { MarketDashboard } from '../today/MarketDashboard';
+import { IndexWorkspace } from '../indices/IndexWorkspace';
 import { DiscoverView } from '../discover/DiscoverView';
 import { EvaluationCenter } from '../evaluation/EvaluationCenter';
 import { EventsView } from '../events/EventsView';
@@ -46,6 +47,9 @@ export const FinanceWorkspace: React.FC = () => {
       break;
     case 'today':
       content = <MarketDashboard />;
+      break;
+    case 'indices':
+      content = <IndexWorkspace />;
       break;
     case 'portfolio':
       content = <PortfolioSection />;

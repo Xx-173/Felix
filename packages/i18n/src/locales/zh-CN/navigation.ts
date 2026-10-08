@@ -3,6 +3,23 @@ import type { navigation as enNavigation } from '../en-US/navigation.ts';
 
 /** Global navigation rail + shell chrome — Simplified Chinese (glossary-aligned §61). */
 export const navigation = {
+  indices: '指数',
+  indexPoints: '点',
+  indexWorkspaceHint: '独立查看指数历史行情，不改变股票自选。',
+  refreshIndices: '刷新指数日 K',
+  coreIndices: '核心指数',
+  indexRangeStart: '开始日期',
+  indexRangeEnd: '结束日期',
+  indexBarsCount: '所选范围 {{count}} 根日 K',
+  indexAvailableRange: '可用历史：{{start}} 至 {{end}}',
+  indexHistorySourceUnknown: '历史数据接口未提供独立来源标记',
+  indexDaily: '日 K · 均线 / 成交量 / MACD',
+  indexInvalidRange: '请输入有效日期，开始日期不能晚于结束日期。',
+  indexNoHistory: '所选范围暂无可用历史，请调整日期或配置行情来源。',
+  indexVolumeUnavailable: '所选范围没有可用成交量数据。',
+  indexIntraday: '分时',
+  indexIntradayUnavailable: '暂无可核验的指数分时数据',
+  indexIntradayHint: '当前指数接口提供日 K；分时行情需另接支持的数据源。',
   floatingSessionHint: "新建会话 · 拖动可调整位置",
   sessionCreateFailed: "会话创建失败，请稍后重试",
   marketTabs: "市场切换",

@@ -2,6 +2,7 @@ import { createStore } from 'jotai';
 import { describe, expect, it } from 'bun:test';
 import {
   activeSymbolAtom,
+  activeIndexSymbolAtom,
   activeViewAtom,
   selectedPositionAtom,
   workspaceContextAtom,
@@ -11,6 +12,20 @@ import {
 import { compareSymbolsAtom } from './compareAtoms';
 
 describe('workspace atoms', () => {
+  it('isolates index focus from the selected stock, portfolio and comparison', () => {
+    const store = createStore();
+    store.set(activeSymbolAtom, 'AAPL.US');
+    store.set(selectedPositionAtom, 'position-1');
+    store.set(compareSymbolsAtom, ['AAPL.US', 'MSFT.US']);
+    store.set(activeIndexSymbolAtom, 'HSI.HK');
+    store.set(navSectionAtom, 'indices');
+    expect(store.get(workspaceContextAtom)).toEqual({ activeSymbol: 'HSI.HK', activeView: 'chart' });
+    expect(store.get(activeSymbolAtom)).toBe('AAPL.US');
+    store.set(activeIndexSymbolAtom, 'AAPL.US');
+    expect(store.get(activeIndexSymbolAtom)).toBe('HSI.HK');
+    store.set(navSectionAtom, 'watchlist');
+    expect(store.get(workspaceContextAtom).activeSymbol).toBe('AAPL.US');
+  });
   it('derives WorkspaceContext from active symbol and view', () => {
     const store = createStore();
     store.set(activeSymbolAtom, 'NVDA.US');

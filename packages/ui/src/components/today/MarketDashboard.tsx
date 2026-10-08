@@ -3,7 +3,7 @@ import { atom, useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import { Activity, ArrowDownRight, ArrowUpRight, BarChart3, Gauge, RefreshCw, TrendingUp } from 'lucide-react';
 import type { MarketStatus, MarketTemperature, Quote } from '@finagent/core';
-import { activeSymbolAtom, activeViewAtom, fetchQuoteAtom, navSectionAtom, quoteCacheAtomFamily, watchlistAtom } from '../../atoms';
+import { activeIndexSymbolAtom, activeSymbolAtom, activeViewAtom, fetchQuoteAtom, navSectionAtom, quoteCacheAtomFamily, watchlistAtom } from '../../atoms';
 import { useFinagentClient } from '../../client';
 import { DASHBOARD_INDICES, CHANGE_BUCKET_LABELS, summarizeQuotes, type DashboardMarket } from '../../lib/market-dashboard';
 import { readPersisted, writePersisted } from '../../lib/persistedPrefs';
@@ -24,6 +24,7 @@ export const MarketDashboard: React.FC = () => {
   const fetchQuote = useSetAtom(fetchQuoteAtom);
   const setSection = useSetAtom(navSectionAtom);
   const setSymbol = useSetAtom(activeSymbolAtom);
+  const setIndex = useSetAtom(activeIndexSymbolAtom);
   const setView = useSetAtom(activeViewAtom);
   const [market, setMarket] = useState<DashboardMarket>(() => {
     const value = readPersisted<string>('dashboardMarket', 'CN');
@@ -84,7 +85,7 @@ export const MarketDashboard: React.FC = () => {
     </header>
     <section id="market-content" role="tabpanel" aria-labelledby={`market-tab-${market}`}>
       <div className="felix-dashboard-context"><span><Activity size={13} />{t('navigation.dashboardNotRealtime')}</span><span>{marketStatus.length ? marketStatus.map((item) => `${item.market}: ${item.status}`).join(' · ') : t('navigation.marketStatusUnknown')}</span></div>
-      <div className="felix-dashboard-indices">{DASHBOARD_INDICES[market].map((index) => <IndexCard key={index.symbol} descriptor={index} onOpen={() => openSymbol(index.symbol)} />)}</div>
+      <div className="felix-dashboard-indices">{DASHBOARD_INDICES[market].map((index) => <IndexCard key={index.symbol} descriptor={index} onOpen={() => { setIndex(index.symbol); setSection('indices'); }} />)}</div>
       <div className="felix-dashboard-scope"><span>{t('navigation.observationScope', { count: stats.count, total: symbols.length })}</span>{stats.isDemo && <DemoBadge />}<button type="button" onClick={() => setSection('workspace')}>{t('navigation.manageWatchlist')} <ArrowUpRight size={13} /></button></div>
       <div className="felix-dashboard-metrics">
         <Metric title={t('navigation.observedBreadth')} value={stats.count ? `${stats.rising} / ${stats.flat} / ${stats.falling}` : '—'} hint={t('navigation.breadthOrder')} />

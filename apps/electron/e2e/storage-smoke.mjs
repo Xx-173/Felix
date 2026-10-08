@@ -63,6 +63,16 @@ try {
   await page.getByRole('tab', { name: '美股（US）', exact: true }).click();
   await page.locator('[data-market=US]').waitFor();
   await page.screenshot({ path: join(artifacts, 'desktop-market-dashboard.png') });
+  await page.getByTestId('assistant-close').click();
+  await page.locator('.felix-index-card').first().getByRole('button').click();
+  await page.locator('[data-testid=index-workspace][data-symbol="SPX.US"]').waitFor();
+  await page.getByTestId('chart-canvas').waitFor();
+  await page.getByTestId('index-item-NDX.US').click();
+  await page.locator('[data-testid=index-workspace][data-symbol="NDX.US"]').waitFor();
+  await page.getByTestId('chart-canvas').waitFor();
+  assert.deepEqual((await page.evaluate(() => window.electronAPI.workspace.get())).data.watchlist, ['TSLA.US']);
+  await page.screenshot({ path: join(artifacts, 'desktop-index-workspace.png') });
+  await page.getByRole('button', { name: '返回市场看板（Back to market dashboard）', exact: true }).click();
   await page.getByTestId('new-session-fab').click();
   await page.getByTestId('agent-input').waitFor();
   assert.equal(await page.locator('.felix-assistant-questions button').count(), 17);

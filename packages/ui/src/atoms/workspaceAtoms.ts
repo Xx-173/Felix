@@ -2,6 +2,7 @@ import { compareSymbolsAtom } from './compareAtoms';
 import { atom } from 'jotai';
 import type { WorkspaceContext, WorkspaceView } from '@finagent/core';
 import { persistedAtom } from '../lib/persistedPrefs';
+import { DASHBOARD_INDICES } from '../lib/market-dashboard';
 
 // ---------------------------------------------------------------------------
 // Workspace context: the current financial-object focus of the UI.
@@ -13,6 +14,17 @@ import { persistedAtom } from '../lib/persistedPrefs';
 
 /** The security the workspace is currently focused on (e.g. "NVDA.US"). */
 export const activeSymbolAtom = atom<string | null>(null);
+/** Index browsing never changes the selected stock or the user's watchlist. */
+const indexSymbolPreferenceAtom = persistedAtom<string>('activeIndexSymbol', '000001.SH');
+export const activeIndexSymbolAtom = atom(
+  (get) => {
+    const saved = get(indexSymbolPreferenceAtom);
+    return Object.values(DASHBOARD_INDICES).flat().some((index) => index.symbol === saved) ? saved : '000001.SH';
+  },
+  (_get, set, symbol: string) => {
+    if (Object.values(DASHBOARD_INDICES).flat().some((index) => index.symbol === symbol)) set(indexSymbolPreferenceAtom, symbol);
+  },
+);
 
 /** Which workspace view is visible: security views or app sections. */
 export const activeViewAtom = atom<WorkspaceView>('overview');
@@ -36,6 +48,7 @@ export type NavSection =
   | 'compare'
   // Felix V4 "Today" dashboard (spec §31–32) — mounted by the Lead.
   | 'today'
+  | 'indices'
   // Felix V5 "Discover" (spec §4–5) — mounted by the Lead.
   | 'discover'
   // Felix V7 Evaluation Center (spec §61–68) — mounted by the Evaluation UI agent.
@@ -67,6 +80,7 @@ export const settingsTabAtom = atom<SettingsTab>('general');
 
 /** Derived WorkspaceContext passed to agent runs and shared by all views. */
 export const workspaceContextAtom = atom<WorkspaceContext>((get) => {
+  if (get(navSectionAtom) === 'indices') return { activeSymbol: get(activeIndexSymbolAtom), activeView: 'chart' };
   const activeSymbol = get(activeSymbolAtom);
   const activeView = get(activeViewAtom);
   const selectedPosition = get(selectedPositionAtom);

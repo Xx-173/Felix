@@ -13,6 +13,7 @@ import {
   FlaskConical,
   GitCompareArrows,
   LayoutDashboard,
+  Activity,
   Settings,
   UserRound,
   Zap,
@@ -29,6 +30,7 @@ type SidebarItem = { key: NavSection; labelKey: string; icon: LucideIcon };
 
 const SIDEBAR_ITEMS: SidebarItem[] = [
   { key: 'today', labelKey: 'today', icon: LayoutDashboard },
+  { key: 'indices', labelKey: 'indices', icon: Activity },
   { key: 'discover', labelKey: 'discover', icon: Compass },
   { key: 'workspace', labelKey: 'workspace', icon: ChartNoAxesCombined },
   { key: 'portfolio', labelKey: 'portfolio', icon: BriefcaseBusiness },

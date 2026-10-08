@@ -55,6 +55,9 @@ export interface Kline {
   low: number;
   close: number;
   volume: number;
+  /** Optional provenance; legacy providers may omit it. */
+  source?: string;
+  providerName?: string;
 }
 
 export interface IntradayData {

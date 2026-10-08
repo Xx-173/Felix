@@ -17,6 +17,8 @@ interface FinancialKLineChartProps {
   period?: string;
   showMA?: boolean;
   showEMA?: boolean;
+  showVolume?: boolean;
+  showMACD?: boolean;
 }
 
 const CANDLE_PANE_ID = 'candle_pane';
@@ -78,12 +80,16 @@ export function FinancialKLineChart({
   period,
   showMA = false,
   showEMA = false,
+  showVolume = false,
+  showMACD = false,
 }: FinancialKLineChartProps) {
   const containerRef = useRef<HTMLDivElement>(null);
   const chartRef = useRef<Chart | null>(null);
   const barsRef = useRef<FinancialBar[]>(bars);
   const maIdRef = useRef<string | null>(null);
   const emaIdRef = useRef<string | null>(null);
+  const volumeIdRef = useRef<string | null>(null);
+  const macdIdRef = useRef<string | null>(null);
 
   const hasData = bars.length > 0;
 
@@ -150,6 +156,8 @@ export function FinancialKLineChart({
       chartRef.current = null;
       maIdRef.current = null;
       emaIdRef.current = null;
+      volumeIdRef.current = null;
+      macdIdRef.current = null;
     };
   }, [hasData]);
 
@@ -187,6 +195,23 @@ export function FinancialKLineChart({
       emaIdRef.current = null;
     }
   }, [showMA, showEMA, hasData]);
+
+  useEffect(() => {
+    const chart = chartRef.current;
+    if (!chart) return;
+    for (const { enabled, name, paneId, ref } of [
+      { enabled: showVolume, name: 'VOL', paneId: 'felix_volume_pane', ref: volumeIdRef },
+      { enabled: showMACD, name: 'MACD', paneId: 'felix_macd_pane', ref: macdIdRef },
+    ]) {
+      if (enabled && ref.current === null) {
+        ref.current = chart.createIndicator({ name, paneId });
+        chart.setPaneOptions({ id: paneId, height: 110, minHeight: 75 });
+      } else if (!enabled && ref.current !== null) {
+        chart.removeIndicator({ id: ref.current });
+        ref.current = null;
+      }
+    }
+  }, [showVolume, showMACD, hasData]);
 
   if (!hasData) {
     return (

@@ -3,6 +3,7 @@ import { useTranslation } from 'react-i18next';
 import { useAtom, useSetAtom } from 'jotai';
 import {
   activeSymbolAtom,
+  activeIndexSymbolAtom,
   activeViewAtom,
   navSectionAtom,
   type NavSection,
@@ -21,6 +22,7 @@ const SECTION_LABEL_KEY: Partial<Record<NavSection, string>> = {
   settings: 'navigation.settings',
   evaluation: 'navigation.evaluation',
   today: 'navigation.today',
+  indices: 'navigation.indices',
 };
 
 /**
@@ -30,9 +32,11 @@ const SECTION_LABEL_KEY: Partial<Record<NavSection, string>> = {
  */
 export const ContextChip: React.FC = () => {
   const { t } = useTranslation();
-  const [activeSymbol] = useAtom(activeSymbolAtom);
+  const [stockSymbol] = useAtom(activeSymbolAtom);
+  const [indexSymbol] = useAtom(activeIndexSymbolAtom);
   const [activeView] = useAtom(activeViewAtom);
   const [navSection] = useAtom(navSectionAtom);
+  const activeSymbol = navSection === 'indices' ? indexSymbol : stockSymbol;
   const [compareSymbols] = useAtom(compareSymbolsAtom);
   const setActiveSymbol = useSetAtom(activeSymbolAtom);
 
@@ -87,7 +91,7 @@ export const ContextChip: React.FC = () => {
           <span className="font-semibold text-foreground">{parts[1]}</span>
         </>
       )}
-      {activeSymbol && (
+      {activeSymbol && navSection !== 'indices' && (
         <button
           type="button"
           onClick={() => setActiveSymbol(null)}
