@@ -9,6 +9,7 @@ import {
   deleteSessionAtom,
   hydrateSessionsAtom,
   loadMessagesAtom,
+  loadedSessionIdsAtom,
   messagesAtomFamily,
   sessionsAtom,
 } from './sessionAtoms.ts';
@@ -103,6 +104,15 @@ describe('session atoms', () => {
     sessionCounter = 0;
     savedSessions = [];
     savedMessages = {};
+  });
+
+  it('reports a failed history load without replacing cached messages', async () => {
+    const store = createStore();
+    const client = makeClient();
+    client.kernel.getMessages = async () => ({ ok: false as const, error: { code: 'NETWORK_UNAVAILABLE', message: 'offline' } });
+    expect(await store.set(loadMessagesAtom, client, 'missing')).toBe(false);
+    expect(store.get(activeSessionIdAtom)).toBeNull();
+    expect(store.get(loadedSessionIdsAtom).has('missing')).toBe(false);
   });
 
   it('hydrates sessions from the kernel and activates the first one', async () => {

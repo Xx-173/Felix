@@ -365,3 +365,38 @@ body { font-size: 13px; }
   .felix-market-tabs .felix-bilingual-gloss { display: block; font-size: 9px; }
   .felix-dashboard-tools { flex-basis: 100%; justify-content: flex-end; }
 }
+/* Assistant welcome, shared by desktop and web. */
+.felix-assistant-header { padding: 14px 16px 12px; background: var(--surface); flex-shrink: 0; }
+.felix-assistant-heading { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.felix-assistant-title { display: flex; align-items: center; gap: 8px; font-size: 14px; font-weight: 700; }
+.felix-assistant-title > svg { color: var(--accent); flex-shrink: 0; }
+.felix-assistant-actions { display: flex; gap: 2px; flex-shrink: 0; }
+.felix-assistant-actions button { display: grid; place-items: center; width: 30px; height: 30px; border-radius: 8px; color: oklch(var(--text-secondary)); }
+.felix-assistant-actions button:hover, .felix-assistant-actions button[aria-pressed='true'] { background: rgba(var(--accent-rgb), .1); color: var(--accent); }
+.felix-assistant-actions button:disabled { opacity: .4; cursor: not-allowed; }
+.felix-assistant-models { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 10px; }
+.felix-assistant-welcome { padding: 8px 4px 16px; container-type: inline-size; }
+.felix-assistant-hero { padding: 24px 18px; border-radius: 16px; border: 1px solid var(--border); background: linear-gradient(145deg, rgba(var(--accent-rgb), .08), transparent); text-align: center; }
+.felix-assistant-bot { display: grid; place-items: center; width: 52px; height: 52px; margin: 0 auto 14px; border-radius: 18px; background: rgba(var(--accent-rgb), .12); color: var(--accent); }
+.felix-assistant-hero h2 { font-size: 18px; font-weight: 700; line-height: 1.5; }
+.felix-assistant-hero p { margin-top: 8px; font-size: 12px; line-height: 1.7; opacity: .6; }
+.felix-assistant-group { margin-top: 24px; }
+.felix-assistant-group h3 { display: flex; align-items: center; gap: 8px; margin-bottom: 10px; font-size: 12px; font-weight: 650; opacity: .64; }
+.felix-assistant-questions { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }
+.felix-assistant-questions button { min-height: 48px; padding: 10px 12px; border: 1px solid var(--border); border-radius: 11px; background: var(--surface); font-size: 12px; line-height: 1.5; text-align: left; overflow-wrap: anywhere; transition: background .15s, border-color .15s; }
+.felix-assistant-questions button:hover { border-color: rgba(var(--accent-rgb), .5); background: rgba(var(--accent-rgb), .06); }
+.felix-assistant-questions button:focus-visible, .felix-assistant-actions button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.felix-assistant-evidence-note { display: flex; align-items: flex-start; gap: 10px; margin-top: 24px; padding: 16px; border: 1px dashed var(--border); border-radius: 12px; }
+.felix-assistant-evidence-note > svg { flex-shrink: 0; color: var(--accent); }
+.felix-assistant-evidence-note h3 { font-size: 12px; font-weight: 650; }
+.felix-assistant-evidence-note p, .felix-assistant-draft-hint { margin-top: 6px; font-size: 11px; line-height: 1.7; opacity: .6; }
+.felix-assistant-history { flex-shrink: 0; padding: 12px 16px; max-height: 220px; overflow-y: auto; border-bottom: 1px solid var(--border); background: var(--surface); }
+.felix-assistant-history h3, .felix-assistant-history p { font-size: 12px; margin-bottom: 8px; }
+.felix-assistant-history button { width: 100%; display: flex; align-items: center; gap: 12px; padding: 10px; border-radius: 8px; text-align: left; font-size: 12px; }
+.felix-assistant-history button:hover, .felix-assistant-history button[aria-current='true'] { background: rgba(var(--accent-rgb), .08); }
+.felix-assistant-history button span { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.felix-assistant-history button small { opacity: .5; }
+.felix-agent-panel.felix-assistant-expanded { position: fixed; z-index: 70; inset: 16px 16px 16px auto; width: min(720px, calc(100vw - 32px)); height: calc(100dvh - 32px); border: 1px solid var(--border); border-radius: 18px; overflow: hidden; box-shadow: 0 20px 80px rgba(0, 0, 0, .2); }
+@container (min-width: 500px) { .felix-assistant-questions { grid-template-columns: repeat(3, minmax(0, 1fr)); } }
+@container (max-width: 260px) { .felix-assistant-questions { grid-template-columns: 1fr; } }
+@media (max-width: 600px) { .felix-assistant-header { padding: 10px; } .felix-assistant-title { font-size: 12px; } .felix-assistant-actions button { width: 28px; } }

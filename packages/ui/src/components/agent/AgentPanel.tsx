@@ -1,6 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useTranslation } from 'react-i18next';
-import { ArrowUp, ChevronLeft, ChevronRight, Square, Sparkles } from 'lucide-react';
+import { createPortal } from 'react-dom';
+import { ArrowUp, ChevronRight, Square, Sparkles, History, Plus, X, Maximize2, Minimize2 } from 'lucide-react';
 import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import type { ApiError, FelixTrace, PortfolioSnapshot, Quote, ToolCall } from '@finagent/core';
 import {
@@ -11,12 +12,13 @@ import {
   createSessionAtom,
   lastRunSummaryAtom,
   loadMessagesAtom,
+  mobileAgentVisibleAtom,
+  sessionsAtom,
   navSectionAtom,
   runViewAtom,
   settingsTabAtom,
   workspaceContextAtom,
   type LastRunSummary,
-  type NavSection,
 } from '../../atoms';
 import { useFinagentClient } from '../../client';
 import { MessageList } from '../chat/MessageList';
@@ -30,8 +32,7 @@ import { loadSessionTraceSources, projectSessionTrace } from '../../lib/traceDat
 import { QuoteCard } from './structured/QuoteCard';
 import { PortfolioRiskCard } from './structured/PortfolioRiskCard';
 import { AgentAmbientField, type AgentMotionState } from '../motion/AgentAmbientField';
-
-const felixLogoUrl = new URL('../../assets/felix-logo.png', import.meta.url).href;
+import { AssistantWelcome } from './AssistantWelcome';
 
 // ---------------------------------------------------------------------------
 // Defensive parsing of structured tool results (get_quote / get_portfolio).
@@ -90,9 +91,11 @@ export const AgentPanel: React.FC = () => {
   const { t } = useTranslation();
   const client = useFinagentClient();
   const [messages] = useAtom(activeMessagesAtom);
-  const [activeSessionId] = useAtom(activeSessionIdAtom);
-  const [runView] = useAtom(runViewAtom);
+  const [activeSessionId, setActiveSessionId] = useAtom(activeSessionIdAtom);
+  const [runView, setRunView] = useAtom(runViewAtom);
   const setAgentPanelVisible = useSetAtom(agentPanelVisibleAtom);
+  const setMobileAgentVisible = useSetAtom(mobileAgentVisibleAtom);
+  const sessions = useAtomValue(sessionsAtom);
   const createSession = useSetAtom(createSessionAtom);
   const cancelRun = useSetAtom(cancelRunAtom);
   const [lastRun, setLastRun] = useAtom(lastRunSummaryAtom);
@@ -102,11 +105,18 @@ export const AgentPanel: React.FC = () => {
   const [sendError, setSendError] = useState<string | null>(null);
   const [traceDialog, setTraceDialog] = useState<{ runId: string; trace: FelixTrace | null } | null>(null);
   const [traceLoading, setTraceLoading] = useState(false);
+  const [historyOpen, setHistoryOpen] = useState(false);
+  const [expanded, setExpanded] = useState(false);
+  const [pending, setPending] = useState(false);
+  const pendingRef = useRef(false);
+  const inputRef = useRef<HTMLTextAreaElement>(null);
   const bodyRef = useRef<HTMLDivElement>(null);
   const bodyEndRef = useRef<HTMLDivElement>(null);
   const shouldAutoScrollRef = useRef(true);
 
   const isRunning = runView !== null && runView.infraError === undefined;
+  const busy = isRunning || pending;
+  const closeAssistant = () => { setAgentPanelVisible(false); setMobileAgentVisible(false); setExpanded(false); };
 
   // The run_completed event payload does not carry financial evidence (the
   // envelopes are built when the run settles). Once a run finishes, refresh the
@@ -131,9 +141,13 @@ export const AgentPanel: React.FC = () => {
           : 'idle';
 
   useEffect(() => {
+    if (messages.length === 0 && !isRunning) {
+      if (bodyRef.current) bodyRef.current.scrollTop = 0;
+      return;
+    }
     if (!shouldAutoScrollRef.current) return;
     bodyEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages, runView?.answer, runView?.toolCalls]);
+  }, [messages, isRunning, runView?.answer, runView?.toolCalls]);
 
   const handleBodyScroll = () => {
     const body = bodyRef.current;
@@ -144,24 +158,36 @@ export const AgentPanel: React.FC = () => {
 
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || !activeSessionId || isRunning) return;
+    if (!text || isRunning || pendingRef.current) return;
+    pendingRef.current = true;
+    setPending(true);
 
     setInput('');
     setSendError(null);
-    // V9.1 §2: capture the ACTUAL context this live run starts with so the
-    // run footer's trace can show it as 'Live' — never guessed later.
-    setLastRun((previous) => ({
-      runId: previous?.runId ?? '',
-      sessionId: activeSessionId,
-      status: 'running',
-      startedAt: previous?.startedAt ?? Date.now(),
-      toolCount: 0,
-      workspaceContext,
-    }));
-    const result = await client.kernel.startRun(activeSessionId, text, workspaceContext);
-    if (!result.ok) {
-      setSendError(result.error.message);
+    try {
+      const sessionId = activeSessionId ?? (await createSession(client))?.id;
+      if (!sessionId) throw new Error(t('navigation.sessionCreateFailed'));
+      // V9.1 §2: capture the ACTUAL context this live run starts with so the
+      // run footer's trace can show it as 'Live' — never guessed later.
+      setLastRun((previous) => ({
+        runId: previous?.runId ?? '',
+        sessionId,
+        status: 'running',
+        startedAt: previous?.startedAt ?? Date.now(),
+        toolCount: 0,
+        workspaceContext,
+      }));
+      const result = await client.kernel.startRun(sessionId, text, workspaceContext);
+      if (!result.ok) {
+        setSendError(result.error.message);
+        setInput(text);
+      }
+    } catch (error) {
+      setSendError(error instanceof Error ? error.message : t('navigation.sessionCreateFailed'));
       setInput(text);
+    } finally {
+      pendingRef.current = false;
+      setPending(false);
     }
   };
 
@@ -217,59 +243,41 @@ export const AgentPanel: React.FC = () => {
     }
   };
 
-  if (!activeSessionId) {
-    return (
-      <aside
-        data-testid="agent-panel"
-        className="felix-agent-panel flex h-full w-full flex-col items-center justify-center border-l mac-section-divider bg-background"
-      >
-        <div className="px-6 text-center">
-          <img
-            src={felixLogoUrl}
-            alt=""
-            className="mx-auto mb-4 h-14 w-14 rounded-[16px] shadow-[0_14px_38px_rgba(var(--accent-rgb),0.18)]"
-            draggable={false}
-          />
-          <h2 className="mb-2 text-[19px] font-semibold tracking-tight text-foreground">{t('agent.panel.title')}</h2>
-          <p className="mb-5 text-[13px] leading-relaxed text-foreground/52">
-            {t('agent.empty.body')}
-          </p>
-          <button
-            onClick={() => void createSession(client)}
-            className="mac-primary-button h-9 rounded-[10px] px-4 text-[13px] font-semibold transition-smooth active:scale-[0.985]"
-          >
-            {t('agent.empty.createSession')}
-          </button>
-        </div>
-      </aside>
-    );
-  }
-
   const toolCalls = runView?.toolCalls ?? [];
   const quote = extractQuote(toolCalls);
   const portfolio = extractPortfolio(toolCalls);
 
-  return (
+  const panel = (
     <aside
       data-testid="agent-panel"
-      className="felix-agent-panel mac-sidebar flex h-full w-full flex-col border-l mac-section-divider"
+      className={`felix-agent-panel mac-sidebar flex h-full w-full flex-col border-l mac-section-divider ${expanded ? "felix-assistant-expanded" : ""}`}
     >
-      {/* Header: model + thinking selectors and collapse affordance */}
-      <div className="felix-agent-header flex items-center gap-1.5 border-b mac-section-divider px-4 py-3">
-        <div className="felix-agent-title mr-auto">{t('agent.panel.title')}</div>
-        <ModelSelector disabled={isRunning} />
-        <ThinkingSelector disabled={isRunning} />
-        <div className="flex-1" />
-        <button
-          type="button"
-          onClick={() => setAgentPanelVisible(false)}
-          className="flex h-7 w-7 shrink-0 items-center justify-center rounded-[8px] text-foreground/44 transition-smooth hover:bg-[var(--mac-sidebar-hover)] hover:text-foreground"
-          aria-label={t('agent.panel.collapsePanel')}
-          title={t('agent.panel.collapsePanel')}
-        >
-          <ChevronLeft className="h-4 w-4" strokeWidth={1.8} />
-        </button>
+      <div className="felix-assistant-header border-b mac-section-divider">
+        <div className="felix-assistant-heading">
+          <div className="felix-assistant-title"><Sparkles size={18} />{t('agent.panel.title')}</div>
+          <div className="felix-assistant-actions">
+            <button type="button" data-testid="assistant-history" disabled={busy} aria-pressed={historyOpen} aria-label={t('agent.welcome.history')} title={t('agent.welcome.history')} onClick={() => setHistoryOpen(!historyOpen)}><History size={17} /></button>
+            <button type="button" data-testid="assistant-new-session" disabled={busy} aria-label={t('agent.welcome.newSession')} title={t('agent.welcome.newSession')} onClick={() => { setActiveSessionId(null); setRunView(null); setHistoryOpen(false); setInput(''); setSendError(null); inputRef.current?.focus(); }}><Plus size={18} /></button>
+            <button type="button" data-testid="assistant-expand" aria-label={t(expanded ? 'agent.welcome.restore' : 'agent.welcome.expand')} title={t(expanded ? 'agent.welcome.restore' : 'agent.welcome.expand')} onClick={() => setExpanded(!expanded)}>{expanded ? <Minimize2 size={16} /> : <Maximize2 size={16} />}</button>
+            <button type="button" data-testid="assistant-close" aria-label={t('agent.welcome.close')} title={t('agent.welcome.close')} onClick={closeAssistant}><X size={18} /></button>
+          </div>
+        </div>
+        <div className="felix-assistant-models"><ModelSelector disabled={busy} /><ThinkingSelector disabled={busy} /></div>
       </div>
+      {historyOpen && <section className="felix-assistant-history" data-testid="assistant-history-list" aria-label={t('agent.welcome.history')}>
+        <h3>{t('agent.welcome.history')}</h3>
+        {sessions.length === 0 ? <p>{t('agent.welcome.historyEmpty')}</p> : [...sessions].sort((a, b) => b.updatedAt - a.updatedAt).map((session) => <button type="button" key={session.id} disabled={busy} aria-current={session.id === activeSessionId ? 'true' : undefined} onClick={async () => {
+          if (pendingRef.current || isRunning) return;
+          pendingRef.current = true; setPending(true); setSendError(null);
+          try {
+            const loaded = await loadMessages(client, session.id);
+            if (!loaded) throw new Error(t('agent.runtime.reasonUnknown'));
+            setRunView(null); setActiveSessionId(session.id); setInput(''); setHistoryOpen(false);
+          }
+          catch (error) { setSendError(error instanceof Error ? error.message : t('agent.runtime.reasonUnknown')); }
+          finally { pendingRef.current = false; setPending(false); }
+        }}><span>{session.title}</span><small>{session.messageCount}</small></button>)}
+      </section>}
 
       {/* Workspace context chip */}
       <div className="felix-agent-context border-b mac-section-divider px-3 py-2">
@@ -305,15 +313,9 @@ export const AgentPanel: React.FC = () => {
           )}
           {quote && <QuoteCard quote={quote} />}
           {portfolio && <PortfolioRiskCard portfolio={portfolio} />}
-          {messages.length === 0 && !isRunning && (
-            <SuggestionChips
-              onPick={(text) => {
-                setInput(text);
-                void handleSend();
-              }}
-            />
-          )}
-          <MessageList messages={messages} isLoading={isRunning} />
+          {messages.length === 0 && !busy ? <AssistantWelcome onPick={(text) => {
+            setInput(text); setSendError(null); inputRef.current?.focus();
+          }} /> : <MessageList messages={messages} isLoading={busy} />}
           {isRunning && <StreamingBlock answer={runView?.answer ?? ''} />}
           <RunFooter
             lastRun={lastRun}
@@ -328,12 +330,13 @@ export const AgentPanel: React.FC = () => {
       <div className="felix-agent-composer border-t mac-section-divider bg-surface px-3 py-3">
         <div className="relative">
           <textarea
+            ref={inputRef}
             data-testid="agent-input"
             value={input}
             onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
             placeholder={isRunning ? t('agent.panel.inputRunningPlaceholder') : t('agent.panel.inputPlaceholder')}
-            disabled={isRunning}
+            disabled={busy}
             rows={2}
             className="mac-input felix-agent-textarea w-full resize-none px-3 py-2.5 pr-11 text-[13px] leading-relaxed text-foreground placeholder:text-foreground/38 focus:border-[rgba(var(--accent-rgb),0.34)] focus:outline-none focus:ring-2 focus:ring-accent/25 disabled:opacity-50"
           />
@@ -341,7 +344,7 @@ export const AgentPanel: React.FC = () => {
             <button
               type="button"
               onClick={() => void handleSend()}
-              disabled={!input.trim()}
+              disabled={!input.trim() || busy}
               className="mac-primary-button felix-agent-send absolute bottom-2 right-2 flex h-7 w-7 items-center justify-center rounded-full transition-smooth active:scale-[0.985] disabled:cursor-not-allowed disabled:opacity-45"
               aria-label={t('agent.panel.sendMessage')}
             >
@@ -349,6 +352,7 @@ export const AgentPanel: React.FC = () => {
             </button>
           )}
         </div>
+        {messages.length === 0 && !busy && <p className="felix-assistant-draft-hint">{t('agent.welcome.draftHint')}</p>}
         {sendError && <div className="mt-1.5 text-[11px] text-destructive">{sendError}</div>}
         {isRunning && (
           <div className="mt-2 flex justify-end">
@@ -373,6 +377,7 @@ export const AgentPanel: React.FC = () => {
       )}
     </aside>
   );
+  return expanded ? createPortal(panel, document.body) : panel;
 };
 
 /**
@@ -414,49 +419,6 @@ const RunFooter: React.FC<{
     </div>
   );
 };
-/**
- * Contextual starter prompts (V9 §25). The empty-state suggestions follow the
- * current section instead of the same three prompts everywhere.
- */
-const SUGGESTION_GROUP: Partial<Record<NavSection, string>> = {
-  workspace: 'agent.suggestions.watchlist',
-  research: 'agent.suggestions.research',
-  portfolio: 'agent.suggestions.portfolio',
-  discover: 'agent.suggestions.discover',
-  compare: 'agent.suggestions.compare',
-  thesis: 'agent.suggestions.thesis',
-  watchlist: 'agent.suggestions.watchlist',
-  sessions: 'agent.suggestions.watchlist',
-};
-
-const SuggestionChips: React.FC<{ onPick: (text: string) => void }> = ({ onPick }) => {
-  const { t } = useTranslation();
-  const [navSection] = useAtom(navSectionAtom);
-  const groupKey = SUGGESTION_GROUP[navSection] ?? 'agent.suggestions.default';
-  const prompts = (t(groupKey, { returnObjects: true }) as string[]) ?? [];
-  if (prompts.length === 0) return null;
-  return (
-    <div className="felix-agent-suggestions px-3 pb-1" data-testid="agent-suggestions">
-      <div className="flex items-center gap-1.5 text-[10px] font-semibold uppercase tracking-[.12em] text-foreground/36">
-        <Sparkles className="h-3 w-3" strokeWidth={1.8} />
-        {t('agent.suggestions.title')}
-      </div>
-      <div className="mt-1.5 flex flex-wrap gap-1.5">
-        {prompts.slice(0, 3).map((prompt) => (
-          <button
-            key={prompt}
-            type="button"
-            onClick={() => onPick(prompt)}
-            className="max-w-full truncate rounded-full border border-border bg-surface px-2.5 py-1 text-[11px] text-foreground/62 transition-smooth hover:border-border-strong hover:text-foreground"
-          >
-            {prompt}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-};
-
 /** Live streaming answer block while a run is executing. */
 const StreamingBlock: React.FC<{ answer: string }> = ({ answer }) => {
   const { t } = useTranslation();

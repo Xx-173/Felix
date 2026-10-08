@@ -3,7 +3,7 @@ import type { NamespaceResource } from '../keys.ts';
 /** Agent panel + chat chrome (spec §113). Lifetime values are runtime data, not chrome. */
 export const agent = {
   panel: {
-    title: 'Agent Copilot',
+    title: 'AI assistant',
     collapsePanel: 'Collapse agent panel',
     inputPlaceholder: 'Ask the copilot…',
     inputRunningPlaceholder: 'Agent is running…',
@@ -28,6 +28,63 @@ export const agent = {
   empty: {
     body: 'Start a new session to explore markets with your agent.',
     createSession: 'Create New Session',
+  },
+  welcome: {
+    title: 'How can I help?',
+    subtitle: 'Explore markets and research with evidence you can verify.',
+    history: 'History',
+    historyEmpty: 'No conversations yet',
+    newSession: 'New Session',
+    close: 'Close assistant',
+    expand: 'Expand assistant',
+    restore: 'Restore sidebar',
+    draftHint: 'Edit a suggested question before sending. The model runs only when you send.',
+    symbolScope: 'The current security is {{symbol}}.',
+    noSymbolScope: 'No security is selected. Ask which stock to research before choosing one.',
+    noWatchlistScope: 'No watchlist yet. Ask me to add symbols first.',
+    evidenceTitle: 'Verify data before drawing conclusions',
+    evidenceBody: 'State sources, timestamps and sample data. Explain missing data; expand citations and tool records to verify answers.',
+    market: {
+      title: 'Markets and indices',
+      labels: ['China indices', 'Hong Kong indices', 'US indices', 'Events to watch'],
+      prompts: [
+        'Check 000001.SH, 399001.SZ and 399006.SZ. State sources, timestamps and sample status; do not infer whole-market breadth from limited data.',
+        'Check HSI.HK and HSTECH.HK. State sources, timestamps and sample status, or explain unavailable data.',
+        'Check SPX.US, NDX.US and DJI.US. State sources, timestamps and sample status, or explain unavailable data.',
+        'Review news, earnings and macro events relevant to my watchlist. Distinguish past and upcoming events, with sources and dates. My watchlist: {{symbols}}',
+      ],
+    },
+    stocks: {
+      title: 'Watchlist and stocks',
+      labels: ['Watchlist performance', 'Analyze current stock', 'Compare stocks', 'Financials and valuation', 'News impact'],
+      prompts: [
+        'Check my watchlist quotes and notable changes. Keep sample and real data separate. My watchlist: {{symbols}}',
+        '{{scope}}Summarize available quotes, financials, valuation and news; separate facts, inferences and risks.',
+        'Ask which symbols to compare, then compare business, financials, valuation and risks. Mark missing data as unknown.',
+        '{{scope}}Review available financial reports, earnings quality, debt and valuation. Include report periods and sources.',
+        '{{scope}}Review recent news, separating facts, market reactions and possible impacts, with sources and uncertainties.',
+      ],
+    },
+    research: {
+      title: 'Portfolio and research',
+      labels: ['Portfolio concentration', 'Review investment thesis', 'Counterevidence', 'Next research steps'],
+      prompts: [
+        'Analyze concentration, sector and market exposure in my actual holdings. State risks and missing data; ask me to import holdings if none exist.',
+        '{{scope}}Confirm my investment thesis or read existing research. Review assumptions, evidence and invalidation conditions.',
+        '{{scope}}Find counterevidence to a bullish view, distinguishing verified facts from unverified risks. Do not invent citations.',
+        '{{scope}}Create a research checklist based on available evidence, with required data and verification steps.',
+      ],
+    },
+    data: {
+      title: 'Data and verification',
+      labels: ['Data freshness', 'Verify the numbers', 'Missing data', 'Research summary'],
+      prompts: [
+        '{{scope}}Verify available data timestamps, sources and sample status; identify stale or unverifiable data.',
+        'Verify key numbers in the latest answer in this conversation using sources, report periods and tool records. If no answer exists, ask what to verify.',
+        '{{scope}}Identify missing quotes, financials or news needed for research. Explain limitations; never present estimates as actual data.',
+        'Summarize existing research in this conversation: conclusions, evidence, counterevidence, risks and next steps. Ask for a research goal if there is no content yet.',
+      ],
+    },
   },
   context: {
     none: 'No security context',

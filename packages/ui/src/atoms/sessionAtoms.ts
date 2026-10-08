@@ -51,13 +51,14 @@ export const loadMessagesAtom = atom(
   null,
   async (_get, set, client: FinagentClient, sessionId: string) => {
     const result = await client.kernel.getMessages(sessionId);
-    if (!result.ok) return;
+    if (!result.ok) return false;
     set(messagesAtomFamily(sessionId), result.data);
     set(loadedSessionIdsAtom, (loaded) => {
       const next = new Set(loaded);
       next.add(sessionId);
       return next;
     });
+    return true;
   }
 );
 

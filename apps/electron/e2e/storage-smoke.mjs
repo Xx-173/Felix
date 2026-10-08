@@ -65,6 +65,13 @@ try {
   await page.screenshot({ path: join(artifacts, 'desktop-market-dashboard.png') });
   await page.getByTestId('new-session-fab').click();
   await page.getByTestId('agent-input').waitFor();
+  assert.equal(await page.locator('.felix-assistant-questions button').count(), 17);
+  await page.getByTestId('assistant-group-stocks').getByRole('button', { name: /^我的自选表现如何/ }).click();
+  assert.match(await page.getByTestId('agent-input').inputValue(), /TSLA.US/);
+  await page.getByTestId('assistant-expand').click();
+  await page.screenshot({ path: join(artifacts, 'desktop-assistant-welcome.png') });
+  await page.getByTestId('assistant-expand').click();
+  await page.getByTestId('assistant-new-session').click();
   await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await page.getByTestId('workspace-home').waitFor();
   await page.getByRole('button', { name: '管理分组（Manage groups）', exact: true }).click();

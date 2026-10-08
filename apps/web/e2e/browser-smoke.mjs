@@ -44,7 +44,23 @@ try {
   assert.equal(await page.evaluate(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"kernel.hydrate"}' })).json()).data.sessions.length), 0, 'dragging does not create a session');
   steps.push('三市场看板、个人概览入口、可拖动悬浮新会话按钮正常，拖动不会误建会话');
   steps.push('普通浏览器启动，明确标注示例行情与规则分析');
-  await page.getByRole('button', { name: /^新建会话（/ }).click();
+  await fab.click();
+  await page.getByTestId('agent-suggestions').waitFor();
+  assert.equal(await page.locator('.felix-assistant-questions button').count(), 17);
+  await page.getByTestId('assistant-group-stocks').getByRole('button', { name: /^我的自选表现如何/ }).click();
+  assert.match(await page.getByTestId('agent-input').inputValue(), /AAPL.US/);
+  assert.equal(await page.evaluate(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"kernel.hydrate"}' })).json()).data.sessions.length), 0, 'suggestions only draft, never call the model or create sessions');
+  await page.getByTestId('assistant-new-session').click();
+  await page.getByTestId('assistant-group-stocks').getByRole('button', { name: /^分析当前个股/ }).click();
+  assert.match(await page.getByTestId('agent-input').inputValue(), /还没有指定标的/);
+  await page.getByTestId('assistant-expand').click();
+  await page.locator('.felix-assistant-expanded').waitFor();
+  await page.screenshot({ path: resolve(artifacts, 'assistant-welcome-light.png') });
+  await page.getByTestId('assistant-expand').click();
+  await page.getByTestId('assistant-close').click();
+  await page.getByTestId('agent-panel').waitFor({ state: 'hidden' });
+  await fab.click();
+  steps.push('AI 助手提供四组17个可编辑问题，打开及点选不建空会话；展开、关闭、再次打开正常');
   await page.getByTestId('agent-input').fill('查询 AAPL.US 的行情');
   await page.getByTestId('agent-input').press('Enter');
   await page.waitForFunction(async () => {
@@ -153,7 +169,16 @@ try {
   await page.getByTestId('agent-input').waitFor({ state: 'visible' });
   await page.screenshot({ path: resolve(artifacts, 'workspace-sessions.png') });
   await page.getByTestId('new-session-fab').click();
+  await page.getByTestId('assistant-new-session').click();
+  await page.getByTestId('agent-input').fill('查询 NVDA.US 的行情');
+  await page.getByTestId('agent-input').press('Enter');
   await page.waitForFunction(() => document.querySelectorAll('.felix-session-card').length === 2);
+  await page.waitForFunction(() => !document.querySelector('[data-testid=assistant-history]')?.disabled);
+  await page.getByTestId('assistant-history').click();
+  await page.getByTestId('assistant-history-list').getByRole('button').last().click();
+  await page.getByTestId('agent-panel').getByText('再次查询 MSFT.US', { exact: true }).waitFor();
+  assert.equal(await page.locator('.felix-session-card').count(), 2, 'history restoration does not create a conversation');
+  steps.push('新问题才创建会话，历史入口能恢复原对话且不新增会话');
   await page.locator('.felix-session-card').first().getByRole('button', { name: /^删除 / }).click();
   let sessionDeletion = page.getByRole('dialog', { name: /^删除会话/ });
   await sessionDeletion.getByRole('button', { name: /^取消（/ }).click();
@@ -186,6 +211,12 @@ try {
   await page.waitForFunction(() => document.documentElement.classList.contains('dark'));
   await page.waitForTimeout(250); // Wait for the shared color transitions before visual capture.
   await page.screenshot({ path: resolve(artifacts, 'workbench-dark.png') });
+  await assistantToggle.click();
+  await page.getByTestId('assistant-new-session').click();
+  await page.getByTestId('assistant-expand').click();
+  await page.screenshot({ path: resolve(artifacts, 'assistant-welcome-dark.png') });
+  await page.getByTestId('assistant-expand').click();
+  await page.getByTestId('assistant-close').click();
   await page.getByRole('button', { name: '切换浅色主题（Light theme）', exact: true }).click();
   await assistantToggle.click();
   await page.getByTestId('agent-panel').waitFor({ state: 'visible' });
@@ -307,6 +338,13 @@ try {
   await page.getByRole('button', { name: '研究助手（Copilot）', exact: true }).click();
   await page.getByTestId('agent-input').waitFor({ state: 'visible' });
   await page.screenshot({ path: resolve(artifacts, 'web-mobile.png') });
+  await page.getByTestId('assistant-new-session').click();
+  await page.getByTestId('assistant-group-stocks').getByRole('button', { name: /^我的自选表现如何/ }).click();
+  assert.ok((await page.getByTestId('agent-input').inputValue()).length > 0);
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'assistant questions fit narrow screens');
+  await page.screenshot({ path: resolve(artifacts, 'assistant-mobile.png') });
+  await page.getByTestId('assistant-close').click();
+  await page.getByTestId('workspace-home').waitFor();
   steps.push('390px 手机工作台无横向溢出，恢复当前会话也能切换到研究助手');
   await page.getByTestId('account-menu-trigger').click();
   await page.getByRole('menuitem', { name: '删除账号（Delete account）', exact: true }).click();
