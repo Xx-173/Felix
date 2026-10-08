@@ -1,4 +1,4 @@
-import { updateWorkspaceDocument } from '@finagent/shared';
+import { updateWorkspaceDocument, parseWorkspaceContext, resolveAssistantFocusData } from '@finagent/shared';
 import type { PersonalWorkspace } from '@finagent/core';
 import { z } from 'zod';
 import { join } from 'node:path';
@@ -538,34 +538,9 @@ export class AgentKernelHost {
 
   async startRun(input: unknown): Promise<Run> {
     const request = requireObject(input) as Partial<StartRunRequest>;
-    let workspaceContext: WorkspaceContext | undefined;
-    if (request.workspaceContext && typeof request.workspaceContext === 'object') {
-      const context = request.workspaceContext as Record<string, unknown>;
-      workspaceContext = {};
-      if (typeof context.activeSymbol === 'string') {
-        workspaceContext.activeSymbol = context.activeSymbol.toUpperCase();
-      }
-      if (
-        context.activeView === 'overview' ||
-        context.activeView === 'chart' ||
-        context.activeView === 'financials' ||
-        context.activeView === 'news' ||
-        context.activeView === 'portfolio'
-      ) {
-        workspaceContext.activeView = context.activeView;
-      }
-      if (typeof context.selectedPosition === 'string') {
-        workspaceContext.selectedPosition = context.selectedPosition;
-      }
-      if (
-        Array.isArray(context.comparisonSymbols) &&
-        context.comparisonSymbols.every((entry) => typeof entry === 'string')
-      ) {
-        workspaceContext.comparisonSymbols = context.comparisonSymbols.map((entry) =>
-          entry.toUpperCase()
-        );
-      }
-    }
+    const workspaceContext = await resolveAssistantFocusData(request.workspaceContext === undefined ? undefined : parseWorkspaceContext(request.workspaceContext), {
+      watchlist: () => this.workspaceGet(), portfolios: () => this.importRepository.list(),
+    });
     // V8: new agent responses follow the *effective* app locale unless the
     // user explicitly requests another language in the prompt (spec §41–42).
     // Resolved after validation and with a safe fallback so a prefs failure

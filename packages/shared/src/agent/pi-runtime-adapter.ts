@@ -1,3 +1,4 @@
+import { describeAssistantFocus } from './workspace-focus.ts';
 import { homedir } from 'node:os';
 import { join } from 'node:path';
 import { unlink } from 'node:fs/promises';
@@ -491,6 +492,8 @@ function buildPrompt(
   if (workspaceContext?.selectedPosition) {
     workspaceLines.push(`- Selected position: ${workspaceContext.selectedPosition}`);
   }
+  const focusDescription = describeAssistantFocus(workspaceContext);
+  if (focusDescription) workspaceLines.push(focusDescription);
   const workspaceSection = workspaceLines.length > 0
     ? `\nWorkspace context:\n${workspaceLines.join('\n')}\nWhen the user refers to "this", "the stock", or asks follow-up questions about a symbol without naming it, use the active symbol above.`
     : '';

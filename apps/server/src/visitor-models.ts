@@ -9,9 +9,9 @@ const keySchema = z.string().trim().min(1).max(4096);
 const modelId = z.string().trim().min(1).max(160);
 const builtin = [
   { name: 'openai', displayName: 'OpenAI', baseUrl: 'https://api.openai.com/v1', models: [{ id: 'gpt-4.1-mini', name: 'GPT-4.1 mini' }, { id: 'gpt-4.1', name: 'GPT-4.1' }] },
-  { name: 'deepseek', displayName: '深度求索（DeepSeek）', baseUrl: 'https://api.deepseek.com/v1', models: [{ id: 'deepseek-chat', name: 'DeepSeek Chat' }] },
-  { name: 'qwen', displayName: '通义千问（Qwen）', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', models: [{ id: 'qwen-plus', name: 'Qwen Plus' }] },
-  { name: 'siliconflow', displayName: '硅基流动（SiliconFlow）', baseUrl: 'https://api.siliconflow.cn/v1', models: [{ id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen2.5 72B' }] },
+  { name: 'deepseek', displayName: '深度求索', baseUrl: 'https://api.deepseek.com/v1', models: [{ id: 'deepseek-chat', name: 'DeepSeek Chat' }] },
+  { name: 'qwen', displayName: '通义千问', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', models: [{ id: 'qwen-plus', name: 'Qwen Plus' }] },
+  { name: 'siliconflow', displayName: '硅基流动', baseUrl: 'https://api.siliconflow.cn/v1', models: [{ id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen2.5 72B' }] },
 ] satisfies CustomProviderConfig[];
 export const builtinModelHosts = builtin.map((provider) => new URL(provider.baseUrl).hostname);
 type Stored = { credentials: Record<string, { key: string; at: number }>; custom: CustomProviderConfig[]; selected?: { provider: string; id: string }; thinking: string; marketKey?: string };
@@ -21,7 +21,7 @@ export function approvedModelUrl(value: string, additionalHosts: string[] = []):
   const url = new URL(value);
   if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
       (url.port && url.port !== '443') || ![...builtinModelHosts, ...additionalHosts].includes(url.hostname.toLowerCase())) {
-    throw createCodeError('MODEL_ENDPOINT_NOT_ALLOWED', '模型地址需使用 HTTPS 和管理员允许的服务商域名（HTTPS and an approved provider domain required）。');
+    throw createCodeError('MODEL_ENDPOINT_NOT_ALLOWED', '模型地址需使用 HTTPS 和管理员允许的服务商域名。');
   }
   return url.toString().replace(/\/$/, '');
 }
@@ -75,11 +75,11 @@ export class VisitorModels implements AgentRuntime {
     if (!provider || !id) return;
     const definition = this.providers().find((item) => item.name === provider);
     const key = this.data.credentials[provider]?.key;
-    if (!definition?.models.some((model) => model.id === id) || !key) throw createCodeError('MODEL_KEY_REQUIRED', '请先保存自己的模型密钥（Save your own API key first）。');
+    if (!definition?.models.some((model) => model.id === id) || !key) throw createCodeError('MODEL_KEY_REQUIRED', '请先保存自己的模型密钥。');
     return { baseUrl: approvedModelUrl(definition.baseUrl, this.hosts), apiKey: key, model: id, thinking: this.data.thinking };
   }
   async dispatch(method: string, args: unknown[], busy: boolean): Promise<unknown> {
-    if (!['getState', 'listModels', 'listThinkingLevels', 'getProviders', 'listCredentials', 'testProvider'].includes(method) && busy) throw createCodeError('RUN_ACTIVE', '请等当前研究结束后修改模型配置（Wait for the active run）。');
+    if (!['getState', 'listModels', 'listThinkingLevels', 'getProviders', 'listCredentials', 'testProvider'].includes(method) && busy) throw createCodeError('RUN_ACTIVE', '请等当前研究结束后修改模型配置。');
     switch (method) {
       case 'getState': return this.state(busy);
       case 'listModels': return this.listModels();
@@ -126,8 +126,8 @@ export class VisitorModels implements AgentRuntime {
         try {
           const response = await fetch(`${config.baseUrl}/chat/completions`, { method: 'POST', redirect: 'error', signal: AbortSignal.timeout(20000), headers: { Authorization: `Bearer ${config.apiKey}`, 'Content-Type': 'application/json' }, body: JSON.stringify({ model: id, messages: [{ role: 'user', content: 'Reply OK' }], max_tokens: 8 }) });
           await response.body?.cancel();
-          return { ok: response.ok, provider, modelId: id, latencyMs: Date.now() - start, message: response.ok ? '连接成功（Connected）' : '连接失败，请检查密钥及模型权限（Check your key and model access）。' };
-        } catch { return { ok: false, provider, modelId: id, message: '连接失败或超时（Connection failed or timed out）。' }; }
+          return { ok: response.ok, provider, modelId: id, latencyMs: Date.now() - start, message: response.ok ? '连接成功' : '连接失败，请检查密钥及模型权限。' };
+        } catch { return { ok: false, provider, modelId: id, message: '连接失败或超时。' }; }
       }
       default: throw createCodeError('WEB_METHOD_UNAVAILABLE', 'Unknown model method');
     }

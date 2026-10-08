@@ -62,7 +62,7 @@ export const ProfileSecurityView: React.FC = () => {
         <div>
           <div className="felix-eyebrow"><UserRound className="h-3.5 w-3.5" />{t('profile.eyebrow')}</div>
           <h1 className="felix-page-title">{t('profile.title')}</h1>
-          <p className="felix-page-subtitle">{client.deployment ? '查看个人工作区、数据连接和运行状态（Personal workspace, connections and runtime status）。' : t('profile.subtitle')}</p>
+          <p className="felix-page-subtitle">{client.deployment ? '查看个人工作区、数据连接和运行状态。' : t('profile.subtitle')}</p>
         </div>
         <Button variant="outline" size="sm" onClick={() => void refresh()} disabled={loadState === 'loading'}>
           {t('common.refresh')}
@@ -75,8 +75,8 @@ export const ProfileSecurityView: React.FC = () => {
             <div className="flex items-center gap-4">
               <div className="felix-profile-avatar"><ShieldCheck className="h-6 w-6" /></div>
               <div className="min-w-0">
-                <h2>{client.deployment ? '个人工作区（Personal workspace）' : t('profile.localWorkspace')}</h2>
-                <p>{client.deployment ? '账号数据独立存储在服务器，登录后可跨浏览器访问；密钥加密保存，可导出数据或删除账号。匿名记录依赖浏览器 Cookie，注册可保留这些记录（Sign in across browsers; isolated server data and encrypted keys; guest records require cookies until registration）。' : t('profile.localWorkspaceDescription')}</p>
+                <h2>{client.deployment ? '个人工作区' : t('profile.localWorkspace')}</h2>
+                <p>{client.deployment ? '账号数据独立存储在服务器，登录后可跨浏览器访问；密钥加密保存，可导出数据或删除账号。匿名记录依赖浏览器 Cookie，注册可保留这些记录。' : t('profile.localWorkspaceDescription')}</p>
               </div>
             </div>
             <dl className="felix-definition-grid mt-5">

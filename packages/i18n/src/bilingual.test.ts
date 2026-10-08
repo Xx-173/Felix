@@ -3,11 +3,14 @@ import { createSyncI18n } from './i18n.ts';
 import { bilingualResources } from './bilingual.ts';
 import { resources, flattenLocale, interpolationVars } from './resources.ts';
 
-test('renderer pairs Chinese first and English second for both locale preferences', () => {
+test('renderer uses Chinese copy and reserves English for navigation and technical terms', () => {
   for (const locale of ['zh-CN', 'en-US'] as const) {
     const i18n = createSyncI18n({ locale, bilingual: true });
     expect(i18n.t('navigation.settings')).toBe('设置（Settings）');
-    expect(i18n.t('navigation.newSession')).toBe('新建会话（New Session）');
+    expect(i18n.t('navigation.newSession')).toBe('新建会话');
+    expect(i18n.t('agent.panel.inputPlaceholder')).toBe('输入你的问题…');
+    expect(i18n.t('agent.welcome.market.prompts.0')).not.toContain('（');
+    expect(i18n.t('settings.model.apiKey')).toBe('API 密钥（API key）');
     expect(i18n.t('navigation.deleteSession', { title: 'My untouched note' })).toContain('My untouched note');
   }
   expect(createSyncI18n({ locale: 'en-US' }).t('navigation.settings')).toBe('Settings');

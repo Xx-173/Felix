@@ -158,6 +158,29 @@ describe('MarketDataService', () => {
 });
 
 describe('LocalFinanceAgentBackend', () => {
+  it('uses imported focus records instead of demo assets for the user portfolio', async () => {
+    const backend = new LocalFinanceAgentBackend({ demoData: true });
+    const result = await backend.send({ sessionId: 'own-assets', content: '分析我的组合风险', context: {
+      focusObjects: [{ kind: 'portfolio' }], focusData: { manualPortfolios: [{ name: '自己的组合', updatedAt: 12, holdings: [{ symbol: 'AAPL.US', quantity: 12, costPrice: 180.5 }] }] },
+    } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.data.answer).toContain('自己的组合');
+    expect(result.data.answer).toContain('成本价 180.5');
+    expect(result.data.answer).toContain('成本价不代表当前行情');
+    expect(result.data.toolCalls).toEqual([]);
+    const empty = await backend.send({ sessionId: 'own-assets', content: '我的持仓', context: { focusObjects: [{ kind: 'holdings' }], focusData: { manualPortfolios: [] } } });
+    expect(empty.ok && empty.data.answer).toContain('尚未读取到你的实际持仓');
+  });
+  it('does not route a cleared focus back to the previous stock', async () => {
+    const backend = createBackend();
+    await backend.send({ sessionId: 'focus-clear', content: 'AAPL.US quote' });
+    const result = await backend.send({ sessionId: 'focus-clear', content: '看下走势', context: { focusObjects: [] } });
+    expect(result.ok).toBe(true);
+    if (!result.ok) throw new Error(result.error.message);
+    expect(result.data.toolName).toBeUndefined();
+    expect(result.data.toolCalls ?? []).toHaveLength(0);
+  });
   it('answers quote requests and records session context', async () => {
     const backend = createBackend();
 
@@ -200,7 +223,7 @@ describe('LocalFinanceAgentBackend', () => {
     expect(result.ok).toBe(true);
     if (!result.ok) throw new Error(result.error.message);
     const response = result.data;
-    expect(response.content).toContain('当前 MVP 支持');
+    expect(response.content).toContain('当前为规则分析模式');
     expect(response.toolName).toBeUndefined();
   });
 

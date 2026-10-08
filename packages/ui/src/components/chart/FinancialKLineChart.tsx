@@ -24,11 +24,11 @@ interface FinancialKLineChartProps {
 const CANDLE_PANE_ID = 'candle_pane';
 
 registerLocale('felix-bilingual', {
-  time: '时间（Time）：', open: '开盘（Open）：', high: '最高（High）：',
-  low: '最低（Low）：', close: '收盘（Close）：', volume: '成交量（Volume）：',
-  change: '涨跌（Change）：', turnover: '成交额（Turnover）：',
-  second: '秒（S）', minute: '分（m）', hour: '时（h）', day: '日（D）',
-  week: '周（W）', month: '月（M）', year: '年（Y）',
+  time: '时间：', open: '开盘：', high: '最高：',
+  low: '最低：', close: '收盘：', volume: '成交量：',
+  change: '涨跌：', turnover: '成交额：',
+  second: '秒', minute: '分', hour: '时', day: '日',
+  week: '周', month: '月', year: '年',
 });
 
 // Resolves a theme custom property (e.g. --positive) to a concrete color
@@ -216,7 +216,7 @@ export function FinancialKLineChart({
   if (!hasData) {
     return (
       <div className="flex h-full w-full items-center justify-center text-[12.5px] text-text-muted">
-        暂无行情数据（No market data）
+        暂无行情数据
       </div>
     );
   }

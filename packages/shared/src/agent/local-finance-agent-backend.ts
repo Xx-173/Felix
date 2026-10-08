@@ -61,8 +61,20 @@ export class LocalFinanceAgentBackend implements AgentBackend {
         : undefined;
     const routingSession = workspaceSymbol
       ? { ...session, recentSymbols: [workspaceSymbol, ...session.recentSymbols] }
-      : session;
+      : Array.isArray(request.context?.focusObjects) ? { ...session, recentSymbols: [] } : session;
     const routed = routeFinanceIntent(request.content, routingSession);
+    // Demo tools cannot stand in for the user's imported positions.
+    if (this.demoData && (routed.intent === 'portfolio' || routed.intent === 'portfolio_risk')
+      && Array.isArray(request.context?.focusObjects)
+      && request.context.focusObjects.some((focus: { kind: string }) => ['portfolio', 'holdings', 'holding'].includes(focus.kind))) {
+      const focusData = request.context.focusData as import('@finagent/core').WorkspaceContext['focusData'];
+      const portfolios = focusData?.manualPortfolios ?? [];
+      const answer = portfolios.length ? '你手动录入的持仓如下：\n\n' + portfolios.map((portfolio) =>
+        portfolio.name + '\n' + portfolio.holdings.map((holding) => `${holding.symbol}：数量 ${holding.quantity ?? '未填写'}，成本价 ${holding.costPrice ?? '未填写'} ${holding.currency ?? ''}`).join('\n')
+      ).join('\n\n') + '\n\n这些是录入记录，成本价不代表当前行情。' + (focusData?.truncated ? '这里只展示部分记录，不能据此计算整个组合的资产或集中度。' : '') + '当前为规则分析模式；如需进一步研究，请在 AI 设置中连接模型，并配置可用的行情数据源。'
+        : '尚未读取到你的实际持仓。请先在投资组合页导入持仓，或连接券商账户。示例持仓不能用于分析你的资产。';
+      return { ok: true, data: { answer, content: answer, session, sessionSnapshot: session, toolCalls: [] } };
+    }
     if (routed.intent === 'unsupported') {
       session.lastIntent = routed.intent;
       const content = unsupportedFinanceMessage();

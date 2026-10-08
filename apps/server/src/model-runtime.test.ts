@@ -19,6 +19,24 @@ async function collect(runtime: ModelRuntime) {
   return events;
 }
 
+test('HTTP model receives current typed focus and trusted imported positions', async () => {
+  const runtime = model(async (request) => {
+    const body = await request.json() as any;
+    const system = body.messages.filter((message: any) => message.role === 'system').map((message: any) => message.content).join('\n');
+    expect(system).toContain('index: 000001.SH');
+    expect(system).toContain('not 贵州茅台');
+    expect(system).toContain('"costPrice":180');
+    expect(system).toContain('historical cost, never a live quote');
+    return new Response(data({ content: '这是上证指数。' }) + 'data: [DONE]\n\n');
+  });
+  const events: AgentEvent[] = [];
+  for await (const event of runtime.run({ ...input, workspaceContext: {
+    focusObjects: [{ kind: 'index', symbol: '000001.SH' }, { kind: 'portfolio' }],
+    focusData: { manualPortfolios: [{ name: '自己的组合', updatedAt: 12, holdings: [{ symbol: 'AAPL.US', costPrice: 180 }] }] },
+  } })) events.push(event);
+  expect(events.at(-1)?.type).toBe('run_completed');
+});
+
 test('HTTP model assembles fragmented financial tool calls and streams Chinese answer', async () => {
   const requests: any[] = [];
   const runtime = model(async (request) => {

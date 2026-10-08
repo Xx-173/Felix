@@ -15,11 +15,11 @@ export const onboarding = {
     title: '欢迎使用 Felix',
     titleShort: '欢迎',
     subtitle:
-      '只需几分钟即可完成设置，让市场数据和 AI 完成连接。你可以跳过任何步骤，稍后在设置中返回。',
+      '按步骤连接 AI 和行情数据源，也可以先跳过，稍后在设置中补充。',
     accept: '我理解并接受这些条款。',
     disclaimerPrivacyTitle: '隐私',
     disclaimerPrivacyBody:
-      'Felix 在本地设备上运行。API 密钥和凭据存储在你的机器上，绝不会被共享。市场数据提供方只会收到通过你自己的账户发起的请求。',
+      'Felix 在本地设备上运行。API 密钥和凭据存储在你的机器上，绝不会被共享。市场数据服务商只会收到通过你自己的账户发起的请求。',
     disclaimerAiTitle: 'AI 分析',
     disclaimerAiBody:
       'AI 生成的分析仅供参考，可能不准确或不完整。在依赖其结论前请务必核实。',
@@ -30,10 +30,10 @@ export const onboarding = {
   connectAi: {
     title: '连接 AI',
     titleShort: '连接 AI',
-    subtitle: '选择 LLM 提供方、添加其凭据并挑选模型。',
+    subtitle: '选择模型服务商，填写密钥，再选择要使用的模型。',
     model: '模型',
-    providersCredentials: '提供方与凭据',
-    loadingProviders: '正在加载提供方…',
+    providersCredentials: '服务商与凭据',
+    loadingProviders: '正在加载服务商…',
     configured: '已配置',
     apiKey: 'API 密钥',
     save: '保存',
@@ -41,7 +41,7 @@ export const onboarding = {
   },
   providerStep: {
     notAvailable:
-      '此版本中该提供方尚不可用——稍后可从设置 → 连接中连接。',
+      '这个服务商暂时不可用，可稍后到设置中的数据源页面重新连接。',
     recommended: '推荐',
   },
   broker: {
@@ -57,7 +57,7 @@ export const onboarding = {
   environment: {
     title: '检查环境',
     titleShort: '检查环境',
-    subtitle: '快速检查你所连接的一切是否已就绪可用。',
+    subtitle: '检查 AI 和数据源是否连接成功。',
     checking: '正在检查环境…',
     notAvailable: '此版本中健康检查尚不可用。',
     ready: '就绪',
@@ -65,6 +65,6 @@ export const onboarding = {
     itemAi: 'AI',
     itemMarketData: '市场数据',
     itemSkills: '技能',
-    itemAgentRuntime: 'Agent 运行时',
+    itemAgentRuntime: 'AI 服务',
   },
 } satisfies SameKeysAs<typeof enOnboarding>;

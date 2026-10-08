@@ -97,7 +97,7 @@ export class VisitorServices {
     switch (method) {
       case 'thesis.list': return args[0] ? this.theses.getBySymbol(symbol.parse(args[0])) : this.theses.list();
       case 'thesis.getReport': return this.latestReport(args[0]);
-      case 'thesis.saveFromReport': { const report = await this.latestReport(args[0]); if (!report) throw createCodeError('REPORT_NOT_FOUND', '请先完成研究报告（Complete a research report first）。'); return this.thesis.saveFromReport(report); }
+      case 'thesis.saveFromReport': { const report = await this.latestReport(args[0]); if (!report) throw createCodeError('REPORT_NOT_FOUND', '请先完成研究报告。'); return this.thesis.saveFromReport(report); }
       case 'thesis.reEvaluate': return this.thesis.reEvaluate(symbol.parse(args[0]));
       case 'thesis.listImpacts': return this.thesis.listImpacts(symbol.parse(args[0]));
       case 'thesis.update': {
@@ -117,11 +117,11 @@ export class VisitorServices {
         if (!input.accountId) return this.risk.analyze();
         if (input.accountId.startsWith('manual:')) {
           const portfolio = await this.portfolios.get(id.parse(input.accountId.slice(7)));
-          if (!portfolio) throw createCodeError('PORTFOLIO_NOT_FOUND', '组合不存在（Portfolio not found）。');
+          if (!portfolio) throw createCodeError('PORTFOLIO_NOT_FOUND', '组合不存在。');
           return this.risk.analyze(undefined, { holdings: portfolio.holdings, accounts: [], baseCurrency: portfolio.currency, fetchedAt: portfolio.updatedAt });
         }
         const portfolio = await this.market.getPortfolio();
-        if (!portfolio.accounts.some((account) => account.id === input.accountId)) throw createCodeError('PORTFOLIO_NOT_FOUND', '组合不存在（Portfolio not found）。');
+        if (!portfolio.accounts.some((account) => account.id === input.accountId)) throw createCodeError('PORTFOLIO_NOT_FOUND', '组合不存在。');
         return this.risk.analyze(undefined, { ...portfolio, holdings: portfolio.holdings.filter((holding) => holding.symbol.split('.').at(-1) === portfolio.accounts.find((account) => account.id === input.accountId)?.market) });
       }
       case 'outcome.listOpinions': return this.opinions.listOpinions(z.object({ symbol: symbol.optional() }).parse(args[0] ?? {}).symbol);
@@ -152,12 +152,12 @@ export class VisitorServices {
       case 'portfolioImport.parse': {
         const input = z.object({ source: z.enum(['csv', 'paste']), text: z.string().min(1).max(48000) }).parse(args[0]);
         const draft = createDraft(input.source, parseImportText(input.source, input.text));
-        if (draft.rows.length > 200 || this.drafts.size >= 20) throw createCodeError('IMPORT_LIMIT', '最多导入 200 行（At most 200 rows）。');
+        if (draft.rows.length > 200 || this.drafts.size >= 20) throw createCodeError('IMPORT_LIMIT', '最多导入 200 行。');
         this.drafts.add(draft.id); return draft;
       }
       case 'portfolioImport.confirm': {
         const input = z.object({ draft: draftSchema, name: z.string().trim().min(1).max(160) }).parse(args[0]);
-        if (!this.drafts.has(input.draft.id) || validateDraft(input.draft).length) throw createCodeError('INVALID_DRAFT', '请重新解析并检查导入内容（Parse and review the import again）。');
+        if (!this.drafts.has(input.draft.id) || validateDraft(input.draft).length) throw createCodeError('INVALID_DRAFT', '请重新解析并检查导入内容。');
         const result = await this.portfolios.create(draftToPortfolioInput(input.draft, input.name)); this.drafts.delete(input.draft.id); return result;
       }
       case 'portfolioImport.listManual': return this.portfolios.list();
@@ -169,7 +169,7 @@ export class VisitorServices {
       case 'skills.listResources': return this.skills.listSkillResources(id.parse(args[0]));
       case 'skills.readResource': return this.skills.readSkillResource(id.parse(args[0]), z.string().max(300).parse(args[1]));
       case 'skills.readiness': return Object.entries(skillCapabilityMap).map(([skillId, requirements]) => computeSkillReadiness(skillId, requirements, this.registry));
-      case 'evaluation.getSettings': return { settings: await this.evaluation.getSettings(), connection: { status: 'missing_credential', message: '网页版评测记录保存在访客工作区（Local evaluation records）。' }, langfuse: { status: 'missing_credential', message: '未连接（Not connected）' } };
+      case 'evaluation.getSettings': return { settings: await this.evaluation.getSettings(), connection: { status: 'missing_credential', message: '网页版评测记录保存在访客工作区。' }, langfuse: { status: 'missing_credential', message: '未连接' } };
       case 'evaluation.status': { const settings = await this.evaluation.getSettings(); return { backend: 'local', tracingEnabled: false, privacyLevel: settings.privacyLevel, project: settings.langsmithProject }; }
       case 'evaluation.setSettings': {
         const input = z.object({ privacyLevel: z.enum(['minimal', 'standard', 'full']).optional(), langsmithProject: z.string().max(128).optional(), tracingEnabled: z.literal(false).optional(), langfuseTracingEnabled: z.literal(false).optional(), onlineEvaluationEnabled: z.literal(false).optional(), langsmithEndpoint: z.string().max(512).optional(), langfuseHost: z.string().max(512).optional() }).parse(args[0]);
@@ -182,7 +182,7 @@ export class VisitorServices {
       case 'evaluation.listFeedback': return this.evaluation.listFeedback();
       case 'evaluation.submitFeedback': { const input = z.object({ caseId: id, verdict: z.enum(['good', 'bad']), note: z.string().max(2000).optional() }).parse(args[0]); await this.evaluation.addFeedback({ ...input, id: randomUUID(), createdAt: Date.now() }); return; }
       case 'evaluation.getTraceLink': return this.evaluation.lookupTraceLink(z.object({ runId: id }).parse(args[0]).runId);
-      default: throw createCodeError('WEB_METHOD_UNAVAILABLE', '此集成需要桌面版的本地运行环境或尚未连接（Requires a desktop integration or a configured connection）。');
+      default: throw createCodeError('WEB_METHOD_UNAVAILABLE', '此集成需要桌面版的本地运行环境或尚未连接。');
     }
   }
 }

@@ -58,8 +58,8 @@ export const WorkbenchShell: React.FC = () => {
   if (isNarrow) return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <nav aria-label="视图切换" className="flex shrink-0 gap-2 border-b border-border p-2">
-        <button className="rounded border border-border px-3 py-1 text-xs" aria-pressed={!mobileAgent} onClick={() => setMobileAgent(false)}>工作台（Workspace）</button>
-        <button className="rounded border border-border px-3 py-1 text-xs" aria-pressed={mobileAgent} onClick={() => setMobileAgent(true)}>研究助手（Copilot）</button>
+        <button className="rounded border border-border px-3 py-1 text-xs" aria-pressed={!mobileAgent} onClick={() => setMobileAgent(false)}>工作台</button>
+        <button className="rounded border border-border px-3 py-1 text-xs" aria-pressed={mobileAgent} onClick={() => setMobileAgent(true)}>研究助手</button>
       </nav>
       <div className="flex min-h-0 flex-1 overflow-hidden">
         <aside className="w-14 shrink-0"><Sidebar /></aside>

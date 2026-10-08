@@ -13,7 +13,7 @@ export const WorkspaceBridge: React.FC<{ client: FinagentClient }> = ({ client }
     let cancelled = false; setReady(false);
     if (client.workspace) void client.workspace.get().then((result) => {
       if (!cancelled && result.ok) { setWatchlist(result.data.watchlist); setGroups(result.data.groups ?? []); setReady(true); }
-      else if (!cancelled) toast.error('自选股加载失败，刷新后重试（Watchlist could not load; reload to retry）。');
+      else if (!cancelled) toast.error('自选股加载失败，刷新后重试。');
     });
     return () => { cancelled = true; };
   }, [client, setWatchlist, setGroups]);
@@ -21,7 +21,7 @@ export const WorkspaceBridge: React.FC<{ client: FinagentClient }> = ({ client }
     if (!ready || !client.workspace) return;
     writes.current = writes.current.catch(() => undefined).then(async () => {
       const result = await client.workspace!.update({ watchlist, groups });
-      if (!result.ok) toast.error('自选股保存失败（Watchlist could not be saved）：' + result.error.message);
+      if (!result.ok) toast.error('自选股保存失败：' + result.error.message);
     });
   }, [client, ready, watchlist, groups]);
   return null;

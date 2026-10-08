@@ -63,6 +63,6 @@ describe('WorkspaceContext → agent run (local)', () => {
       if (event.type === 'message_delta') answers.push(event.payload.answer);
     }
 
-    expect(answers.join('')).toContain('标的代码');
+    expect(answers.join('')).toContain('股票或指数代码');
   });
 });

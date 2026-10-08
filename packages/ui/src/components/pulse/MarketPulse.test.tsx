@@ -120,7 +120,7 @@ describe('MarketPulse', () => {
     const text = container.textContent ?? ''
 
     // indices line
-    expect(text).toContain('S&P 500')
+    expect(text).toContain('标普 500')
     expect(text).toContain('SPX.US')
     expect(text).toContain('+0.5%')
     expect(text).toContain('-0.3%')
@@ -174,7 +174,7 @@ describe('MarketPulse', () => {
     // Sample-data fallback instead of empty states: sample indices/movers
     // render, and the DemoBadge marks the card as sample content.
     expect(container.querySelector('[data-testid="demo-badge"]')).not.toBeNull()
-    expect(text).toContain('S&P 500')
+    expect(text).toContain('标普 500')
     expect(container.querySelectorAll('[data-testid="pulse-mover-row"]').length).toBeGreaterThan(0)
   })
 })

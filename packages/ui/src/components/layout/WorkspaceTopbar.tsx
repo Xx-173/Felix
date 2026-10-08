@@ -18,12 +18,12 @@ export const WorkspaceTopbar: React.FC = () => {
   return (
     <header className="felix-workspace-topbar flex shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-5">
       <div className="flex min-w-0 items-center gap-3">
-        {section === 'watchlist' && <button type="button" className="felix-topbar-icon" aria-label="返回工作台（Back to workspace）" onClick={() => setSection('workspace')}><ArrowLeft size={16} /></button>}
+        {section === 'watchlist' && <button type="button" className="felix-topbar-icon" aria-label="返回工作台" onClick={() => setSection('workspace')}><ArrowLeft size={16} /></button>}
         <h1 className="felix-workspace-topbar-title"><BilingualLabel>{t('navigation.' + key)}</BilingualLabel></h1>
         {section === 'watchlist' && symbol && <span className="felix-workspace-symbol">{symbol}</span>}
       </div>
       <div className="flex shrink-0 items-center gap-2">
-        <button type="button" className="felix-topbar-icon" aria-label={dark ? '切换浅色主题（Light theme）' : '切换深色主题（Dark theme）'} onClick={() => setMode(dark ? 'light' : 'dark')}>
+        <button type="button" className="felix-topbar-icon" aria-label={dark ? '切换浅色主题' : '切换深色主题'} onClick={() => setMode(dark ? 'light' : 'dark')}>
           {dark ? <Sun size={16} /> : <Moon size={16} />}
         </button>
         <button type="button" className="felix-agent-toggle" aria-label={t('navigation.agentPanel')} aria-pressed={agentVisible} onClick={() => setAgentVisible(!agentVisible)}>

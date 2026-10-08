@@ -159,3 +159,5 @@ export * from './pulse/index.ts';
 export * from './export/index.ts';
 export * from './evidence/index.ts';
 export * from './evaluation/index.ts';
+
+export { parseWorkspaceContext, describeAssistantFocus, resolveAssistantFocusData } from './agent/workspace-focus.ts';

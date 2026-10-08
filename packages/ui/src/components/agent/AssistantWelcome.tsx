@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Bot, Database, ShieldCheck, Star, TrendingUp } from 'lucide-react';
 import { useAtomValue } from 'jotai';
-import { watchlistAtom, workspaceContextAtom } from '../../atoms';
+import { watchlistAtom, assistantWorkspaceContextAtom } from '../../atoms';
 
 const groups = [
   { id: 'market', icon: TrendingUp },
@@ -14,7 +14,7 @@ const groups = [
 /** Suggestions are editable drafts. Opening the assistant never starts a paid run. */
 export const AssistantWelcome: React.FC<{ onPick: (text: string) => void }> = ({ onPick }) => {
   const { t } = useTranslation();
-  const context = useAtomValue(workspaceContextAtom);
+  const context = useAtomValue(assistantWorkspaceContextAtom);
   const watchlist = useAtomValue(watchlistAtom);
   return <div className="felix-assistant-welcome" data-testid="agent-suggestions">
     <section className="felix-assistant-hero">

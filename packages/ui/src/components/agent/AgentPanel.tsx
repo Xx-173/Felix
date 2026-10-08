@@ -16,7 +16,7 @@ import {
   navSectionAtom,
   runViewAtom,
   settingsTabAtom,
-  workspaceContextAtom,
+  assistantWorkspaceContextAtom,
   type LastRunSummary,
 } from '../../atoms';
 import { useFinagentClient } from '../../client';
@@ -98,7 +98,7 @@ export const AgentPanel: React.FC = () => {
   const createSession = useSetAtom(createSessionAtom);
   const cancelRun = useSetAtom(cancelRunAtom);
   const [lastRun, setLastRun] = useAtom(lastRunSummaryAtom);
-  const workspaceContext = useAtomValue(workspaceContextAtom);
+  const workspaceContext = useAtomValue(assistantWorkspaceContextAtom);
 
   const [input, setInput] = useState('');
   const [sendError, setSendError] = useState<string | null>(null);
@@ -277,7 +277,7 @@ export const AgentPanel: React.FC = () => {
 
       {/* Workspace context chip */}
       <div className="felix-agent-context border-b mac-section-divider px-3 py-2">
-        <ContextChip />
+        <ContextChip disabled={busy} />
       </div>
 
       {/* Scrollable body: tool activity, structured results, messages, live answer */}

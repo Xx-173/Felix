@@ -80,6 +80,19 @@ function fakeSkillHub(): SkillHub {
 }
 
 describe('WorkspaceContext → prompt', () => {
+  it('passes selected focus and imported cost records to the desktop runtime', async () => {
+    const proc = new FakePiProcess();
+    const adapter = new PiRuntimeAdapter({ rpcClient: new PiRpcClient({ spawnProcess: createSpawn(proc) }), sessionDir: '/tmp/ws-test' });
+    for await (const _event of adapter.run({ sessionId: 'focus', runId: 'focus-run', content: '分析关注对象', workspaceContext: {
+      focusObjects: [{ kind: 'index', symbol: '000001.SH' }, { kind: 'portfolio' }],
+      focusData: { manualPortfolios: [{ name: '录入记录', updatedAt: 12, holdings: [{ symbol: 'AAPL.US', costPrice: 180 }] }] },
+    } })) { /* Drain. */ }
+    const message = String(proc.received.find((line) => line.type === 'prompt')?.message);
+    expect(message).toContain('index: 000001.SH');
+    expect(message).toContain('not 贵州茅台');
+    expect(message).toContain('"costPrice":180');
+    expect(message).toContain('historical cost, never a live quote');
+  });
   it('injects active symbol and view into the Pi prompt', async () => {
     const proc = new FakePiProcess();
     const client = new PiRpcClient({ spawnProcess: createSpawn(proc) });

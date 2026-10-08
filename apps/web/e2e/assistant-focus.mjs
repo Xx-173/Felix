@@ -1,0 +1,84 @@
+import assert from 'node:assert/strict';
+import { resolve } from 'node:path';
+import { uiText } from './ui-text.mjs';
+
+export async function verifyAssistantFocus(browser, origin, artifacts) {
+  const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
+  await context.route('**/*', (route) => route.request().url().startsWith(origin + '/') ? route.continue() : route.abort());
+  const page = await context.newPage();
+  const errors = [], requests = [];
+  page.on('pageerror', (error) => errors.push(error.message));
+  page.on('request', (request) => {
+    if (request.url().endsWith('/api/rpc') && request.postDataJSON()?.method === 'kernel.startRun') requests.push(request.postDataJSON());
+  });
+  const rpc = (method, ...args) => page.evaluate(async ({ method, args }) => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method, args }) })).json()).data, { method, args });
+  try {
+    await page.goto(origin, { waitUntil: 'domcontentloaded' });
+    await page.getByTestId('sidebar').waitFor();
+    const originalWatchlist = (await rpc('workspace.get')).watchlist;
+    const draft = await rpc('portfolioImport.parse', { source: 'paste', text: 'AAPL.US 12 180.5' });
+    await rpc('portfolioImport.confirm', { draft, name: 'Focus fixture' });
+    await page.getByTestId('assistant-close').click();
+    await page.getByTestId('sidebar').getByRole('button', { name: uiText('指数（Indices）') }).click();
+    await page.getByTestId('new-session-fab').click();
+    await page.getByTestId('assistant-focus-index:000001.SH').waitFor();
+    assert.match(await page.getByTestId('assistant-focus-index:000001.SH').innerText(), /上证指数/);
+    await page.getByTestId('assistant-focus-index:000001.SH').getByRole('button').click();
+    assert.match(await page.getByTestId('context-chip').innerText(), /未选择关注对象/);
+    assert.deepEqual((await rpc('workspace.get')).watchlist, originalWatchlist);
+    await page.getByTestId('assistant-focus-add').click();
+    const dialog = page.getByRole('dialog', { name: '添加关注对象', exact: true });
+    await dialog.getByRole('button', { name: '我的投资组合', exact: true }).click();
+    await dialog.getByRole('button', { name: '我的全部持仓', exact: true }).click();
+    await dialog.getByRole('button', { name: '我的自选', exact: true }).click();
+    const options = dialog.locator('.felix-focus-options');
+    await options.nth(2).getByRole('button', { name: 'AAPL.US', exact: true }).waitFor();
+    await options.nth(2).getByRole('button', { name: 'AAPL.US', exact: true }).click();
+    await dialog.getByRole('textbox', { name: '股票或指数代码' }).fill('600519.sh');
+    await dialog.getByRole('button', { name: '添加代码', exact: true }).click();
+    await dialog.getByRole('button', { name: '上证指数', exact: true }).click();
+    await dialog.getByRole('button', { name: '上证指数', exact: true }).click();
+    await dialog.getByRole('alert').getByText(/已在关注列表/).waitFor();
+    await dialog.getByRole('textbox', { name: '股票或指数代码' }).fill('../../secret');
+    await dialog.getByRole('button', { name: '添加代码', exact: true }).click();
+    await dialog.getByRole('alert').getByText(/请输入完整代码/).waitFor();
+    await dialog.getByRole('button', { name: '完成', exact: true }).click();
+    assert.equal(await page.locator('.felix-focus-chip').count(), 6);
+    await page.getByTestId('sidebar').getByRole('button', { name: uiText('自选（Watchlist）') }).click();
+    assert.equal(await page.locator('.felix-focus-chip').count(), 6, 'navigation preserves manual focus');
+    await page.getByTestId('agent-input').fill('查询当前行情');
+    await page.getByTestId('agent-input').press('Enter');
+    await page.waitForFunction(() => !document.querySelector('[data-testid=assistant-focus-add]')?.disabled, undefined, { polling: 100 });
+    assert.equal(requests.length, 1);
+    assert.equal(requests[0].args[2].focusObjects.length, 6);
+    assert.equal(requests[0].args[2].selectedPosition, 'AAPL.US');
+    assert.equal(requests[0].args[2].focusData, undefined, 'owner records are resolved by the host');
+    await page.screenshot({ path: resolve(artifacts, 'assistant-focus-desktop.png') });
+    while (await page.locator('.felix-focus-chip').count()) await page.locator('.felix-focus-chip').first().getByRole('button').click();
+    await page.getByTestId('agent-input').fill('看下走势');
+    await page.getByTestId('agent-input').press('Enter');
+    await page.waitForFunction(() => !document.querySelector('[data-testid=assistant-focus-add]')?.disabled, undefined, { polling: 100 });
+    assert.deepEqual(requests[1].args[2].focusObjects, []);
+    assert.equal(requests[1].args[2].activeSymbol, undefined);
+    const sessions = (await rpc('kernel.hydrate')).sessions;
+    assert.equal((await rpc('kernel.getMessages', sessions[0].id)).at(-1).toolCalls.length, 0, 'a cleared scope does not query the previous stock');
+    assert.deepEqual((await rpc('workspace.get')).watchlist, originalWatchlist);
+    assert.equal((await rpc('portfolioImport.listManual'))[0].holdings[0].quantity, 12);
+    await page.getByTestId('assistant-focus-follow').click();
+    await page.getByTestId('assistant-focus-watchlist').waitFor();
+    await page.getByRole('button', { name: '切换深色主题', exact: true }).click();
+    await page.setViewportSize({ width: 390, height: 844 });
+    await page.getByTestId('assistant-focus-add').click();
+    await dialog.getByRole('textbox', { name: '股票或指数代码' }).fill('0700.HK');
+    await dialog.getByRole('button', { name: '添加代码', exact: true }).click();
+    const box = await dialog.boundingBox();
+    assert.ok(box.width <= 390 && box.height <= 844);
+    assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth));
+    await page.screenshot({ path: resolve(artifacts, 'assistant-focus-mobile-dark.png') });
+    assert.deepEqual(errors, []);
+    return '关注对象增删、持仓选择、代码校验、手动选择与跟随页面、请求作用域和手机布局通过；未修改自选或实际持仓';
+  } catch (error) {
+    await page.screenshot({ path: resolve(artifacts, 'assistant-focus-failure.png') }).catch(() => {});
+    throw error;
+  } finally { await context.close(); }
+}

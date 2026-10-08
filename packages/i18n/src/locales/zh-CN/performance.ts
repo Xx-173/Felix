@@ -8,7 +8,7 @@ export const performance = {
   horizon1M: '1 个月',
   horizon3M: '3 个月',
   intro:
-    '已评测研究观点的历史成绩。样本数低于 {{min}} 的组为「仅观察」— 绝不会以少量结果调参。',
+    '回顾研究观点在选定时间内的表现。样本少于 {{min}} 个时，仅展示观察结果，不据此调整权重。',
   loading: '加载中…',
 
   skillPerformance: '技能表现',
@@ -20,13 +20,13 @@ export const performance = {
 
   calibrationAdvanced: '校准（高级）',
   calibrationIntro:
-    '仅供参考 — 每条历史成绩会如何调整权重，且绝不超出有界范围。此版本不会应用运行时权重。',
+    '展示历史表现对应的参考权重，调整范围有限。当前版本不会将这些权重用于实际分析。',
   skillCalibration: '技能校准',
   strategyCalibration: '策略校准',
   noCalibratedSkillOutcomes: '还没有已校准的技能结果。',
   noCalibratedStrategyOutcomes: '还没有已校准的策略结果。',
   finalWeightBounded: '最终权重限制在 [{{min}} – {{max}}]',
-  calibrationNote: '仅供参考 — 样本数低于 {{min}} 时不会推导任何调整。',
+  calibrationNote: '样本少于 {{min}} 个时，不计算权重调整。',
 
   // Table headers
   name: '名称',

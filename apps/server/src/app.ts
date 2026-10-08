@@ -1,4 +1,4 @@
-import { updateWorkspaceDocument } from '@finagent/shared';
+import { updateWorkspaceDocument, parseWorkspaceContext, resolveAssistantFocusData } from '@finagent/shared';
 import type { PersonalWorkspace } from '@finagent/core';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
@@ -131,7 +131,7 @@ export async function createWebApplication(options: ServerOptions) {
   }
 
   const signature = (id: string) => createHmac('sha256', secret!).update(id).digest('hex');
-  const notice = demo ? '示例行情（Sample data） · 在设置中填写自己的模型密钥后可启用 AI（Bring your own key in Settings）。' : '行情权限取决于供应商；AI 使用自己的模型密钥（Bring your own key）。';
+  const notice = demo ? '示例行情 · 在设置中填写自己的模型密钥后可启用 AI。' : '行情权限取决于供应商；AI 使用自己的模型密钥。';
   const deployment = { kind: 'web' as const, demoData: demo, notice };
 
   const cookieValue = (request: Request, name: string) => request.headers.get('cookie')?.split(';').map((part) => part.trim()).find((part) => part.startsWith(name + '='))?.slice(name.length + 1);
@@ -214,7 +214,7 @@ export async function createWebApplication(options: ServerOptions) {
       const router = new ProviderRouter({ timeoutMs: 15000 });
       const financial = new MassiveFinancialDataProvider({ getApiKey: async () => runtime.marketKey() });
       router.register(financial); router.setRouting({ primary: 'massive' });
-      const unavailable = async (): Promise<never> => { throw createCodeError('CAPABILITY_UNAVAILABLE', '请连接可用的数据源（Connect an available data provider）。'); };
+      const unavailable = async (): Promise<never> => { throw createCodeError('CAPABILITY_UNAVAILABLE', '请连接可用的数据源。'); };
       const publicFetchers = { ...createRouterFetchers(router), getPortfolio: unavailable, getAccountPositions: unavailable, getAssets: unavailable, getCashFlow: unavailable };
       const fetchers = demo ? withDemoDataFallback(publicFetchers) : publicFetchers;
       const registry = createFullRegistry(fetchers);
@@ -275,7 +275,10 @@ export async function createWebApplication(options: ServerOptions) {
         const sessionId = await session(visitor, args[0]);
         if ((await kernel.sessions.listRuns(sessionId)).length >= 100) throw createCodeError('SESSION_LIMIT', 'This conversation has reached the run limit. Create a new conversation.');
         const content = textSchema.parse(args[1]);
-        const context = args[2] === undefined ? undefined : z.object({ activeSymbol: symbolSchema.optional(), activeView: z.enum(['overview', 'chart', 'financials', 'news']).optional() }).parse(args[2]);
+        const context = await resolveAssistantFocusData(args[2] === undefined ? undefined : parseWorkspaceContext(args[2]), {
+          watchlist: () => visitor.store.read('workspace.json', { watchlist: ['AAPL.US', 'TSLA.US', 'NVDA.US'] }),
+          portfolios: () => visitor.services.portfolios.list(),
+        });
         return queue.submit(visitor.id,
           async () => { await session(visitor, sessionId); await reserveRun(visitor.id); return kernel.runs.startRun(sessionId, content, context, visitor.preferences.effectiveLocale); },
           async () => { while (kernel.runs.isRunning()) await sleep(); }, signal);
@@ -365,7 +368,7 @@ export async function createWebApplication(options: ServerOptions) {
       case 'connections.list': return connectionEntries(visitor);
       case 'connections.coverage': return [{ providerId: 'massive', capabilities: visitor.financial.capabilities(), markets: ['US'] }];
       case 'connections.setConfig': {
-        if (args[0] !== 'massive') throw createCodeError('DESKTOP_CONNECTION_REQUIRED', '长桥本地登录请使用桌面版（Use the desktop app for local Longbridge login）。');
+        if (args[0] !== 'massive') throw createCodeError('DESKTOP_CONNECTION_REQUIRED', '长桥本地登录请使用桌面版。');
         const config = z.object({ apiKey: z.string().trim().min(1).max(4096).optional(), enabled: z.boolean().optional(), endpoint: z.string().max(500).optional(), region: z.string().max(40).optional(), routingRole: z.enum(['primary', 'fallback']).optional() }).parse(args[1]);
         if (config.endpoint && !['https://api.massive.com', 'https://api.polygon.io'].includes(config.endpoint.replace(/\/$/, ''))) throw createCodeError('INVALID_ARGUMENT', 'Unsupported market endpoint');
         if (config.apiKey) await visitor.models.setMarketKey(config.apiKey);
@@ -379,25 +382,25 @@ export async function createWebApplication(options: ServerOptions) {
       }
       case 'connections.cancelConnect': return;
       case 'connections.connect': {
-        if (args[0] !== 'massive') throw createCodeError('DESKTOP_CONNECTION_REQUIRED', '长桥本地登录请使用桌面版（Use the desktop app for local Longbridge login）。');
-        if (!visitor.models.marketKey()) throw createCodeError('MODEL_KEY_REQUIRED', '请先填写自己的行情密钥（Save your market API key first）。');
+        if (args[0] !== 'massive') throw createCodeError('DESKTOP_CONNECTION_REQUIRED', '长桥本地登录请使用桌面版。');
+        if (!visitor.models.marketKey()) throw createCodeError('MODEL_KEY_REQUIRED', '请先填写自己的行情密钥。');
         return { status: 'connected' };
       }
       case 'connections.test': {
-        if (args[0] !== 'massive') return { status: 'not-installed', lastCheck: Date.now(), message: '本地长桥集成需要桌面版（Desktop required）。' };
+        if (args[0] !== 'massive') return { status: 'not-installed', lastCheck: Date.now(), message: '本地长桥集成需要桌面版。' };
         const result = await visitor.financial.execute('market.quote', { symbol: 'AAPL.US' }, AbortSignal.timeout(15000));
-        return { status: result.ok ? 'permission-limited' : 'error', lastCheck: Date.now(), diagnostic: result.ok ? 'healthy' : 'degraded', message: result.ok ? '连接可用；数据延迟及权限取决于订阅（Connected; subscription limits apply）。' : '连接失败，请检查密钥和行情权限（Check the key and data entitlement）。' };
+        return { status: result.ok ? 'permission-limited' : 'error', lastCheck: Date.now(), diagnostic: result.ok ? 'healthy' : 'degraded', message: result.ok ? '连接可用；数据延迟及权限取决于订阅。' : '连接失败，请检查密钥和行情权限。' };
       }
       case 'health.check': return {
-        ai: { ok: true, ...(visitor.models.state().model ? {} : { mode: 'local' }), detail: visitor.models.state().model ? '已选择模型，请通过测试连接验证密钥（Model selected; use Test Connection to verify）。' : '本地规则分析（Local rule-based analysis）', error: null },
-        marketData: { ok: demo || !!visitor.models.marketKey(), ...(demo ? { mode: 'demo' } : {}), detail: demo ? '示例行情（Sample data）' : '行情权限取决于供应商（Provider entitlement applies）', error: demo || visitor.models.marketKey() ? null : { code: 'MARKET_KEY_REQUIRED', message: '请配置行情密钥（Configure a market API key）。' } },
-        skills: { ok: visitor.services.skills.listSkills().length > 0, detail: '已加载内置技能（Bundled skills loaded）', error: null },
-        agentRuntime: { ok: true, detail: '网页研究运行时（Web research runtime）', error: null },
+        ai: { ok: true, ...(visitor.models.state().model ? {} : { mode: 'local' }), detail: visitor.models.state().model ? '已选择模型，请通过测试连接验证密钥。' : '本地规则分析', error: null },
+        marketData: { ok: demo || !!visitor.models.marketKey(), ...(demo ? { mode: 'demo' } : {}), detail: demo ? '示例行情' : '行情权限取决于供应商', error: demo || visitor.models.marketKey() ? null : { code: 'MARKET_KEY_REQUIRED', message: '请配置行情密钥。' } },
+        skills: { ok: visitor.services.skills.listSkills().length > 0, detail: '已加载内置技能', error: null },
+        agentRuntime: { ok: true, detail: '网页研究运行时', error: null },
       };
       case 'diagnostics.collect': return diagnostics(visitor);
       case 'diagnostics.export': return JSON.stringify(await diagnostics(visitor), null, 2);
       case 'diagnostics.restartRuntime': {
-        if (queue.busyVisitors.has(visitor.id)) throw createCodeError('RUN_ACTIVE', '请等待当前研究结束（Wait for the active run）。');
+        if (queue.busyVisitors.has(visitor.id)) throw createCodeError('RUN_ACTIVE', '请等待当前研究结束。');
         return;
       }
       case 'market.getCalendarEvents': return market.getCalendarEvents(z.object({ eventType: z.enum(['financial', 'report', 'dividend', 'ipo', 'macrodata', 'closed']).default('financial'), symbols: z.array(symbolSchema).max(10).optional() }).parse(args[0] ?? {}));
@@ -414,11 +417,11 @@ export async function createWebApplication(options: ServerOptions) {
   async function connectionEntries(visitor: Visitor) {
     const health = await visitor.financial.status();
     return [{ providerId: 'massive', kind: 'financial-data', name: 'Massive (Polygon.io)', status: health.status, health, coverage: { providerId: 'massive', capabilities: visitor.financial.capabilities(), markets: ['US'] }, configurable: true, configured: !!visitor.models.marketKey(), hasAccount: false, accountLabel: null, error: null },
-      { providerId: 'longbridge', kind: 'financial-data', name: '长桥（Longbridge）', status: 'not-installed', health: null, coverage: null, configurable: false, configured: false, hasAccount: false, accountLabel: null, error: { code: 'DESKTOP_CONNECTION_REQUIRED', message: '本地 CLI 登录请使用桌面版（Local CLI login requires desktop）。' } }];
+      { providerId: 'longbridge', kind: 'financial-data', name: '长桥', status: 'not-installed', health: null, coverage: null, configurable: false, configured: false, hasAccount: false, accountLabel: null, error: { code: 'DESKTOP_CONNECTION_REQUIRED', message: '本地 CLI 登录请使用桌面版。' } }];
   }
   async function diagnostics(visitor: Visitor) {
     const model = visitor.models.state().model;
-    return { collectedAt: new Date().toISOString(), app: { version: '0.4.0-beta.2-web', platform: { os: 'web', arch: 'browser', electron: null } }, runtime: { agent: { providerId: model ? 'web-api' : 'local', state: visitor.kernel.runs.isRunning() ? 'running' : 'idle' } }, providers: { llm: { id: model?.provider ?? null, model: model?.id ?? null }, financial: [{ id: 'massive', status: visitor.models.marketKey() ? 'configured' : 'not-connected', coverage: { capabilities: visitor.financial.capabilities(), markets: ['US'] } }], broker: { connected: false, accountCount: 0 }, longbridgeCliVersion: null }, skills: { loaded: visitor.services.skills.listSkills().length }, capabilities: { available: demo ? visitor.registry.list().map((entry) => entry.id) : visitor.models.marketKey() ? visitor.financial.capabilities() : [] }, resources: { dev: false, root: 'visitor-workspace' }, pi: { status: 'idle', command: null, cwd: null, extensions: [], providersConfigured: model ? [model.provider] : [], model: model?.id ?? null, lastExitCode: null, lastExitSignal: null, stderrTail: null, observabilityDegraded: false }, errors: (await database.jobErrors(visitor.id)).map((job) => ({ at: job.updated_at, source: 'scheduler', message: `后台任务${job.status === 'interrupted' ? '因重启中断' : '执行失败'}，可在自动研究页面手动重试（Scheduled job ${job.status}; retry manually）。`, stack: null })), redaction: { policy: 'No keys, account data or server paths', applied: true } };
+    return { collectedAt: new Date().toISOString(), app: { version: '0.4.0-beta.2-web', platform: { os: 'web', arch: 'browser', electron: null } }, runtime: { agent: { providerId: model ? 'web-api' : 'local', state: visitor.kernel.runs.isRunning() ? 'running' : 'idle' } }, providers: { llm: { id: model?.provider ?? null, model: model?.id ?? null }, financial: [{ id: 'massive', status: visitor.models.marketKey() ? 'configured' : 'not-connected', coverage: { capabilities: visitor.financial.capabilities(), markets: ['US'] } }], broker: { connected: false, accountCount: 0 }, longbridgeCliVersion: null }, skills: { loaded: visitor.services.skills.listSkills().length }, capabilities: { available: demo ? visitor.registry.list().map((entry) => entry.id) : visitor.models.marketKey() ? visitor.financial.capabilities() : [] }, resources: { dev: false, root: 'visitor-workspace' }, pi: { status: 'idle', command: null, cwd: null, extensions: [], providersConfigured: model ? [model.provider] : [], model: model?.id ?? null, lastExitCode: null, lastExitSignal: null, stderrTail: null, observabilityDegraded: false }, errors: (await database.jobErrors(visitor.id)).map((job) => ({ at: job.updated_at, source: 'scheduler', message: `后台任务${job.status === 'interrupted' ? '因重启中断' : '执行失败'}，可在自动研究页面手动重试。`, stack: null })), redaction: { policy: 'No keys, account data or server paths', applied: true } };
   }
 
   let ticking = false;
@@ -492,17 +495,17 @@ export async function createWebApplication(options: ServerOptions) {
     if (!rate || rate.resetAt <= now) rates.set(remoteAddress, { count: 1, resetAt: now + 60000 });
     let auth: Awaited<ReturnType<typeof identity>>;
     try { auth = await identity(request); }
-    catch { return json({ ok: false, error: { code: 'STORAGE_UNAVAILABLE', message: '数据服务暂不可用，请稍后重试（Storage unavailable; retry shortly）。' } }, 503); }
+    catch { return json({ ok: false, error: { code: 'STORAGE_UNAVAILABLE', message: '数据服务暂不可用，请稍后重试。' } }, 503); }
     for (const [id, value] of workspaceRates) if (value.resetAt <= now) workspaceRates.delete(id);
     const personalRate = workspaceRates.get(auth.id);
-    if (personalRate && ++personalRate.count > 600) return json({ ok: false, error: { code: 'RATE_LIMITED', message: '个人请求过多，请稍后重试（Too many workspace requests）。' } }, 429, auth.setCookie);
+    if (personalRate && ++personalRate.count > 600) return json({ ok: false, error: { code: 'RATE_LIMITED', message: '个人请求过多，请稍后重试。' } }, 429, auth.setCookie);
     if (!personalRate) {
       if (workspaceRates.size >= 2048) return json({ ok: false, error: { code: 'RATE_LIMITED', message: 'Too many requests.' } }, 429, auth.setCookie);
       workspaceRates.set(auth.id, { count: 1, resetAt: now + 60000 });
     }
     try {
       if (url.pathname === '/api/admin' && request.method === 'POST') {
-        if (auth.user?.role !== 'admin') throw createCodeError('ADMIN_REQUIRED', '仅管理员可以修改全站设置（Administrator access required）。');
+        if (auth.user?.role !== 'admin') throw createCodeError('ADMIN_REQUIRED', '仅管理员可以修改全站设置。');
         if (!request.headers.get('content-type')?.startsWith('application/json')) throw createCodeError('INVALID_ARGUMENT', 'JSON required');
         const raw = await request.text();
         if (Buffer.byteLength(raw) > 16384) throw createCodeError('INVALID_ARGUMENT', 'Request body is too large.');
@@ -520,7 +523,7 @@ export async function createWebApplication(options: ServerOptions) {
           const id = randomBytes(16).toString('hex');
           return json({ ok: true, data: accounts.state() }, 200, [accountCookie('', true), visitorCookie(id)]);
         }
-        if (['register', 'deleteAccount'].includes(input.action) && queue.busyVisitors.has(auth.id)) throw createCodeError('RUN_ACTIVE', '请等待当前研究结束（Wait for the active run）。');
+        if (['register', 'deleteAccount'].includes(input.action) && queue.busyVisitors.has(auth.id)) throw createCodeError('RUN_ACTIVE', '请等待当前研究结束。');
         const result = await accounts.execute(input.action, input.input, auth.id, auth.user, remoteAddress);
         closeStreams(auth.id);
         if ('user' in result) closeStreams(result.user.workspaceId);

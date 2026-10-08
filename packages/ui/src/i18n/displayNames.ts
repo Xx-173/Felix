@@ -12,7 +12,7 @@ const terms: Record<string, string> = {
   Connected: '已连接', 'Permission limited': '权限受限', Expired: '已过期', Error: '错误',
   read_only: '只读', read: '读取', standard: '标准', minimal: '最少', full: '完整',
 };
-export function uiTerm(value: string): string { return terms[value] ? `${terms[value]}（${value}）` : value; }
+export function uiTerm(value: string): string { return terms[value] ?? value; }
 const skillNames: Record<string, string> = {
   longbridge: '长桥金融工具', 'longbridge-market-data': '长桥行情数据',
   'longbridge-fundamentals': '长桥基本面分析', 'longbridge-technical': '长桥技术分析',
@@ -23,7 +23,7 @@ const skillNames: Record<string, string> = {
   'longbridge-watchlist': '长桥自选管理',
 };
 export function skillDisplayName(id: string, name: string): string {
-  return skillNames[id] ? `${skillNames[id]}（${name}）` : name;
+  return skillNames[id] ?? name;
 }
 const skillDescriptions: Record<string, string> = {
   longbridge: '使用长桥金融工具获取行情、财务信息和组合数据。',
@@ -42,12 +42,12 @@ const skillDescriptions: Record<string, string> = {
 };
 export function skillDisplayDescription(id: string, description: string): string {
   return skillDescriptions[id] && description && !/[\u4e00-\u9fff]/.test(description.slice(0, 120))
-    ? `${skillDescriptions[id]}（${description}）` : description;
+    ? skillDescriptions[id] : description;
 }
 
 const metricNames: Record<string, string> = { Last: '最新价', 'Change %': '涨跌幅', Open: '开盘价', High: '最高价', Low: '最低价', 'Prev close': '昨收价', Volume: '成交量', Symbol: '证券代码', Qty: '数量', Value: '市值', Weight: '权重', 'P&L %': '盈亏比例', '30d volatility': '30 日波动率', 'Day change': '当日涨跌', price: '价格', percent: '百分比', count: '数量', ratio: '比率' };
-export function metricDisplayLabel(value: string): string { return metricNames[value] ? `${metricNames[value]}（${value}）` : value; }
+export function metricDisplayLabel(value: string): string { return metricNames[value] ?? value; }
 export function blockDisplayTitle(value: string): string {
   const match = /^([A-Z0-9.]+) (key metrics|daily close \(30d\))$/.exec(value);
-  return match ? `${match[1]} ${match[2] === 'key metrics' ? '关键指标' : '每日收盘价（30 日）'}（${match[2]}）` : value;
+  return match ? `${match[1]} ${match[2] === 'key metrics' ? '关键指标' : '每日收盘价（30 日）'}` : value;
 }

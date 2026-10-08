@@ -30,8 +30,8 @@ it('switches market requests and observation scope, leaving unavailable market-w
     expect(container.querySelector('[data-market=CN]')).not.toBeNull();
     expect(requested).toContain('000001.SH');
     expect(requested).not.toContain('HSI.HK');
-    expect(container.textContent).toContain('仅统计当前市场自选');
-    expect(container.textContent).toContain('当前接口未提供全市场汇总');
+    expect(container.textContent).toContain('仅统计当前市场的自选股');
+    expect(container.textContent).toContain('当前数据源暂不提供全市场统计');
     expect(container.querySelector('.felix-dashboard-rankings')?.textContent).toContain('600519.SH');
     for (const market of ['HK', 'US']) {
       await act(async () => (container.querySelector(`#market-tab-${market}`) as HTMLButtonElement).click());

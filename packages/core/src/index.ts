@@ -422,14 +422,25 @@ export interface AgentBackend {
 
 export type WorkspaceView = 'overview' | 'chart' | 'financials' | 'news' | 'portfolio';
 
-/**
- * Current financial-object context of the workspace.
- *
- * Deliberately separate from Agent Session state: a Session is the
- * conversation scope, a WorkspaceContext is the security / view the user is
- * currently looking at. It is ephemeral (per run) and never persisted.
- */
+/** Objects explicitly selected in the assistant, independently of page navigation. */
+export type AssistantFocus =
+  | { kind: 'security' | 'index' | 'holding'; symbol: string }
+  | { kind: 'portfolio' | 'holdings' | 'watchlist' };
+
+/** Financial context for a single request, separate from persisted chat history. */
 export interface WorkspaceContext {
+  /** Trusted owner data resolved by the host, never accepted from a client request. */
+  focusData?: {
+    truncated?: boolean;
+    watchlist?: string[];
+    manualPortfolios?: Array<{
+      name: string;
+      updatedAt: number;
+      holdings: Array<{ symbol: string; quantity?: number; costPrice?: number; currency?: string }>;
+    }>;
+  };
+  /** An empty list means the user intentionally removed all focus objects. */
+  focusObjects?: AssistantFocus[];
   activeSymbol?: string;
   activeView?: WorkspaceView;
   selectedPosition?: string;

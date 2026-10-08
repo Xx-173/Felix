@@ -10,7 +10,7 @@ export interface RoutedIntent {
 
 const SYMBOL_REGEX = /\b[A-Z0-9]{1,6}\.(US|HK|SG|SH|SZ|HAS)\b/i;
 const UNSUPPORTED_CONTENT =
-  '当前 MVP 支持 quote/行情/价格、K-line/K线 和 portfolio/持仓/组合 查询。请带上标的代码，例如 AAPL.US 或 0700.HK。';
+  '当前为规则分析模式，支持行情、K 线和持仓查询。请指定股票或指数代码，例如 AAPL.US 或 0700.HK。';
 
 export function routeFinanceIntent(
   message: string,

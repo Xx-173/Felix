@@ -22,7 +22,7 @@ function channel<T>(name: string): T {
 async function adminRequest(action: string, input?: unknown) {
   try {
     return await (await fetch('/api/admin', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, input }) })).json();
-  } catch { return { ok: false, error: { code: 'WEB_CONNECTION_FAILED', message: '连接失败，请稍后重试（Connection failed; retry shortly）。' } }; }
+  } catch { return { ok: false, error: { code: 'WEB_CONNECTION_FAILED', message: '连接失败，请稍后重试。' } }; }
 }
 
 export async function createWebClient(): Promise<FinagentClient> {
@@ -58,7 +58,7 @@ export async function createWebClient(): Promise<FinagentClient> {
     workspace: channel('workspace'),
     account: { request: async (action, input) => {
       try { return await (await fetch('/api/auth', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, input }) })).json(); }
-      catch { return { ok: false, error: { code: 'WEB_CONNECTION_FAILED', message: '连接失败，请稍后重试（Connection failed; retry shortly）。' } }; }
+      catch { return { ok: false, error: { code: 'WEB_CONNECTION_FAILED', message: '连接失败，请稍后重试。' } }; }
     } },
     admin: { getSettings: () => adminRequest('getSettings'), saveSettings: (input) => adminRequest('saveSettings', input) },
     kernel: {
@@ -81,7 +81,7 @@ export async function createWebClient(): Promise<FinagentClient> {
     health: channel('health'),
     diagnostics: { collect: () => rpc('diagnostics.collect'), restartRuntime: () => rpc('diagnostics.restartRuntime'), export: async () => { const result = await rpc<string>('diagnostics.export'); if (!result.ok) return result; const url = URL.createObjectURL(new Blob([result.data], { type: 'application/json' })); const link = document.createElement('a'); link.href = url; link.download = 'felix-diagnostics.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000); return { ok: true, data: {} }; } },
     connections: { ...Object.fromEntries(['list','connect','cancelConnect','disconnect','test','setConfig','coverage'].map((method) => [method, (...args: unknown[]) => rpc(`connections.${method}`, ...args)])), onChanged: (callback) => { const listener = (event: Event) => callback(JSON.parse((event as MessageEvent).data)); source.addEventListener('connections', listener); return () => source.removeEventListener('connections', listener); } } as NonNullable<FinagentClient['connections']>,
-    openExternal: async (url) => { const target = new URL(url); if (!['http:', 'https:'].includes(target.protocol)) return { ok: false, error: { code: 'INVALID_URL', message: '仅支持网页链接（Only HTTP(S) links）。' } }; window.open(target.href, '_blank', 'noopener,noreferrer'); return { ok: true, data: undefined }; },
+    openExternal: async (url) => { const target = new URL(url); if (!['http:', 'https:'].includes(target.protocol)) return { ok: false, error: { code: 'INVALID_URL', message: '仅支持网页链接。' } }; window.open(target.href, '_blank', 'noopener,noreferrer'); return { ok: true, data: undefined }; },
     llm: channel('llm'), skills: channel('skills'), prefs: channel('prefs'),
     onboarding: channel('onboarding'), about: channel('about'), capabilities: channel('capabilities'),
     screening: channel('screening'), outcome: channel('outcome'), pulse: channel('pulse'), performance: channel('performance'), automation: channel('automation'), evaluation: channel('evaluation'), portfolioRisk: channel('portfolioRisk'), portfolioImport: channel('portfolioImport'),

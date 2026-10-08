@@ -5,7 +5,7 @@ import type { evaluation as enEvaluation } from '../en-US/evaluation.ts';
 export const evaluation = {
   // Shell
   center: '评测中心',
-  centerDescription: 'Agent 工程循环的基准评测结果 — 内部工具。',
+  centerDescription: '查看 AI 助手的测试结果，比较不同模型的表现。这是面向开发调试的工具。',
   refresh: '刷新',
   overview: '概览',
   experiments: '实验',
@@ -18,20 +18,20 @@ export const evaluation = {
   // Overview tab
   latestExperiment: '最近实验',
   latestExperimentNoSummary: '最近实验“{{name}}”还没有摘要。',
-  noCompletedExperiments: '还没有完成的实验 — 请从 CLI 运行评测以在此查看结果。',
+  noCompletedExperiments: '暂无评测结果。通过命令行运行评测后，可在这里查看结果。',
   viewSummary: '查看摘要',
   cases: '用例数',
   passRate: '通过率',
   composite: '综合得分',
   topFailureMode: '主要失败模式',
-  completedCount: '{{count}} 已完成',
+  completedCount: '已完成 {{count}} 项',
   runsScored: '{{count}} 次运行已评分',
-  vsBaseline: '{{delta}} vs 基线',
+  vsBaseline: '较基准 {{delta}}',
   noBaseline: '无基线',
   runsCount: '{{count}} 次运行',
   noFailures: '无失败',
   perMetricBreakdown: '分指标明细',
-  breakdownNote: '始终与综合得分一同展示（规格 §111）',
+  breakdownNote: '结合各项指标和样本数判断表现，避免只看综合得分。',
 
   // Table headers
   metric: '指标',
@@ -65,26 +65,26 @@ export const evaluation = {
   // Metric ids → display; ids stay stable, only the label is translated (§35).
   metrics: {
     task_completion: '任务完成度',
-    tool_recall: '必需工具覆盖',
+    tool_recall: '必要工具覆盖率',
     tool_precision: '工具准确率',
     tool_error_rate: '工具错误率',
     argument_validity: '工具参数有效性',
     max_tool_calls: '最大工具调用数',
-    evidence_presence: '依据存在性',
-    provenance_presence: '数据来源存在性',
-    freshness_compliance: '数据时效合规',
-    partial_failure_honesty: '部分失败诚实度',
+    evidence_presence: '是否提供依据',
+    provenance_presence: '是否标明来源',
+    freshness_compliance: '数据时效符合度',
+    partial_failure_honesty: '数据缺失说明完整度',
     latency: '延迟',
     failure_recovery: '失败恢复',
     groundedness: '依据可信度',
     research_completeness: '研究完整性',
     financial_reasoning: '金融推理质量',
-    decision_usefulness: '决策有用性',
+    decision_usefulness: '决策参考价值',
     trajectory_quality: '执行轨迹质量',
   },
   metricKinds: {
     deterministic: '确定性',
-    llmJudge: 'LLM 判官',
+    llmJudge: '模型评分',
     trajectory: '轨迹',
     outcome: '结果',
   },
@@ -97,7 +97,7 @@ export const evaluation = {
     tool_loop: '工具循环',
     duplicate_tool: '重复工具调用',
     ignored_tool_result: '忽略工具结果',
-    provider_failure: '提供方故障',
+    provider_failure: '服务商故障',
     no_evidence: '无依据',
     unsupported_claim: '无据断言',
     premature_answer: '过早作答',
@@ -105,7 +105,7 @@ export const evaluation = {
     strategy_miss: '策略缺失',
     timeout: '超时',
     runtime_error: '运行时错误',
-    judge_error: '判官错误',
+    judge_error: '评分模型错误',
     resource_unavailable: '资源不可用',
   },
 
@@ -139,15 +139,15 @@ export const evaluation = {
   // Case definition
   caseDefinition: '用例详情',
   prompt: '提示词',
-  workspaceContext: '工作台上下文',
+  workspaceContext: '关注对象与对话背景',
   expectedBehavior: '预期行为',
   forbiddenCapability: '禁止：{{cap}}',
   maxToolCalls: '≤{{count}} 次调用',
   evidenceRequired: '必须提供依据',
-  caseDefUnavailable: '此用例定义的注释化提示词与预期行为不可用。',
+  caseDefUnavailable: '暂未记录这个用例的提示词或预期行为。',
 
   // Agent answer
-  agentAnswer: 'Agent 回答',
+  agentAnswer: 'AI 回答',
   noAnswer: '此运行没有记录回答。',
   latency: '延迟 {{ms}}ms',
 
@@ -169,7 +169,7 @@ export const evaluation = {
 
   // Human review
   humanReview: '人工复核',
-  humanReviewDescription: '将本次运行标记为 好/差 — 会写入人工反馈日志（规格 §82）。',
+  humanReviewDescription: '评价这次回答是否有帮助，评价和备注会保存在反馈记录中。',
   good: '好',
   bad: '差',
   hideNote: '隐藏备注',
@@ -181,7 +181,7 @@ export const evaluation = {
   // Experiment detail
   configuration: '配置',
   datasetLabel: '数据集',
-  judgeLabel: '判官',
+  judgeLabel: '评分模型',
   thinkingLevel: '思考等级',
   started: '开始时间',
   completed: '完成时间',

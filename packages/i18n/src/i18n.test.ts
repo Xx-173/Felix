@@ -51,7 +51,7 @@ describe('error code → message resolution (spec §50–51)', () => {
   it('resolves a code to its translation key and localized message', () => {
     expect(errorKeyForCode('PI_RUNTIME_NOT_FOUND')).toBe('piRuntimeNotFound');
     const zh = createSyncI18n({ locale: 'zh-CN' });
-    expect(translateErrorCode('PI_RUNTIME_NOT_FOUND', zh.t)).toContain('运行时');
+    expect(translateErrorCode('PI_RUNTIME_NOT_FOUND', zh.t)).toContain('AI 服务');
     expect(translateErrorCode('TYPE_NOT_A_CODE', zh.t)).toBeNull();
   });
 });

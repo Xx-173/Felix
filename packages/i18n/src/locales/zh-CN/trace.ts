@@ -1,13 +1,13 @@
 import type { SameKeysAs } from '../keys.ts';
 import type { trace as enTrace } from '../en-US/trace.ts';
 
-/** Trace Inspector（V9.1 §8–11）— 渐进式披露的 Agent 运行调试界面。 */
+/** Trace Inspector（V9.1 §8–11）— 渐进式披露的 AI 分析调试界面。 */
 export const trace = {
   notRecorded: '未记录',
   tabs: {
     overview: '概览',
     timeline: '时间线',
-    context: '上下文',
+    context: "关注对象与对话背景",
     details: '详情',
   },
   status: {
@@ -20,17 +20,17 @@ export const trace = {
     partial: '部分',
     partialHint: '部分证据缺失 —— 结论只反映当前可见的内容。',
     minimal: '最小',
-    minimalHint: '该追踪仅有最基本的运行数据。',
+    minimalHint: "这次分析只记录了基本信息。",
   },
   contextSource: {
     recorded: '已记录',
     'evaluation-input': '评测输入',
     runtime: 'Pi 运行时',
-    live: '实时',
+    live: "当前页面",
     'not-recorded': '未记录',
   },
   elementSource: {
-    event: 'Agent 事件',
+    event: "AI 分析过程",
     message: '对话记录',
     'trace-event': '运行时事件',
     run: '运行记录',
@@ -38,14 +38,14 @@ export const trace = {
     langsmith: 'LangSmith',
   },
   overview: {
-    title: '追踪',
+    title: "分析记录",
     run: '运行',
     input: '输入',
     answer: '回答',
     error: '错误',
     latency: '{{seconds}} 秒',
     tools: '{{count}} 个工具',
-    steps: '{{count}} 个步骤',
+    steps: "{{count}} 个分析步骤",
     status: '状态',
     sources: '数据来源',
     noAnswer: '未记录回答。',
@@ -60,7 +60,7 @@ export const trace = {
     note: '评测结论是对运行的判断 —— 不属于执行时间线的一部分。',
   },
   context: {
-    title: '上下文',
+    title: "关注对象与对话背景",
     field: '字段',
     value: '值',
     source: '来源',
@@ -86,6 +86,6 @@ export const trace = {
   footer: {
     completed: '已完成 · {{seconds}} 秒 · {{steps}} 个步骤',
     failed: '失败 · {{tools}} 个工具',
-    trace: '追踪',
+    trace: "分析记录",
   },
 } satisfies SameKeysAs<typeof enTrace>;

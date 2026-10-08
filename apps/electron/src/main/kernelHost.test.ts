@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, mock } from 'bun:test';
 import { join } from 'node:path';
 import type { AgentEvent, AutomationRule } from '@finagent/core';
+import { parseWorkspaceContext, resolveAssistantFocusData } from '../../../../packages/shared/src/agent/workspace-focus.ts';
 import { updateWorkspaceDocument } from '../../../../packages/shared/src/workspace-storage.ts';
 
 let lastKernelOptions: Record<string, unknown> | null = null;
@@ -107,7 +108,7 @@ const noopStore = class {
 };
 
 mock.module('@finagent/shared', () => ({
-  updateWorkspaceDocument,
+  updateWorkspaceDocument, parseWorkspaceContext, resolveAssistantFocusData,
   AgentKernel: FakeAgentKernel,
   MarketDataService: class extends FakeMarketDataService {
     constructor(options?: { fetchers?: unknown }) {

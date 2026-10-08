@@ -23,10 +23,10 @@ import { ProfileSecurityView } from '../profile/ProfileSecurityView';
 import { WorkspaceHome } from './WorkspaceHome';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 const WORKSPACE_TABS: { value: WorkspaceView; label: string }[] = [
-  { value: 'overview', label: '概览（Overview）' },
-  { value: 'chart', label: 'K 线（Chart）' },
-  { value: 'financials', label: '财务报表（Financials）' },
-  { value: 'news', label: '新闻（News）' },
+  { value: 'overview', label: '概览' },
+  { value: 'chart', label: 'K 线' },
+  { value: 'financials', label: '财务报表' },
+  { value: 'news', label: '新闻' },
 ];
 
 

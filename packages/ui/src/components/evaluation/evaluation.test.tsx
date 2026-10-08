@@ -35,8 +35,8 @@ async function render(element: React.ReactElement) {
 describe('EvaluationCenter', () => {
   it('renders the shell with tab navigation when the channel is unwired', async () => {
     const { container, root } = await render(<EvaluationCenter />);
-    expect(container.textContent).toContain('Evaluation Center');
-    for (const label of ['Overview', 'Experiments', 'Model Comparison', 'Failure Modes']) {
+    expect(container.textContent).toContain('评测中心');
+    for (const label of ['概览', '实验', '模型对比', '失败模式']) {
       expect(container.textContent).toContain(label);
     }
     // The fallback client answers CLIENT_UNAVAILABLE → the error banner shows.
@@ -49,7 +49,7 @@ describe('EvaluationCenter', () => {
     const { container, root } = await render(<EvaluationCenter />);
     await act(async () => {});
     const buttons = Array.from(container.querySelectorAll('button'));
-    const modelTab = buttons.find((button) => button.textContent === '模型对比（Model Comparison）');
+    const modelTab = buttons.find((button) => button.textContent === '模型对比');
     expect(modelTab).toBeDefined();
     await act(async () => {
       modelTab?.click();
@@ -65,7 +65,7 @@ describe('EvaluationSettingsTab', () => {
   it('degrades to the unwired notice when the channel is unavailable', async () => {
     const { container, root } = await render(<EvaluationSettingsTab />);
     await act(async () => {});
-    expect(container.textContent).toContain('Evaluation settings aren\u0027t available yet');
+    expect(container.textContent).toContain('暂时无法读取追踪设置。');
     root.unmount();
   });
 
@@ -110,8 +110,8 @@ describe('EvaluationSettingsTab', () => {
       );
     });
     await act(async () => {});
-    expect(container.textContent).toContain('Langfuse Connection');
-    expect(container.textContent).toContain('Langfuse tracing');
+    expect(container.textContent).toContain('Langfuse 连接');
+    expect(container.textContent).toContain('Langfuse 追踪');
     expect(container.querySelector('[data-testid="langfuse-settings"]')).not.toBeNull();
     root.unmount();
   });
@@ -157,8 +157,8 @@ describe('EvaluationSettingsTab', () => {
       );
     });
     await act(async () => {});
-    expect(container.textContent).toContain('Langfuse Connection');
-    expect(container.textContent).toContain('Add Langfuse public and secret keys');
+    expect(container.textContent).toContain('Langfuse 连接');
+    expect(container.textContent).toContain('填写 Langfuse 公钥和私钥');
     root.unmount();
   });
 });

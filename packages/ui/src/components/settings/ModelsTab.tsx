@@ -218,7 +218,7 @@ export const ModelsTab: React.FC = () => {
 
   return (
     <div className="max-w-4xl space-y-7">
-      {client.deployment && <p className="rounded-lg border border-border bg-surface-muted p-3 text-xs leading-6">使用自己的模型密钥，费用由你的模型服务商账户承担。密钥按访客加密保存；可随时移除。自定义接口需使用管理员允许的 HTTPS 服务商域名（Bring your own key; billed to your provider account; encrypted per visitor; approved HTTPS domains only）。</p>}
+      {client.deployment && <p className="rounded-lg border border-border bg-surface-muted p-3 text-xs leading-6">使用自己的模型密钥，费用由你的模型服务商账户承担。密钥按访客加密保存；可随时移除。自定义接口需使用管理员允许的 HTTPS 服务商域名。</p>}
       <Section title={t('settings.model.runtimeDefaultModel')}>
         <div className="rounded-xl border border-border bg-surface p-5 shadow-sm">
           <div className="mb-3 flex items-center justify-between">

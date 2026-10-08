@@ -23,7 +23,7 @@ export const SkillReadinessBadge: React.FC<SkillReadinessBadgeProps> = ({ readin
       <span aria-hidden="true" style={{ color: visual.color }}>
         {visual.icon}
       </span>
-      <span className="text-foreground/56">{readiness ? readiness.summary.replace('capabilities', '项能力（capabilities）') : t('settings.skills.unavailable')}</span>
+      <span className="text-foreground/56">{readiness ? readiness.summary.replace('capabilities', '项能力') : t('settings.skills.unavailable')}</span>
       {readiness && readiness.missing.length > 0 && (
         <span className="flex flex-wrap gap-1">
           {readiness.missing.map((capability) => (

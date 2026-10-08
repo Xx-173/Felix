@@ -20,8 +20,8 @@ export const DataFreshness: React.FC<{
   const source = providerName ? `${providerName} · ` : '';
   return (
     <span className={`text-[10.5px] tabular-nums text-foreground/42 ${className ?? ''}`}>
-      {source}更新于（Updated） {time}
-      {delayed ? ' · 延迟行情（Delayed）' : ''}
+      {source}更新于 {time}
+      {delayed ? ' · 延迟行情' : ''}
     </span>
   );
 };

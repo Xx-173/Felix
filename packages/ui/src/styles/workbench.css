@@ -536,3 +536,17 @@ body { font-size: 13px; }
 
 .felix-settings-content .felix-evaluation-view, .felix-settings-content .felix-evaluation-header { background: var(--surface); }
 .felix-settings-content .felix-evaluation-tabs { flex-wrap: wrap; }
+.felix-focus-chips { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.felix-focus-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; padding: 5px 8px; border: 1px solid var(--border); border-radius: 8px; background: var(--mac-blue-soft); font-size: 11px; }
+.felix-focus-chip > span { overflow-wrap: anywhere; }
+.felix-focus-chip button { display: grid; place-items: center; flex-shrink: 0; border-radius: 4px; padding: 2px; }
+.felix-focus-chip button:hover { background: var(--surface-hover); }
+.felix-focus-add, .felix-focus-follow { display: inline-flex; align-items: center; gap: 4px; padding: 5px 7px; font-size: 11px; border: 1px dashed var(--border); border-radius: 8px; }
+.felix-focus-follow { border: 0; color: var(--text-muted); }
+.felix-focus-follow[aria-pressed=true] { color: var(--accent); }
+.felix-focus-empty { font-size: 11px; color: var(--text-muted); }
+.felix-focus-symbol-form { display: flex; gap: 8px; }
+.felix-focus-symbol-form input { width: 100%; min-width: 0; padding: 9px; border: 1px solid var(--border); border-radius: 8px; background: var(--surface); font-size: 12px; }
+.felix-focus-options { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 12px; }
+.felix-focus-options button { padding: 6px 9px; border: 1px solid var(--border); border-radius: 7px; font-size: 12px; }
+.felix-focus-options button:hover { color: var(--accent); background: var(--mac-blue-soft); }

@@ -2,7 +2,7 @@ import { afterAll, beforeAll, describe, expect, it } from 'bun:test';
 import React, { act } from 'react';
 import { createRoot } from 'react-dom/client';
 import { createStore, Provider } from 'jotai';
-import { activeSymbolAtom, watchlistAtom } from '../../atoms';
+import { activeSymbolAtom, watchlistAtom, navSectionAtom } from '../../atoms';
 import { installHappyDom } from '../../test/setupHappyDom';
 import { I18nextProvider, makeTestI18n } from '../../test/i18nTest';
 import { AssistantWelcome } from './AssistantWelcome';
@@ -15,6 +15,7 @@ describe('AssistantWelcome drafts', () => {
   for (const locale of ['en-US', 'zh-CN'] as const) {
     it(`uses the current symbol and watchlist without running a model (${locale})`, async () => {
       const store = createStore();
+      store.set(navSectionAtom, 'research');
       store.set(activeSymbolAtom, '0700.HK');
       store.set(watchlistAtom, ['0700.HK', 'MSFT.US']);
       const drafts: string[] = [];

@@ -130,7 +130,7 @@ export function ChartView() {
         ))}
         <div className="ml-auto">
           <DataFreshness
-            providerName={client.deployment ? t(client.deployment.demoData ? 'demo.badge' : 'security.header.marketStatus') : '长桥（Longbridge）'}
+            providerName={client.deployment ? t(client.deployment.demoData ? 'demo.badge' : 'security.header.marketStatus') : '长桥'}
             updatedAtMs={
               bars.length > 0 ? bars[bars.length - 1]!.timestamp * 1000 : undefined
             }

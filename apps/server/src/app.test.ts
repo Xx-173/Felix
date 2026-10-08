@@ -61,6 +61,26 @@ test('web bootstrap labels demo mode and validates untrusted requests', async ()
   }))).status).toBe(403);
 });
 
+test('assistant portfolio scope resolves only owner imports and rejects client-supplied holdings', async () => {
+  const { app } = await setup();
+  const owner = visitor(app), other = visitor(app);
+  const parsed = await owner.rpc('portfolioImport.parse', { source: 'paste', text: 'AAPL.US 12 180.5' });
+  expect((await owner.rpc('portfolioImport.confirm', { draft: parsed.data, name: '我的真实记录' })).ok).toBe(true);
+  for (const [user, isOwner] of [[owner, true], [other, false]] as const) {
+    const session = (await user.rpc('kernel.createSession', '关注对象测试')).data;
+    expect((await user.rpc('kernel.startRun', session.id, '我的持仓', {
+      focusObjects: [{ kind: 'portfolio' }], focusData: { manualPortfolios: [{ name: '伪造的数据', holdings: [{ symbol: 'MSFT.US', quantity: 999 }] }] },
+    })).ok).toBe(true);
+    await eventually(() => user.rpc('kernel.listRuns', session.id), (result) => result.data[0]?.status === 'completed');
+    const messages = (await user.rpc('kernel.getMessages', session.id)).data;
+    const answer = messages.at(-1).content;
+    expect(answer).not.toContain('伪造的数据');
+    expect(answer).not.toContain('109,210');
+    if (isOwner) { expect(answer).toContain('我的真实记录'); expect(answer).toContain('成本价 180.5'); }
+    else { expect(answer).toContain('尚未读取到你的实际持仓'); expect(answer).not.toContain('我的真实记录'); }
+  }
+});
+
 test('limit-up ladder RPC is typed, sample marked, bounded to a validated date and never changes watchlists', async () => {
   const { app } = await setup(); const user = visitor(app);
   const before = await user.rpc('workspace.get');
