@@ -82,22 +82,25 @@ function demoKlinesFor(symbol: string, limit?: number): Kline[] {
   const klines: Kline[] = [];
   const daySeconds = 86_400;
   const todayUtc = Math.floor(new Date().setUTCHours(0, 0, 0, 0) / 1000);
-  for (let index = count - 1; index >= 0; index -= 1) {
-    const step = count - 1 - index;
+  let nextClose = quote.lastPrice;
+  // Walk backward from the quote. Applying a different drift raised to the
+  // entire history length created extreme spikes and lost the latest price.
+  for (let index = 0; index < count; index += 1) {
     const drift = (seeded(symbol, index + 3) - 0.5) * 0.02;
-    const close = round2(quote.lastPrice / Math.pow(1 + drift, step));
-    const open = round2(close * (1 + (seeded(symbol, index + 61) - 0.5) * 0.008));
+    const close = index === 0 ? quote.lastPrice : index === 1 ? quote.prevClose : round2(nextClose * (1 + drift));
+    const open = index === 0 ? quote.open : round2(close * (1 + (seeded(symbol, index + 61) - 0.5) * 0.008));
     klines.push({
       symbol: quote.symbol,
       timestamp: todayUtc - index * daySeconds,
       open,
-      high: round2(Math.max(open, close) * 1.006),
-      low: round2(Math.min(open, close) * 0.994),
+      high: index === 0 ? quote.high : round2(Math.max(open, close) * 1.006),
+      low: index === 0 ? quote.low : round2(Math.min(open, close) * 0.994),
       close,
-      volume: Math.round(10_000_000 + seeded(symbol, index + 97) * 60_000_000),
+      volume: index === 0 ? quote.volume : Math.round(10_000_000 + seeded(symbol, index + 97) * 60_000_000),
     });
+    nextClose = close;
   }
-  return klines;
+  return klines.reverse();
 }
 
 function demoPortfolioSnapshot(): PortfolioSnapshot {
