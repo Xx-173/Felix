@@ -55,7 +55,8 @@ export interface PaletteCommandInput {
 export const NAVIGATION_COMMANDS: Array<{ section: NavSection; label: string }> = [
   { section: 'today', label: 'Today' },
   { section: 'discover', label: 'Discover' },
-  { section: 'watchlist', label: 'Workspace' },
+  { section: 'workspace', label: 'Workspace' },
+  { section: 'sessions', label: 'Sessions' },
   { section: 'portfolio', label: 'Portfolio' },
   { section: 'events', label: 'Events' },
   { section: 'research', label: 'Research' },

@@ -1,5 +1,5 @@
 import React, { useEffect, useReducer, useRef } from 'react';
-import { CirclePlus, X } from 'lucide-react';
+import { CirclePlus, Search, X } from 'lucide-react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import {
@@ -13,21 +13,28 @@ import {
   removeFromWatchlistAtom,
   activeSymbolAtom,
   activeViewAtom,
+  navSectionAtom,
 } from '../../atoms';
 import { useFinagentClient } from '../../client';
 import { Input } from '../primitives/Input';
 import { Button } from '../primitives/Button';
 import { DataFreshness } from '../primitives/DataFreshness';
 import { DemoBadge } from '../primitives/DemoBadge';
+import { BilingualLabel } from '../primitives/BilingualLabel';
 
 const SYMBOL_REGEX = /^[A-Z0-9]{1,6}\.(US|HK|SG|SH|SZ|HAS)$/;
 const DASH = '\u2014';
 
-const formatPrice = (value: number): string => `$${value.toFixed(2)}`;
+const marketOf = (symbol: string): string => {
+  const suffix = symbol.split('.').at(-1) ?? '';
+  return ['SH', 'SZ', 'HAS'].includes(suffix) ? 'CN' : suffix;
+};
+const formatPrice = (value: number, symbol: string): string =>
+  `${({ US: '$', HK: 'HK$', CN: '¥', SG: 'S$' } as Record<string, string>)[marketOf(symbol)] ?? ''}${value.toFixed(2)}`;
 const formatPercent = (value: number): string =>
   `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 
-export const Watchlist: React.FC<{ showHeader?: boolean }> = ({ showHeader = true }) => {
+export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> = ({ showHeader = true, fullPage = false }) => {
   const { t } = useTranslation();
   const client = useFinagentClient();
   const watchlist = useAtomValue(watchlistAtom);
@@ -36,6 +43,10 @@ export const Watchlist: React.FC<{ showHeader?: boolean }> = ({ showHeader = tru
   const setActiveSymbol = useSetAtom(activeSymbolAtom);
   const setActiveView = useSetAtom(activeViewAtom);
   const activeSymbol = useAtomValue(activeSymbolAtom);
+  const setSection = useSetAtom(navSectionAtom);
+  const [query, setQuery] = React.useState('');
+  const [market, setMarket] = React.useState('ALL');
+  const [sort, setSort] = React.useState('added');
   const latestTimestamp = useAtomValue(watchlistLatestTimestampAtom);
   const quotesAreDemo = useAtomValue(watchlistQuotesAreDemoAtom);
   const hasDemoQuotes = useAtomValue(watchlistHasDemoQuotesAtom);
@@ -77,16 +88,18 @@ export const Watchlist: React.FC<{ showHeader?: boolean }> = ({ showHeader = tru
     if (!symbol) return;
 
     if (!SYMBOL_REGEX.test(symbol)) {
-      setError('Invalid symbol format. Use: AAPL.US, 0700.HK');
+      setError(t('navigation.watchlistInvalid'));
       return;
     }
 
     if (watchlist.includes(symbol)) {
-      setError('Symbol already in watchlist');
+      setError(t('navigation.watchlistDuplicate'));
       return;
     }
 
     addSymbol(symbol);
+    setQuery('');
+    setMarket('ALL');
     setNewSymbol('');
     setError('');
   };
@@ -97,8 +110,12 @@ export const Watchlist: React.FC<{ showHeader?: boolean }> = ({ showHeader = tru
     }
   };
 
+  const visible = watchlist.filter((symbol) => (market === 'ALL' || marketOf(symbol) === market)
+    && (symbol + ' ' + (nameCache.current.get(symbol) ?? '')).toLowerCase().includes(query.trim().toLowerCase()));
+  const ordered = sort === 'symbol' ? [...watchlist].sort() : watchlist;
+
   return (
-    <div className="felix-watchlist flex h-full flex-col">
+    <div className={`felix-watchlist flex flex-col ${fullPage ? 'felix-watchlist-page' : 'h-full'}`}>
       <div className="felix-watchlist-header border-b mac-section-divider px-3 py-3">
         {showHeader && (
           <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-0.5">
@@ -117,7 +134,7 @@ export const Watchlist: React.FC<{ showHeader?: boolean }> = ({ showHeader = tru
             </span>
           </div>
         )}
-        <div className="flex gap-1.5">
+        <div className="felix-watchlist-add flex gap-1.5">
           <Input
             value={newSymbol}
             onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
@@ -126,29 +143,49 @@ export const Watchlist: React.FC<{ showHeader?: boolean }> = ({ showHeader = tru
             }}
             onKeyDown={handleKeyDown}
             placeholder="AAPL.US"
+            aria-label={t('navigation.watchlistAddSymbol')}
             error={error}
             className="h-8 flex-1 text-[12px]"
           />
-          <Button size="icon" onClick={handleAddSymbol} aria-label={t('navigation.watchlistAddSymbol')}>
+          <Button size={fullPage ? 'sm' : 'icon'} onClick={handleAddSymbol} aria-label={t('navigation.watchlistAddSymbol')}>
             <CirclePlus className="h-4 w-4" strokeWidth={1.8} />
+            {fullPage && <span>{t('navigation.watchlistAddSymbol')}</span>}
           </Button>
         </div>
       </div>
 
-      <div className="felix-watchlist-list flex-1 overflow-y-auto p-1.5">
-        {watchlist.map((symbol) => (
+      {fullPage && <div className="felix-hub-toolbar">
+        <label className="felix-hub-search"><Search size={16} /><input aria-label={t('navigation.watchlistSearch')} placeholder={t('navigation.watchlistSearch')} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
+        <select aria-label={t('navigation.marketFilter')} value={market} onChange={(event) => setMarket(event.target.value)}>
+          <option value="ALL">{t('navigation.allMarkets')}</option>
+          {['US', 'HK', 'CN', 'SG'].map((value) => <option key={value} value={value}>{t('navigation.market' + value)}</option>)}
+        </select>
+        <select aria-label={t('navigation.symbolSort')} value={sort} onChange={(event) => setSort(event.target.value)}>
+          <option value="added">{t('navigation.addedOrder')}</option><option value="symbol">{t('navigation.alphabetical')}</option>
+        </select>
+      </div>}
+      {fullPage && <div className="felix-watchlist-columns" aria-hidden="true">
+        {['symbolColumn', 'marketColumn', 'priceColumn', 'changeColumn', 'actionsColumn'].map((key) => <span key={key}><BilingualLabel stacked>{t('navigation.' + key)}</BilingualLabel></span>)}
+      </div>}
+      <div className="felix-watchlist-list flex-1 p-1.5">
+        {/* Hidden rows still resolve names and refresh quotes for accurate search. */}
+        {ordered.map((symbol) => (
           <WatchlistRow
             key={symbol}
+            fullPage={fullPage}
+            hidden={!visible.includes(symbol)}
             symbol={symbol}
             name={resolveName(symbol)}
             active={symbol === activeSymbol}
             onSelect={() => {
               setActiveSymbol(symbol);
               setActiveView('overview');
+              if (fullPage) setSection('watchlist');
             }}
             onRemove={() => removeSymbol(symbol)}
           />
         ))}
+        {watchlist.length > 0 && visible.length === 0 && <div className="felix-hub-empty">{t('navigation.noMatches')}</div>}
         {watchlist.length === 0 && (
           <div className="py-8 text-center text-[13px] text-foreground/44">
             <p>{t('navigation.watchlistEmpty')}</p>
@@ -161,6 +198,8 @@ export const Watchlist: React.FC<{ showHeader?: boolean }> = ({ showHeader = tru
 };
 
 interface WatchlistRowProps {
+  fullPage: boolean;
+  hidden: boolean;
   symbol: string;
   name: string;
   active: boolean;
@@ -170,6 +209,8 @@ interface WatchlistRowProps {
 
 const WatchlistRow: React.FC<WatchlistRowProps> = ({
   symbol,
+  fullPage,
+  hidden,
   name,
   active,
   onSelect,
@@ -195,60 +236,14 @@ const WatchlistRow: React.FC<WatchlistRowProps> = ({
     : undefined;
 
   return (
-    <div
-      role="button"
-      tabIndex={0}
-      aria-label={symbol}
-      data-testid={`watchlist-row-${symbol}`}
-      onClick={onSelect}
-      onKeyDown={(event) => {
-        if (event.key === 'Enter' || event.key === ' ') {
-          event.preventDefault();
-          onSelect();
-        }
-      }}
-      className={`felix-watchlist-row group relative flex cursor-pointer items-center gap-1.5 rounded-[8px] px-2.5 py-1.5 transition-colors ${
-        active
-          ? 'felix-watchlist-row--active bg-[var(--mac-blue-soft)]'
-          : 'hover:bg-[var(--mac-sidebar-hover)]'
-      }`}
-    >
-      <div className="min-w-0 flex-1">
-        <div className="flex items-baseline gap-1.5">
-          <span className="text-[12px] font-bold uppercase tracking-tight text-foreground">
-            {symbol}
-          </span>
-          <span className="truncate text-[11px] text-foreground/48">{name}</span>
-        </div>
-      </div>
-
-      <div className="shrink-0 text-right tabular-nums">
-        {loading ? (
-          <div className="h-3.5 w-14 animate-pulse rounded bg-foreground/10" />
-        ) : quote ? (
-          <>
-            <div className="text-[12px] font-semibold text-foreground">
-              {formatPrice(quote.lastPrice)}
-            </div>
-            <div className="text-[11px]" style={{ color: changeColor }}>
-              {formatPercent(quote.changePercent)}
-            </div>
-          </>
-        ) : (
-          <div className="text-[12px] text-foreground/40">{DASH}</div>
-        )}
-      </div>
-
-      <button
-        onClick={(e) => {
-          e.stopPropagation();
-          onRemove();
-        }}
-        className="flex h-5 w-5 shrink-0 items-center justify-center rounded-full text-foreground/38 opacity-0 transition-smooth hover:bg-foreground/8 hover:text-[var(--negative)] group-hover:opacity-100"
-        aria-label={t('navigation.watchlistRemoveSymbol', { symbol })}
-      >
-        <X className="h-3 w-3" strokeWidth={1.8} />
+    <div hidden={hidden} className={`felix-watchlist-row group ${active ? 'felix-watchlist-row--active' : ''}`}>
+      <button type="button" aria-label={symbol} data-testid={`watchlist-row-${symbol}`} onClick={onSelect} className="felix-watchlist-open">
+        <span className="felix-watchlist-identity"><strong>{symbol}</strong><span>{name}</span></span>
+        {fullPage && <span className="felix-watchlist-market">{t("navigation.market" + marketOf(symbol))}</span>}
+        <span className="felix-watchlist-price">{loading ? <span className="inline-block h-3.5 w-14 animate-pulse rounded bg-foreground/10" /> : quote ? formatPrice(quote.lastPrice, symbol) : DASH}</span>
+        <span className="felix-watchlist-change" style={{ color: changeColor }}>{quote ? formatPercent(quote.changePercent) : DASH}</span>
       </button>
+      <button type="button" onClick={onRemove} className="felix-hub-remove" aria-label={t("navigation.watchlistRemoveSymbol", { symbol })}><X size={15} /></button>
     </div>
   );
 };

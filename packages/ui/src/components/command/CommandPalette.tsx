@@ -88,6 +88,8 @@ export const CommandPalette: React.FC = () => {
       openConnections: t('navigation.paletteOpenConnections'),
       quickActionSettingsHint: t('navigation.paletteQuickActionSettingsHint'),
       navigation: {
+        workspace: t('navigation.workspace'),
+        sessions: t('navigation.sessions'),
         portfolio: t('navigation.portfolio'),
         research: t('navigation.research'),
         thesis: t('navigation.thesis'),

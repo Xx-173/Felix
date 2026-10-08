@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { Allotment } from 'allotment';
 import 'allotment/dist/style.css';
-import { useAtomValue } from 'jotai';
-import { agentPanelVisibleAtom, activeSessionIdAtom } from '../../atoms';
+import { useAtom, useAtomValue } from 'jotai';
+import { agentPanelVisibleAtom, activeSessionIdAtom, mobileAgentVisibleAtom } from '../../atoms';
 import { useFinagentClient } from '../../client';
 import { readPersisted, writePersisted } from '../../lib/persistedPrefs';
 import { ErrorBoundary } from '../primitives/ErrorBoundary';
@@ -17,7 +17,7 @@ const DEFAULT_SIZES = [224, 800, 360];
 export const WorkbenchShell: React.FC = () => {
   const client = useFinagentClient();
   const sessionId = useAtomValue(activeSessionIdAtom);
-  const [mobileAgent, setMobileAgent] = useState(false);
+  const [mobileAgent, setMobileAgent] = useAtom(mobileAgentVisibleAtom);
   const agentPanelVisible = useAtomValue(agentPanelVisibleAtom);
   const [sizes, setSizes] = useState<number[]>(() => readPersisted<number[]>(SIZES_KEY, DEFAULT_SIZES));
   const [isNarrow, setIsNarrow] = useState(() => typeof window !== 'undefined' && window.innerWidth < 900);
@@ -55,7 +55,7 @@ export const WorkbenchShell: React.FC = () => {
   // remembered width automatically; no extra state required.
   const showAgent = agentPanelVisible && !isNarrow;
 
-  if (client.deployment && isNarrow) return (
+  if (isNarrow) return (
     <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
       <nav aria-label="视图切换" className="flex shrink-0 gap-2 border-b border-border p-2">
         <button className="rounded border border-border px-3 py-1 text-xs" aria-pressed={!mobileAgent} onClick={() => setMobileAgent(false)}>工作台（Workspace）</button>

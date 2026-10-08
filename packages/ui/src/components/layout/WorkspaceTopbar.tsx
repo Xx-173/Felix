@@ -1,6 +1,6 @@
 import React from 'react';
-import { Moon, Sun, PanelRight } from 'lucide-react';
-import { useAtom, useAtomValue } from 'jotai';
+import { ArrowLeft, Moon, Sun, PanelRight } from 'lucide-react';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import { activeSymbolAtom, agentPanelVisibleAtom, navSectionAtom } from '../../atoms';
 import { BilingualLabel } from '../primitives/BilingualLabel';
@@ -11,12 +11,14 @@ export const WorkspaceTopbar: React.FC = () => {
   const { t } = useTranslation();
   const symbol = useAtomValue(activeSymbolAtom);
   const section = useAtomValue(navSectionAtom);
+  const setSection = useSetAtom(navSectionAtom);
   const [agentVisible, setAgentVisible] = useAtom(agentPanelVisibleAtom);
   const { isDark: dark, setMode } = useTheme();
   const key = section === 'watchlist' || section === 'sessions' ? 'workspace' : section;
   return (
     <header className="felix-workspace-topbar flex shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-5">
       <div className="flex min-w-0 items-center gap-3">
+        {section === 'watchlist' && <button type="button" className="felix-topbar-icon" aria-label="返回工作台（Back to workspace）" onClick={() => setSection('workspace')}><ArrowLeft size={16} /></button>}
         <h1 className="felix-workspace-topbar-title"><BilingualLabel>{t('navigation.' + key)}</BilingualLabel></h1>
         {section === 'watchlist' && symbol && <span className="felix-workspace-symbol">{symbol}</span>}
       </div>

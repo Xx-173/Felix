@@ -57,6 +57,10 @@ try {
   if (await skip.isVisible()) await skip.click();
   assert.equal(await page.getByTestId('account-bar').count(), 0, 'desktop keeps its local account behavior');
   await page.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
+  await page.getByTestId('workspace-home').waitFor();
+  assert.equal(await page.locator('.felix-sidebar-context').count(), 0);
+  assert.ok((await page.getByTestId('watchlist-row-TSLA.US').boundingBox()).height >= 50);
+  await page.screenshot({ path: join(artifacts, 'desktop-workspace-home.png') });
   await page.getByTestId('watchlist-row-TSLA.US').click();
   await page.getByRole('tab', { name: 'K 线（Chart）', exact: true }).click();
   await page.getByTestId('chart-canvas').waitFor();

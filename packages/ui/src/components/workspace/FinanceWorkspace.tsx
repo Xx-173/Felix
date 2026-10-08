@@ -21,6 +21,7 @@ import { DiscoverView } from '../discover/DiscoverView';
 import { EvaluationCenter } from '../evaluation/EvaluationCenter';
 import { EventsView } from '../events/EventsView';
 import { ProfileSecurityView } from '../profile/ProfileSecurityView';
+import { WorkspaceHome } from './WorkspaceHome';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 const WORKSPACE_TABS: { value: WorkspaceView; label: string }[] = [
   { value: 'overview', label: '概览（Overview）' },
@@ -36,6 +37,10 @@ export const FinanceWorkspace: React.FC = () => {
 
   let content: React.ReactNode;
   switch (navSection) {
+    case 'workspace':
+    case 'sessions':
+      content = <WorkspaceHome />;
+      break;
     case 'discover':
       content = <DiscoverView />;
       break;
@@ -72,7 +77,6 @@ export const FinanceWorkspace: React.FC = () => {
     case 'evaluation':
       content = <EvaluationCenter />;
       break;
-    case 'sessions':
     case 'watchlist':
     default:
       content = <SecurityWorkspace />;

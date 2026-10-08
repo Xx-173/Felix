@@ -419,6 +419,7 @@ const RunFooter: React.FC<{
  * current section instead of the same three prompts everywhere.
  */
 const SUGGESTION_GROUP: Partial<Record<NavSection, string>> = {
+  workspace: 'agent.suggestions.watchlist',
   research: 'agent.suggestions.research',
   portfolio: 'agent.suggestions.portfolio',
   discover: 'agent.suggestions.discover',

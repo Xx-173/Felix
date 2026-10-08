@@ -48,7 +48,7 @@ describe('workspace atoms', () => {
 
   it('nav and panel visibility atoms have defaults', () => {
     const store = createStore();
-    expect(store.get(navSectionAtom)).toBe('sessions');
+    expect(store.get(navSectionAtom)).toBe('workspace');
     expect(store.get(agentPanelVisibleAtom)).toBe(true);
     store.set(agentPanelVisibleAtom, false);
     expect(store.get(agentPanelVisibleAtom)).toBe(false);

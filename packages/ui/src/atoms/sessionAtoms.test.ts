@@ -6,6 +6,7 @@ import {
   activeMessagesAtom,
   activeSessionIdAtom,
   createSessionAtom,
+  deleteSessionAtom,
   hydrateSessionsAtom,
   loadMessagesAtom,
   messagesAtomFamily,
@@ -175,5 +176,20 @@ describe('session atoms', () => {
 
     expect(store.get(messagesAtomFamily('s1'))[0].content).toBe('from A');
     expect(store.get(messagesAtomFamily('s2'))[0].content).toBe('from B');
+  });
+
+  it('reports a rejected deletion without losing the current session or messages', async () => {
+    const store = createStore();
+    savedSessions = [makeSession('Research in progress')];
+    savedMessages = { s1: [{ id: 'm1', role: 'user', content: 'Keep this evidence', timestamp: 1000 }] };
+    const client = makeClient();
+    client.kernel.deleteSession = async () => ({ ok: false, error: { code: 'RUN_IN_PROGRESS', message: 'Stop the run first.' } });
+    await store.set(hydrateSessionsAtom, client);
+    await store.set(loadMessagesAtom, client, 's1');
+
+    expect(await store.set(deleteSessionAtom, client, 's1')).toBe(false);
+    expect(store.get(activeSessionIdAtom)).toBe('s1');
+    expect(store.get(sessionsAtom)).toHaveLength(1);
+    expect(store.get(activeMessagesAtom)[0].content).toBe('Keep this evidence');
   });
 });

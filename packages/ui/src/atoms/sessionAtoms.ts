@@ -77,12 +77,13 @@ export const deleteSessionAtom = atom(
   null,
   async (_get, set, client: FinagentClient, sessionId: string) => {
     const result = await client.kernel.deleteSession(sessionId);
-    if (!result.ok) return;
+    if (!result.ok) return false;
     set(sessionsAtom, (sessions) => sessions.filter((session) => session.id !== sessionId));
     messagesAtomFamily.remove(sessionId);
     if (_get(activeSessionIdAtom) === sessionId) {
       const remaining = _get(sessionsAtom);
       set(activeSessionIdAtom, remaining.length > 0 ? remaining[0].id : null);
     }
+    return true;
   }
 );

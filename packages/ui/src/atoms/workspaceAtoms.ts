@@ -22,6 +22,7 @@ export const selectedPositionAtom = atom<string | null>(null);
 
 /** Sidebar navigation section (app-level views). */
 export type NavSection =
+  | 'workspace'
   | 'sessions'
   | 'watchlist'
   | 'portfolio'
@@ -43,10 +44,12 @@ export type NavSection =
   | 'events'
   | 'profile';
 
-export const navSectionAtom = persistedAtom<NavSection>('navSection', 'sessions');
+export const navSectionAtom = persistedAtom<NavSection>('navSection', 'workspace');
 
 /** Whether the Agent Panel is visible (collapse/expand in the shell). */
 export const agentPanelVisibleAtom = persistedAtom<boolean>('agentPanelVisible', true);
+/** Narrow layouts show either the workspace or the assistant, without persisting a tab. */
+export const mobileAgentVisibleAtom = atom(false);
 /** Active tab within the Settings section. */
 export type SettingsTab =
   | 'general'
