@@ -30,7 +30,12 @@ try {
  if(!result.ok) throw new Error('Cannot seed administrator test account');
 } finally { await app.close(); }
 const db = await WorkspaceDatabase.open(process.env.FELIX_DATA_DIR, database, false);
-try { await setAdministrator(db, process.env.FELIX_ADMIN_TEST_USERNAME, true); } finally { await db.close(); }
+try {
+ await setAdministrator(db, process.env.FELIX_ADMIN_TEST_USERNAME, true);
+ // The preceding PostgreSQL browser suite uses the same test database and
+ // loopback address. Keep its persisted rate counters out of this fixture.
+ await db.query('DELETE FROM auth_attempts WHERE key=$1', ['127.0.0.1:register']);
+} finally { await db.close(); }
 `;
 let server, browser, diagnostics = '';
 try {
@@ -84,6 +89,7 @@ try {
     const response = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'register', input: { username: 'user-' + username, password, role: 'admin' } }) });
     return response.json();
   }, { username, password });
+  assert.equal(registered.ok, true, JSON.stringify(registered.error));
   assert.equal(registered.data.user.role, 'user');
   await ordinaryPage.reload(); await ordinaryPage.getByTestId('account-bar').getByText(new RegExp('user-' + username)).waitFor();
   assert.equal(await ordinaryPage.getByRole('button', { name: '管理设置（Administration）', exact: true }).count(), 0);
