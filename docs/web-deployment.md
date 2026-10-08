@@ -22,6 +22,16 @@ bun run web:start
 
 打开 http://127.0.0.1:8787 。默认是示例行情和本地规则演示，不产生模型费用。开发时分别启动 `bun run web:server:dev` 和 `bun run web:dev`，访问 http://127.0.0.1:5174 。
 
+Windows 构建完成后也可用后台启动脚本，不需要一直开着终端：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-web.ps1 start
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-web.ps1 status
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-web.ps1 stop
+```
+
+脚本只监听 `127.0.0.1`，使用 SQLite 和示例行情；已有 `.felix-web-data/` 资料会保留。日志和进程记录也在该目录，重复启动会检查已有服务。默认端口被占用时可加 `-Port 8788`；它不设置开机自启，重启电脑后重新运行 `start` 即可。停止时会结束对应 Bun 进程，SQLite 的 WAL 恢复和失效进程锁处理会在下次启动执行。网页自己的模型密钥在设置中填写；脚本不加载桌面 `.env` 或替访客提供密钥。
+
 ## 账号与自己的密钥
 
 可匿名试用，注册会保留当前匿名记录。用户名使用 3–40 个英文字母、数字或 `_.-`，密码至少 12 个字符。注册时展示一次恢复码，请保存；忘记密码可用恢复码设置新密码并撤销旧登录。修改密码也撤销其他登录。账号可在其他浏览器登录，退出后恢复独立匿名工作区。
