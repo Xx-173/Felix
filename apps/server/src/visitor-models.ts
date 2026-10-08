@@ -13,14 +13,14 @@ const builtin = [
   { name: 'qwen', displayName: '通义千问（Qwen）', baseUrl: 'https://dashscope.aliyuncs.com/compatible-mode/v1', models: [{ id: 'qwen-plus', name: 'Qwen Plus' }] },
   { name: 'siliconflow', displayName: '硅基流动（SiliconFlow）', baseUrl: 'https://api.siliconflow.cn/v1', models: [{ id: 'Qwen/Qwen2.5-72B-Instruct', name: 'Qwen2.5 72B' }] },
 ] satisfies CustomProviderConfig[];
-const defaultHosts = builtin.map((provider) => new URL(provider.baseUrl).hostname);
+export const builtinModelHosts = builtin.map((provider) => new URL(provider.baseUrl).hostname);
 type Stored = { credentials: Record<string, { key: string; at: number }>; custom: CustomProviderConfig[]; selected?: { provider: string; id: string }; thinking: string; marketKey?: string };
 
 /** Operator-approved domains, not arbitrary URLs, prevent this public app becoming an SSRF proxy. */
 export function approvedModelUrl(value: string, additionalHosts: string[] = []): string {
   const url = new URL(value);
   if (url.protocol !== 'https:' || url.username || url.password || url.search || url.hash ||
-      (url.port && url.port !== '443') || ![...defaultHosts, ...additionalHosts].includes(url.hostname.toLowerCase())) {
+      (url.port && url.port !== '443') || ![...builtinModelHosts, ...additionalHosts].includes(url.hostname.toLowerCase())) {
     throw createCodeError('MODEL_ENDPOINT_NOT_ALLOWED', '模型地址需使用 HTTPS 和管理员允许的服务商域名（HTTPS and an approved provider domain required）。');
   }
   return url.toString().replace(/\/$/, '');

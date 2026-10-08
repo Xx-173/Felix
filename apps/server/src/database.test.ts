@@ -7,21 +7,21 @@ import { join, resolve, sep } from 'node:path';
 import { WorkspaceDatabase, databaseOptions, type DatabaseOptions } from './database.ts';
 import { createWebApplication } from './app.ts';
 import { backupData, restoreData } from './backup.ts';
+import { setAdministrator } from './accounts.ts';
 
 type App = Awaited<ReturnType<typeof createWebApplication>>;
 const password = 'database-test-password-2026';
 const postgresUrl = process.env.FELIX_TEST_POSTGRES_URL;
-function client(app: App, address = 'test-address') {
-  const jar = new Map<string, string>();
+function client(app: App, address = 'test-address', jar = new Map<string, string>()) {
   async function send(endpoint: string, body: unknown) {
     const response = await app.fetch(new Request(`http://localhost/api/${endpoint}`, {
       method: 'POST', headers: { 'Content-Type': 'application/json', Cookie: [...jar].map(([k, v]) => `${k}=${v}`).join('; ') }, body: JSON.stringify(body),
     }), address);
     for (const header of response.headers.getSetCookie()) { const [pair] = header.split(';'), index = pair.indexOf('='); jar.set(pair.slice(0, index), pair.slice(index + 1)); }
     const result = await response.json() as any;
-    return result;
+    return { ...result, httpStatus: response.status };
   }
-  return { rpc: (method: string, ...args: unknown[]) => send('rpc', { method, args }), auth: (action: string, input: unknown = {}) => send('auth', { action, input }) };
+  return { jar, rpc: (method: string, ...args: unknown[]) => send('rpc', { method, args }), auth: (action: string, input: unknown = {}) => send('auth', { action, input }), admin: (action: string, input?: unknown) => send('admin', { action, input }) };
 }
 
 test('storage selection is explicit, validates settings and never leaks a URL', () => {
@@ -143,6 +143,52 @@ for (const kind of ['sqlite', 'postgresql'] as const) {
       for (let i = 0; i < 10; i++) expect((await limited.auth('login', { username: 'unknown', password })).error.code).toBe('INVALID_CREDENTIALS');
       expect((await limited.auth('login', { username: 'unknown', password })).error.code).toBe('AUTH_RATE_LIMIT');
     });
+    test('administrator settings enforce roles, validate domains and update existing visitors without restart', async () => {
+      const root = await directory(), first = await start(root), owner = client(first);
+      const registration = await owner.auth('register', { username: 'operator', password, role: 'admin' });
+      expect(registration.data.user.role).toBe('user');
+      expect((await owner.admin('getSettings')).httpStatus).toBe(403);
+      expect((await owner.auth('grantAdministrator', { username: 'operator' })).ok).toBe(false);
+      await first.close();
+      const database = await open(root);
+      await setAdministrator(database, 'OPERATOR', true); await database.close();
+      const app = await start(root, { modelAllowedHosts: ['fixed.example.com'] });
+      const admin = client(app, 'admin-address', owner.jar), guest = client(app, 'guest-address');
+      expect((await admin.auth('state')).data.user.role).toBe('admin');
+      const ordinary = await guest.auth('register', { username: 'ordinary', password, role: 'admin' });
+      expect(ordinary.data.user.role).toBe('user');
+      expect((await guest.admin('saveSettings', { revision: 0, modelAllowedHosts: ['evil.example.com'] })).httpStatus).toBe(403);
+      expect((await client(app, 'anonymous-address').admin('getSettings')).error.code).toBe('ADMIN_REQUIRED');
+      const config = { name: 'agnes', displayName: 'Agnes', baseUrl: 'https://apihub.agnes-ai.com/v1', apiKey: 'dummy-admin-domain-key', models: [{ id: 'agnes-3.0-flash', name: 'Agnes' }] };
+      expect((await guest.rpc('llm.setCustomProvider', config)).error.code).toBe('MODEL_ENDPOINT_NOT_ALLOWED');
+      const state = (await admin.admin('getSettings')).data;
+      expect(state.revision).toBe(0); expect(state.environmentHosts).toEqual(['fixed.example.com']);
+      const crossSite = await app.fetch(new Request('http://localhost/api/admin', {
+        method: 'POST', headers: { 'Content-Type': 'application/json', Origin: 'https://untrusted.example.com', Cookie: [...admin.jar].map(([key, value]) => `${key}=${value}`).join('; ') },
+        body: JSON.stringify({ action: 'saveSettings', input: { revision: 0, modelAllowedHosts: ['evil.example.com'] } }),
+      }));
+      expect(crossSite.status).toBe(403);
+      for (const invalid of ['http://example.com', '127.0.0.1', 'localhost', 'service.internal', '*.example.com', 'example.com/v1', 'example.com:443']) {
+        expect((await admin.admin('saveSettings', { revision: 0, modelAllowedHosts: [invalid] })).error.code).toBe('INVALID_ARGUMENT');
+      }
+      const saved = await admin.admin('saveSettings', { revision: 0, modelAllowedHosts: ['APIHUB.AGNES-AI.COM', 'apihub.agnes-ai.com'] });
+      expect(saved.ok).toBe(true); expect(saved.data.modelAllowedHosts).toEqual(['apihub.agnes-ai.com']);
+      expect((await guest.rpc('llm.setCustomProvider', config)).ok).toBe(true);
+      expect((await guest.rpc('llm.setModel', 'agnes', 'agnes-3.0-flash')).ok).toBe(true);
+      expect(JSON.stringify(await admin.admin('getSettings'))).not.toContain('dummy-admin-domain-key');
+      expect((await admin.admin('saveSettings', { revision: 0, modelAllowedHosts: [] })).httpStatus).toBe(409);
+      expect((await admin.admin('saveSettings', { revision: 1, modelAllowedHosts: [] })).ok).toBe(true);
+      expect((await guest.rpc('llm.setModel', 'agnes', 'agnes-3.0-flash')).error.code).toBe('MODEL_ENDPOINT_NOT_ALLOWED');
+      expect((await admin.auth('deleteAccount', { password })).error.code).toBe('ADMIN_ACCOUNT_DELETE_FORBIDDEN');
+      await app.close();
+      const again = await start(root), resumed = client(again, 'resumed', owner.jar);
+      expect((await resumed.auth('state')).data.user.role).toBe('admin');
+      expect((await resumed.admin('getSettings')).data.revision).toBe(2);
+      await again.close();
+      const reopened = await open(root); await setAdministrator(reopened, 'operator', false); await reopened.close();
+      const revoked = client(await start(root), 'revoked', owner.jar);
+      expect((await revoked.admin('getSettings')).httpStatus).toBe(403);
+    });
     test('job claims are atomic and failed/interrupted records survive restart', async () => {
       const root = await directory(), database = await open(root), id = 'b'.repeat(32);
       const claims = await Promise.all([database.claimJob(id, 'rule', '2026-10-07'), database.claimJob(id, 'rule', '2026-10-07')]);
@@ -163,16 +209,38 @@ for (const kind of ['sqlite', 'postgresql'] as const) {
       const backup = await directory();
       await expect(backupData(root, backup, undefined, options)).rejects.toThrow('in use');
       await app.close();
+      const database = await open(root);
+      await setAdministrator(database, 'portable', true);
+      await database.write(join(root, 'server', 'settings.json'), { modelAllowedHosts: ['apihub.agnes-ai.com'], revision: 1, updatedAt: Date.now(), updatedBy: 'portable' });
+      await database.close();
       await backupData(root, backup, undefined, options);
       const restored = await directory();
       await restoreData(backup, restored, { kind: 'sqlite' });
       const local = await createWebApplication({ dataDir: restored }); apps.push(local);
       const user = client(local);
-      expect((await user.auth('login', { username: 'portable', password })).ok).toBe(true);
+      const restoredLogin = await user.auth('login', { username: 'portable', password });
+      expect(restoredLogin.ok).toBe(true); expect(restoredLogin.data.user.role).toBe('admin');
+      expect((await user.admin('getSettings')).data.modelAllowedHosts).toEqual(['apihub.agnes-ai.com']);
       expect((await user.rpc('kernel.hydrate')).data.sessions[0].title).toBe('Portable backup');
       expect((await user.rpc('llm.getState')).data.model.provider).toBe('deepseek');
       await writeFile(join(backup, 'database-snapshot.json'), '{}');
       await expect(restoreData(backup, await directory())).rejects.toThrow('checksum');
+    });
+    test('portable snapshots from before administrator support restore as ordinary accounts', async () => {
+      const root = await directory(), app = await start(root);
+      expect((await client(app).auth('register', { username: 'legacy', password })).ok).toBe(true);
+      await app.close();
+      const database = await open(root);
+      const legacy = await database.snapshot();
+      delete (legacy.tables as Partial<typeof legacy.tables>).administrators;
+      await database.close();
+      const restoredRoot = await directory(), restored = await WorkspaceDatabase.open(restoredRoot);
+      connections.push(restored);
+      await restored.restore(legacy);
+      expect((await restored.snapshot()).tables.administrators).toEqual([]);
+      await restored.close();
+      const local = await createWebApplication({ dataDir: restoredRoot }); apps.push(local);
+      expect((await client(local).auth('login', { username: 'legacy', password })).data.user.role).toBe('user');
     });
     if (kind === 'postgresql') {
       test('SQLite backup migrates to PostgreSQL and rejects a second server on another data directory', async () => {

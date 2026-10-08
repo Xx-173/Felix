@@ -38,9 +38,32 @@ powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-web.ps1 stop
 
 管理员可设置 `FELIX_INVITE_CODE`，只允许持有邀请码的人注册。密码使用 Argon2id 哈希；会话令牌只通过 HttpOnly Cookie 传递，数据库仅保存其哈希。每账号最多保留 10 个登录会话，登录有效期 30 天。
 
+### 管理员账号与页面设置
+
+管理员登录后，顶部账号栏显示“管理设置（Administration）”。在“允许的模型域名”中每行填写一个域名，例如 `apihub.agnes-ai.com`，点击“保存并生效”即可；不填写 `https://` 或 `/v1`，不需要重启服务。设置对所有访客生效，每人仍填写自己的密钥。内置服务商和部署环境变量固定允许的域名会单独展示；页面只编辑额外域名。
+
+普通注册账号不会自动成为管理员，也不能通过注册参数或网页接口提升权限。首次授权由部署者完成一次：先在网页注册账号，停止后端，再执行以下命令并重新启动（使用当前数据库和数据目录配置）。
+
+```sh
+bun --no-env-file apps/server/src/admin.ts grant your-username
+# 撤销权限：bun --no-env-file apps/server/src/admin.ts revoke your-username
+```
+
+Windows 本机后台启动脚本对应操作：
+
+```powershell
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-web.ps1 stop
+bun --no-env-file apps/server/src/admin.ts grant your-username
+powershell -NoProfile -ExecutionPolicy Bypass -File scripts/local-web.ps1 start
+```
+
+Compose 部署先 `stop felix`，再通过 `run --rm --no-deps --entrypoint bun felix /app/admin.js grant your-username` 授权并启动 Felix；命令仍使用相同 `--env-file`、Compose 文件和数据卷，自建 PostgreSQL 模式添加 `-f deploy/compose.postgresql.yml`。不要将日常用户注册开放成管理员初始化接口。
+
+域名设置、管理员权限和最近 100 次域名变更记录进入所选数据库，随管理员备份恢复；旧备份不含管理员角色时按普通账号恢复。权限每个请求重新检查，撤销后旧登录不能继续访问管理接口。管理员账号须先撤销权限再删除，避免误删管理入口。只批准可信的模型服务商；服务商会收到使用者发送的模型请求和相应密钥。
+
 进入“设置 → 大语言模型”，填写自己的供应商密钥、选择模型并测试。模型费用计入使用者的供应商账户。支持兼容的流式 Chat Completions 和金融工具调用；内置 OpenAI、DeepSeek、通义千问、硅基流动入口。
 
-自定义模型接口必须使用 HTTPS，域名须在内置列表或 `FELIX_MODEL_ALLOWED_HOSTS` 中。管理员只填写可信公网供应商域名，不含协议、端口、路径或通配符；不开放任意地址、Shell、文件执行或交易工具。
+自定义模型接口必须使用 HTTPS，域名须在内置列表、管理员页面允许列表或 `FELIX_MODEL_ALLOWED_HOSTS` 中。管理员只填写可信公网供应商域名，不含协议、端口、路径或通配符；不开放任意地址、Shell、文件执行或交易工具。
 
 模型及行情密钥使用 AES-256-GCM 加密保存，工作区标识作为认证数据；接口只返回配置状态。服务管理员控制数据及加密材料，这属于服务端加密。个人“导出数据”下载 JSON，不含密钥、密码和登录令牌；包括会话、报告、投资论点、组合、自选股和技能开关等工作区资料。删除账号需要密码，会删除当前服务器的账号、会话、工作区资料及密钥；运维历史备份按照管理员保留策略清理。该 JSON 导出当前用于留档，完整恢复使用下述管理员备份流程。
 

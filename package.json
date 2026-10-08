@@ -37,7 +37,8 @@
     "release:package": "bun run scripts/release-package.mjs",
     "i18n:check": "bun scripts/i18n-check.ts",
     "trace:showcase": "cd apps/electron && node e2e/trace-showcase.mjs",
-    "web:backup": "bun apps/server/src/backup.ts"
+    "web:backup": "bun apps/server/src/backup.ts",
+    "web:admin": "bun --no-env-file apps/server/src/admin.ts"
   },
   "devDependencies": {
     "@earendil-works/pi-coding-agent": "file:.pi/extensions/langsmith/vendor/pi-coding-agent",

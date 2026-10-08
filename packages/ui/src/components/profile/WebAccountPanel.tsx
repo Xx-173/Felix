@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useFinagentClient } from '../../client';
+import { ServerAdminPanel } from './ServerAdminPanel';
 
 type Mode = 'login' | 'register' | 'resetPassword' | 'changePassword' | 'deleteAccount';
 const labels: Record<Mode, string> = { login: '登录（Sign in）', register: '注册（Register）', resetPassword: '恢复账号（Recover account）', changePassword: '修改密码（Change password）', deleteAccount: '删除账号和数据（Delete account and data）' };
 const buttonStyle = 'rounded border border-border px-3 py-1.5 text-xs disabled:opacity-50';
 export const WebAccountPanel: React.FC = () => {
   const client = useFinagentClient();
-  const [user, setUser] = useState<{ username: string } | null>(null);
+  const [user, setUser] = useState<{ username: string; role?: 'user' | 'admin' } | null>(null);
+  const [administration, setAdministration] = useState(false);
   const [inviteRequired, setInviteRequired] = useState(false);
   const [mode, setMode] = useState<Mode | null>(null);
   const [busy, setBusy] = useState(false);
@@ -43,9 +45,11 @@ export const WebAccountPanel: React.FC = () => {
   return <>
     <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-2" data-testid="account-bar">
       <span className="mr-auto text-xs">{user ? `个人工作区（Personal workspace）：${user.username}` : '匿名试用（Guest trial） · 注册可保留当前记录并在其他设备登录（Register to keep this workspace across devices）。'}</span>
+      {user?.role === 'admin' && client.admin && <button className={buttonStyle} onClick={() => setAdministration(true)}>管理设置（Administration）</button>}
       {user ? <><button className={buttonStyle} disabled={busy} onClick={() => void exportData()}>导出数据（Export data）</button><button className={buttonStyle} onClick={() => open('changePassword')}>修改密码（Change password）</button><button className={buttonStyle} onClick={() => open('deleteAccount')}>删除账号（Delete account）</button><button className={buttonStyle} disabled={busy} onClick={() => void logout()}>退出（Sign out）</button></> : <><button className={buttonStyle} onClick={() => open('login')}>登录（Sign in）</button><button className={buttonStyle} onClick={() => open('register')}>注册（Register）</button></>}
       {!mode && error && <p role="alert" className="w-full text-xs text-destructive">{error}</p>}
     </div>
+    {administration && <ServerAdminPanel onClose={() => setAdministration(false)} />}
     {mode && <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/40 p-4" role="dialog" aria-modal="true" aria-label={labels[mode]}>
       <form onSubmit={(event) => void execute(event)} className="max-h-[90vh] w-full max-w-md space-y-4 overflow-y-auto rounded-xl border border-border bg-surface p-6 shadow-xl">
         <h2 className="text-lg font-semibold">{labels[mode]}</h2>

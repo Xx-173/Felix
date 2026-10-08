@@ -175,14 +175,27 @@ export interface EvaluationChannel {
   >;
 }
 
+export interface ServerManagementSettings {
+  modelAllowedHosts: string[];
+  builtinHosts: string[];
+  environmentHosts: string[];
+  revision: number;
+  updatedAt?: number;
+  updatedBy?: string;
+}
+
 export interface FinagentClient {
+  admin?: {
+    getSettings: () => Promise<ApiResult<ServerManagementSettings>>;
+    saveSettings: (input: { modelAllowedHosts: string[]; revision: number }) => Promise<ApiResult<ServerManagementSettings>>;
+  };
   workspace?: {
     get: () => Promise<ApiResult<{ watchlist: string[] }>>;
     update: (input: { watchlist: string[] }) => Promise<ApiResult<{ watchlist: string[] }>>;
     exportData?: () => Promise<ApiResult<unknown>>;
   };
   account?: {
-    request: (action: string, input?: Record<string, string>) => Promise<ApiResult<{ user?: { username: string }; recoveryCode?: string; inviteRequired?: boolean; deleted?: boolean }>>;
+    request: (action: string, input?: Record<string, string>) => Promise<ApiResult<{ user?: { username: string; role?: 'user' | 'admin' }; recoveryCode?: string; inviteRequired?: boolean; deleted?: boolean }>>;
   };
   portfolioImport?: {
     parse: (input: import('./client/portfolioImport').PortfolioImportParseInput) => Promise<ApiResult<import('@finagent/core').PortfolioImportDraft>>;

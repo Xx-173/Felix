@@ -19,6 +19,12 @@ function channel<T>(name: string): T {
   return new Proxy({}, { get: (_, method) => (...args: unknown[]) => rpc(`${name}.${String(method)}`, ...args) }) as T;
 }
 
+async function adminRequest(action: string, input?: unknown) {
+  try {
+    return await (await fetch('/api/admin', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, input }) })).json();
+  } catch { return { ok: false, error: { code: 'WEB_CONNECTION_FAILED', message: '连接失败，请稍后重试（Connection failed; retry shortly）。' } }; }
+}
+
 export async function createWebClient(): Promise<FinagentClient> {
   const bootstrap = await rpc<Bootstrap>('bootstrap');
   if (!bootstrap.ok) throw new Error(bootstrap.error.message);
@@ -54,6 +60,7 @@ export async function createWebClient(): Promise<FinagentClient> {
       try { return await (await fetch('/api/auth', { method: 'POST', credentials: 'same-origin', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action, input }) })).json(); }
       catch { return { ok: false, error: { code: 'WEB_CONNECTION_FAILED', message: '连接失败，请稍后重试（Connection failed; retry shortly）。' } }; }
     } },
+    admin: { getSettings: () => adminRequest('getSettings'), saveSettings: (input) => adminRequest('saveSettings', input) },
     kernel: {
       hydrate: () => rpc('kernel.hydrate'),
       createSession: (title) => rpc('kernel.createSession', title),

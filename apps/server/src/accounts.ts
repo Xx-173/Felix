@@ -9,9 +9,21 @@ const tokenHash = (value: string) => createHash('sha256').update(value).digest('
 const fresh = () => randomBytes(32).toString('base64url');
 const changed = () => createCodeError('INVALID_CREDENTIALS', '凭据已更改，请重新登录（Credentials changed; sign in again）。');
 type AccountResult = { user: Account; token: string; recoveryCode?: string } | { deleted: true; expectedPasswordHash: string };
-export type Account = { id: string; username: string; workspaceId: string; createdAt: number };
-type UserRow = { id: string; username: string; workspace_id: string; password_hash: string; recovery_hash: string; created_at: number };
-const publicUser = (user: UserRow): Account => ({ id: user.id, username: user.username, workspaceId: user.workspace_id, createdAt: user.created_at });
+export type Account = { id: string; username: string; workspaceId: string; createdAt: number; role: 'user' | 'admin' };
+type UserRow = { id: string; username: string; workspace_id: string; password_hash: string; recovery_hash: string; created_at: number; role: Account['role'] };
+const userSelect = "SELECT users.*, CASE WHEN administrators.user_id IS NULL THEN 'user' ELSE 'admin' END AS role FROM users LEFT JOIN administrators ON administrators.user_id=users.id";
+const publicUser = (user: UserRow): Account => ({ id: user.id, username: user.username, workspaceId: user.workspace_id, createdAt: user.created_at, role: user.role });
+
+/** Only the local operator CLI can grant/revoke roles; registration always creates users. */
+export async function setAdministrator(database: WorkspaceDatabase, name: string, enabled: boolean) {
+  name = username.parse(name);
+  await database.transaction(async (tx) => {
+    const [row] = await tx.query('SELECT id FROM users WHERE username=$1', [name]);
+    if (!row) throw new Error('Account not found. Register the account before granting administrator access.');
+    if (enabled) await tx.query('INSERT INTO administrators VALUES ($1, $2) ON CONFLICT DO NOTHING', [row.id, Date.now()]);
+    else await tx.query('DELETE FROM administrators WHERE user_id=$1', [row.id]);
+  });
+}
 
 export class Accounts {
   private concurrent = 0;
@@ -23,10 +35,10 @@ export class Accounts {
   async workspaceClaimed(workspaceId: string) { return (await this.database.query('SELECT 1 FROM users WHERE workspace_id = $1', [workspaceId])).length > 0; }
   async resolve(cookie: string | undefined): Promise<Account | undefined> {
     if (!cookie || !/^[a-zA-Z0-9_-]{43}$/.test(cookie)) return;
-    const [user] = await this.database.query<UserRow>('SELECT users.* FROM users JOIN auth_sessions ON users.id=auth_sessions.user_id WHERE token_hash=$1 AND expires_at>$2', [tokenHash(cookie), Date.now()]);
+    const [user] = await this.database.query<UserRow>(userSelect + ' JOIN auth_sessions ON users.id=auth_sessions.user_id WHERE token_hash=$1 AND expires_at>$2', [tokenHash(cookie), Date.now()]);
     return user ? publicUser(user) : undefined;
   }
-  private async row(name: string, tx: QueryExecutor = this.database) { return (await tx.query<UserRow>('SELECT * FROM users WHERE username = $1', [name]))[0]; }
+  private async row(name: string, tx: QueryExecutor = this.database) { return (await tx.query<UserRow>(userSelect + ' WHERE username = $1', [name]))[0]; }
   private session(user: UserRow) {
     return this.database.transaction(async (tx) => {
       const current = await this.row(user.username, tx);
@@ -102,7 +114,10 @@ export class Accounts {
         });
         return this.session((await this.row(row.username))!);
       }
-      if (action === 'deleteAccount') return { deleted: true as const, expectedPasswordHash: row.password_hash };
+      if (action === 'deleteAccount') {
+        if (row.role === 'admin') throw createCodeError('ADMIN_ACCOUNT_DELETE_FORBIDDEN', '请先由部署者撤销管理员权限，再删除账号（Revoke administrator access before deleting this account）。');
+        return { deleted: true as const, expectedPasswordHash: row.password_hash };
+      }
       throw createCodeError('INVALID_ARGUMENT', '未知账号操作（Unknown account action）。');
     } finally { this.concurrent--; }
   }

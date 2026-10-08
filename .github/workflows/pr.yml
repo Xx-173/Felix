@@ -150,12 +150,14 @@ jobs:
         run: |
           FELIX_DATABASE_TYPE=postgresql FELIX_DATABASE_URL="$FELIX_TEST_POSTGRES_URL" bun run web:start > /tmp/felix-postgresql.log 2>&1 &
           SERVER_PID=$!
-          trap 'kill "$SERVER_PID" 2>/dev/null || true' EXIT
+          trap 'kill "$SERVER_PID" 2>/dev/null || true; wait "$SERVER_PID" 2>/dev/null || true' EXIT
           for attempt in {1..40}; do
             if curl --fail --silent http://127.0.0.1:8787/healthz; then break; fi
             sleep 1
           done
           bun run web:e2e
+      - name: Administrator settings with PostgreSQL
+        run: FELIX_DATABASE_TYPE=postgresql FELIX_DATABASE_URL="$FELIX_TEST_POSTGRES_URL" node apps/web/e2e/admin-smoke.mjs
       - name: PostgreSQL container persistence and crash recovery
         shell: bash
         run: |
@@ -223,6 +225,8 @@ jobs:
             sleep 1
           done
           bun run web:e2e
+      - name: Administrator browser settings
+        run: node apps/web/e2e/admin-smoke.mjs
       - name: Build and verify Linux container restart
         shell: bash
         run: |

@@ -11,7 +11,7 @@ export interface QueryExecutor {
   query<T extends Row = Row>(statement: string, parameters?: Array<string | number>): Promise<T[]>;
 }
 interface Connection extends QueryExecutor { close(): Promise<void> }
-const numericColumns = new Set(['created_at', 'expires_at', 'updated_at', 'reset_at']);
+const numericColumns = new Set(['created_at', 'expires_at', 'updated_at', 'reset_at', 'granted_at']);
 function normalizePostgresRows<T extends Row>(rows: Row[]): T[] {
   // Bun returns BIGINT timestamps as strings; both drivers expose safe JS numbers.
   return rows.map((row) => {
@@ -47,8 +47,9 @@ const schema = [
   'CREATE TABLE IF NOT EXISTS auth_sessions (token_hash TEXT PRIMARY KEY, user_id TEXT NOT NULL REFERENCES users(id) ON DELETE CASCADE, expires_at BIGINT NOT NULL)',
   'CREATE INDEX IF NOT EXISTS auth_sessions_user ON auth_sessions(user_id, expires_at)',
   'CREATE TABLE IF NOT EXISTS auth_attempts (key TEXT PRIMARY KEY, count INTEGER NOT NULL, reset_at BIGINT NOT NULL)',
+  'CREATE TABLE IF NOT EXISTS administrators (user_id TEXT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE, granted_at BIGINT NOT NULL)',
 ];
-export const snapshotTables = ['schema_version', 'documents', 'scheduled_jobs', 'users', 'auth_sessions', 'auth_attempts'] as const;
+export const snapshotTables = ['schema_version', 'documents', 'scheduled_jobs', 'users', 'auth_sessions', 'auth_attempts', 'administrators'] as const;
 export type DatabaseSnapshot = { version: 1; tables: Record<(typeof snapshotTables)[number], Row[]> };
 
 /** Async transactions and queries share one queue and cannot interleave. */
@@ -196,11 +197,14 @@ export class WorkspaceDatabase implements JsonStoreBackend, QueryExecutor {
     });
   }
   async restore(snapshot: DatabaseSnapshot) {
+    // Portable backups created before administrator roles remain restorable.
+    if (snapshot?.tables && !Object.hasOwn(snapshot.tables, 'administrators')) snapshot.tables.administrators = [];
     if (snapshot.version !== 1 || !snapshot.tables || snapshotTables.some((table) => !Array.isArray(snapshot.tables[table]))) throw new Error('Invalid database snapshot.');
     const columns = {
       schema_version: ['version'], documents: ['key', 'value'], scheduled_jobs: ['workspace_id', 'rule_id', 'day', 'status', 'updated_at'],
       users: ['id', 'username', 'workspace_id', 'password_hash', 'recovery_hash', 'created_at'],
       auth_sessions: ['token_hash', 'user_id', 'expires_at'], auth_attempts: ['key', 'count', 'reset_at'],
+      administrators: ['user_id', 'granted_at'],
     };
     await this.transaction(async (tx) => {
       for (const table of snapshotTables.filter((name) => name !== 'schema_version')) {

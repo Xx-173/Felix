@@ -6,12 +6,14 @@ RUN bun install --frozen-lockfile --ignore-scripts --filter '@finagent/web...' -
 RUN bun run web:build
 RUN bun build apps/server/src/index.ts --target bun --outfile /app/server.js
 RUN bun build apps/server/src/backup.ts --target bun --outfile /app/backup.js
+RUN bun build apps/server/src/admin.ts --target bun --outfile /app/admin.js
 
 FROM ${BUN_IMAGE} AS runtime
 WORKDIR /app
 ENV NODE_ENV=production HOST=0.0.0.0 PORT=8787 FELIX_DATA_DIR=/data FELIX_STATIC_DIR=/app/public FELIX_SKILLS_DIR=/app/skills
 COPY --from=build /app/server.js /app/server.js
 COPY --from=build /app/backup.js /app/backup.js
+COPY --from=build /app/admin.js /app/admin.js
 COPY --from=build /app/apps/web/dist /app/public
 COPY --from=build /app/skills /app/skills
 RUN mkdir -p /data && chown bun:bun /data

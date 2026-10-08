@@ -17,6 +17,7 @@ import { VisitorModels } from './visitor-models.ts';
 import { WorkspaceDatabase, type DatabaseOptions } from './database.ts';
 import { lockDataDirectory } from './data-lock.ts';
 import { Accounts } from './accounts.ts';
+import { ServerSettings } from './server-settings.ts';
 import { registerJsonStoreBackend } from '@finagent/shared';
 import { isIP } from 'node:net';
 import { WorkQueue } from './queue.ts';
@@ -97,6 +98,9 @@ export async function createWebApplication(options: ServerOptions) {
   try { await database.migrateFiles(); unregisterStorage = registerJsonStoreBackend(dataDir, database); }
   catch (error) { await database.close(); await unlock(); throw error; }
   const accounts = new Accounts(database, options.inviteCode);
+  const serverSettings = new ServerSettings(database, dataDir, options.modelAllowedHosts);
+  try { await serverSettings.load(); }
+  catch (error) { unregisterStorage(); await database.close(); await unlock(); throw error; }
   const publicOrigin = options.publicOrigin ? new URL(options.publicOrigin).origin : undefined;
   const demo = options.demoData ?? true;
   const queue = new WorkQueue(options.concurrency ?? 2);
@@ -214,7 +218,7 @@ export async function createWebApplication(options: ServerOptions) {
       const registry = createFullRegistry(fetchers);
       const market = new MarketDataService({ fetchers: { ...fetchers, getLongBridgeStatus: async () => ({ installed: false, authed: false, available: false, status: 'not_installed' }) } });
       const tools = new FinanceToolRegistry(registry);
-      runtime = new VisitorModels(store, secret!, id, tools, market, (sessionId) => kernel.sessions.listMessages(sessionId), options.modelAllowedHosts, demo);
+      runtime = new VisitorModels(store, secret!, id, tools, market, (sessionId) => kernel.sessions.listMessages(sessionId), serverSettings.modelHosts, demo);
       await runtime.load();
       kernel = new AgentKernel({
         storageDir: join(root, 'store'), piSessionDir: join(root, 'pi-sessions'),
@@ -493,6 +497,15 @@ export async function createWebApplication(options: ServerOptions) {
       workspaceRates.set(auth.id, { count: 1, resetAt: now + 60000 });
     }
     try {
+      if (url.pathname === '/api/admin' && request.method === 'POST') {
+        if (auth.user?.role !== 'admin') throw createCodeError('ADMIN_REQUIRED', '仅管理员可以修改全站设置（Administrator access required）。');
+        if (!request.headers.get('content-type')?.startsWith('application/json')) throw createCodeError('INVALID_ARGUMENT', 'JSON required');
+        const raw = await request.text();
+        if (Buffer.byteLength(raw) > 16384) throw createCodeError('INVALID_ARGUMENT', 'Request body is too large.');
+        const body = z.object({ action: z.enum(['getSettings', 'saveSettings']), input: z.unknown().optional() }).strict().parse(JSON.parse(raw));
+        const data = body.action === 'getSettings' ? await serverSettings.get() : await serverSettings.save(body.input, auth.user.username);
+        return json({ ok: true, data }, 200, auth.setCookie);
+      }
       if (url.pathname === '/api/auth' && request.method === 'POST') {
         if (!request.headers.get('content-type')?.startsWith('application/json')) throw createCodeError('INVALID_ARGUMENT', 'JSON required');
         const input = z.object({ action: z.enum(['state', 'register', 'login', 'logout', 'changePassword', 'resetPassword', 'deleteAccount']), input: z.unknown().optional() }).parse(JSON.parse(await request.text().then((raw) => { if (Buffer.byteLength(raw) > 65536) throw createCodeError('INVALID_ARGUMENT', 'Request body is too large.'); return raw; })));
@@ -566,9 +579,9 @@ export async function createWebApplication(options: ServerOptions) {
         : known ? String(error.code) : 'INTERNAL_ERROR';
       const message = known ? (error as Error).message : code === 'INVALID_ARGUMENT' ? 'Invalid request parameters.' : 'The server could not complete the request.';
       // Raw providers/errors can contain credentials or local paths. Only explicitly safe errors are sent.
-      const safeCodes = new Set(['SESSION_NOT_FOUND', 'SESSION_LIMIT', 'RUN_NOT_FOUND', 'QUEUE_FULL', 'SERVER_BUSY', 'STREAM_LIMIT', 'INVALID_ARGUMENT', 'WEB_METHOD_UNAVAILABLE', 'REQUEST_CANCELLED', 'RUN_IN_PROGRESS', 'DAILY_RUN_LIMIT', 'MODEL_ENDPOINT_NOT_ALLOWED', 'MODEL_KEY_REQUIRED', 'RUN_ACTIVE', 'REPORT_NOT_FOUND', 'THESIS_NOT_FOUND', 'IMPORT_LIMIT', 'INVALID_DRAFT', 'DESKTOP_CONNECTION_REQUIRED', 'AUTH_BUSY', 'AUTH_RATE_LIMIT', 'AUTH_ALREADY_SIGNED_IN', 'INVITE_REQUIRED', 'ACCOUNT_EXISTS', 'INVALID_CREDENTIALS', 'SIGN_IN_REQUIRED', 'PORTFOLIO_NOT_FOUND']);
+      const safeCodes = new Set(['ADMIN_REQUIRED', 'ADMIN_ACCOUNT_DELETE_FORBIDDEN', 'SERVER_SETTINGS_CHANGED', 'SESSION_NOT_FOUND', 'SESSION_LIMIT', 'RUN_NOT_FOUND', 'QUEUE_FULL', 'SERVER_BUSY', 'STREAM_LIMIT', 'INVALID_ARGUMENT', 'WEB_METHOD_UNAVAILABLE', 'REQUEST_CANCELLED', 'RUN_IN_PROGRESS', 'DAILY_RUN_LIMIT', 'MODEL_ENDPOINT_NOT_ALLOWED', 'MODEL_KEY_REQUIRED', 'RUN_ACTIVE', 'REPORT_NOT_FOUND', 'THESIS_NOT_FOUND', 'IMPORT_LIMIT', 'INVALID_DRAFT', 'DESKTOP_CONNECTION_REQUIRED', 'AUTH_BUSY', 'AUTH_RATE_LIMIT', 'AUTH_ALREADY_SIGNED_IN', 'INVITE_REQUIRED', 'ACCOUNT_EXISTS', 'INVALID_CREDENTIALS', 'SIGN_IN_REQUIRED', 'PORTFOLIO_NOT_FOUND']);
       return json({ ok: false, error: { code, message: safeCodes.has(code) ? message : 'This operation is unavailable or failed. Check the server configuration.' } },
-        ['QUEUE_FULL', 'SERVER_BUSY', 'DAILY_RUN_LIMIT', 'AUTH_BUSY', 'AUTH_RATE_LIMIT'].includes(code) ? 429 : code === 'INTERNAL_ERROR' ? 500 : 400, auth.setCookie);
+        code === 'ADMIN_REQUIRED' ? 403 : code === 'SERVER_SETTINGS_CHANGED' ? 409 : ['QUEUE_FULL', 'SERVER_BUSY', 'DAILY_RUN_LIMIT', 'AUTH_BUSY', 'AUTH_RATE_LIMIT'].includes(code) ? 429 : code === 'INTERNAL_ERROR' ? 500 : 400, auth.setCookie);
     }
   }
 
