@@ -2,6 +2,8 @@
 
 import type { SupportedLocale } from './locale.ts';
 import type { FinancialEvidenceEnvelope } from './financial-evidence.ts';
+import type { ProviderProvenance } from './provider.ts';
+export * from './workspace-storage.ts';
 
 export type { SupportedLocale, LocalePreference } from './locale.ts';
 
@@ -11,6 +13,8 @@ export * from './stream-events.ts';
 export interface Quote {
   /** Explicit marker for synthetic sample values; absence does not prove freshness. */
   source?: 'demo';
+  /** The actual router-selected provider, including fallback and delay metadata. */
+  provenance?: ProviderProvenance;
   symbol: string;
   /** Felix canonical instrument id when the quote was resolved through the catalog. */
   instrumentId?: string;

@@ -165,7 +165,10 @@ export function createRouterFetchers(
 ): RouterCapabilityFetchers {
   const resolve = options.resolve;
   return {
-    getQuote: (symbol) => fetch(router, 'market.quote', bindSymbolInput(symbol, {}, resolve)),
+    getQuote: async (symbol) => {
+      const result = await fetchResult<Quote>(router, 'market.quote', bindSymbolInput(symbol, {}, resolve));
+      return { ...result.data, provenance: result.provenance };
+    },
     getQuoteResult: (symbol, signal) =>
       fetchResult(router, 'market.quote', bindSymbolInput(symbol, {}, resolve), signal),
     getKline: (options) =>

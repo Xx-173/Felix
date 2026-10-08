@@ -144,6 +144,7 @@ export * from './alerts/index.ts';
 export * from './portfolio-risk/index.ts';
 export * from './resources/index.ts';
 export { isRecord, toFiniteNumber } from './guards.ts';
+export { updateWorkspaceDocument } from './workspace-storage.ts';
 export * from './providers/index.ts';
 export * from './diagnostics/index.ts';
 export * from './screening/index.ts';

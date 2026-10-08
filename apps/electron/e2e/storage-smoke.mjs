@@ -58,6 +58,16 @@ try {
   assert.equal(await page.getByTestId('account-bar').count(), 0, 'desktop keeps its local account behavior');
   await page.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
   await page.getByTestId('workspace-home').waitFor();
+  await page.getByRole('button', { name: '管理分组（Manage groups）', exact: true }).click();
+  const groupDialog = page.getByRole('dialog', { name: '管理分组（Manage groups）', exact: true });
+  await groupDialog.getByRole('textbox', { name: '分组名称（Group name）', exact: true }).fill('桌面研究');
+  await groupDialog.getByRole('button', { name: '新建分组（Create group）', exact: true }).click();
+  await groupDialog.getByRole('button', { name: '完成（Done）', exact: true }).click();
+  await page.getByRole('button', { name: '设置 TSLA.US 的分组（Set groups for TSLA.US）', exact: true }).click();
+  const membership = page.getByRole('dialog', { name: /所属分组/ });
+  await membership.getByRole('checkbox', { name: '桌面研究', exact: true }).check();
+  await membership.getByRole('button', { name: '完成（Done）', exact: true }).click();
+  await page.waitForFunction(async () => (await window.electronAPI.workspace.get()).data.groups?.[0].symbols.includes('TSLA.US'));
   assert.equal(await page.locator('.felix-sidebar-context').count(), 0);
   assert.ok((await page.getByTestId('watchlist-row-TSLA.US').boundingBox()).height >= 50);
   await page.screenshot({ path: join(artifacts, 'desktop-workspace-home.png') });
@@ -74,6 +84,7 @@ try {
   const migrated = await page.evaluate(() => window.electronAPI.workspace.get());
   assert.deepEqual(migrated.data.watchlist, ['TSLA.US']);
   assert.equal((await page.evaluate(() => window.electronAPI.workspace.update({ watchlist: ['MSFT.US'] }))).ok, true);
+  assert.deepEqual((await page.evaluate(() => window.electronAPI.workspace.get())).data.groups[0].symbols, [], 'legacy updates retain group and prune removed membership');
   const session = await page.evaluate(() => window.electronAPI.kernel.createSession('SQLite restart'));
   assert.equal(session.ok, true);
   const skills = await page.evaluate(() => window.electronAPI.skills.list());
@@ -87,6 +98,7 @@ try {
   await writeFile(join(profile, 'workspace.json'), JSON.stringify({ watchlist: ['STALE.US'] }));
   await launch();
   assert.deepEqual((await page.evaluate(() => window.electronAPI.workspace.get())).data.watchlist, ['MSFT.US']);
+  assert.equal((await page.evaluate(() => window.electronAPI.workspace.get())).data.groups[0].name, '桌面研究');
   const hydrated = await page.evaluate(() => window.electronAPI.kernel.hydrate());
   assert(hydrated.data.sessions.some((item) => item.id === session.data.id));
   const restoredSkills = await page.evaluate(() => window.electronAPI.skills.list());

@@ -1,3 +1,5 @@
+import { updateWorkspaceDocument } from '@finagent/shared';
+import type { PersonalWorkspace } from '@finagent/core';
 import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { mkdir, readFile, writeFile, rm } from 'node:fs/promises';
 import { join, resolve, sep } from 'node:path';
@@ -347,8 +349,9 @@ export async function createWebApplication(options: ServerOptions) {
       }
       case 'workspace.get': return visitor.store.read('workspace.json', { watchlist: ['AAPL.US', 'TSLA.US', 'NVDA.US'] });
       case 'workspace.update': {
-        const value = z.object({ watchlist: z.array(symbolSchema).max(40) }).parse(args[0]);
-        const result = { watchlist: [...new Set(value.watchlist)] }; await visitor.store.write('workspace.json', result); return result;
+        const previous = await visitor.store.read<PersonalWorkspace>('workspace.json', { watchlist: [] });
+        const result = updateWorkspaceDocument(args[0], previous);
+        await visitor.store.write('workspace.json', result); return result;
       }
       case 'workspace.exportData': {
         const documents = (await database.documents(`visitors/${visitor.id}/`)).filter((row) => !row.key.endsWith('/model-vault.json') && !/credential|vault/i.test(row.key)).map((row) => ({ ...row, key: row.key.split('/').slice(2).join('/') }));

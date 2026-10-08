@@ -101,6 +101,17 @@ describe('watchlistQuotesAreDemoAtom', () => {
 });
 
 describe('fetchQuoteAtom demo fallback', () => {
+  it('keeps the last genuine quote and original fetched time when refresh fails', async () => {
+    const store = createStore();
+    const original = { ...quote(1000), symbol: 'AAPL.US', lastPrice: 245 };
+    store.set(quoteCacheAtomFamily('AAPL.US'), { data: original, timestamp: 1234, loading: false, error: null, isDemo: false });
+    await store.set(fetchQuoteAtom, { client: fallbackClient, symbol: 'AAPL.US' });
+    const cache = store.get(quoteCacheAtomFamily('AAPL.US'));
+    expect(cache.data).toEqual(original);
+    expect(cache.timestamp).toBe(1234);
+    expect(cache.isDemo).toBe(false);
+    expect(cache.error).toBeTruthy();
+  });
   it('falls back to badged sample data when the provider fails', async () => {
     const store = createStore();
     const failingClient = {

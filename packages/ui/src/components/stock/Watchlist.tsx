@@ -1,9 +1,11 @@
 import React, { useEffect, useReducer, useRef } from 'react';
-import { CirclePlus, Search, X } from 'lucide-react';
-import { useAtomValue, useSetAtom } from 'jotai';
+import { CirclePlus, Folder, RefreshCw, Search, Upload, X } from 'lucide-react';
+import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { MAX_WATCHLIST_SYMBOLS } from '@finagent/core';
 import { useTranslation } from 'react-i18next';
 import {
   watchlistAtom,
+  watchlistGroupsAtom,
   quoteCacheAtomFamily,
   watchlistLatestTimestampAtom,
   watchlistQuotesAreDemoAtom,
@@ -21,16 +23,13 @@ import { Button } from '../primitives/Button';
 import { DataFreshness } from '../primitives/DataFreshness';
 import { DemoBadge } from '../primitives/DemoBadge';
 import { BilingualLabel } from '../primitives/BilingualLabel';
+import { formatMarketPrice, watchlistMarket, WATCHLIST_SYMBOL_PATTERN } from '../../lib/watchlist';
+import { QuoteStatus } from './QuoteStatus';
+import { WatchlistGroupsDialog } from './WatchlistGroupsDialog';
+import { WatchlistImportDialog } from './WatchlistImportDialog';
 
-const SYMBOL_REGEX = /^[A-Z0-9]{1,6}\.(US|HK|SG|SH|SZ|HAS)$/;
 const DASH = '\u2014';
 
-const marketOf = (symbol: string): string => {
-  const suffix = symbol.split('.').at(-1) ?? '';
-  return ['SH', 'SZ', 'HAS'].includes(suffix) ? 'CN' : suffix;
-};
-const formatPrice = (value: number, symbol: string): string =>
-  `${({ US: '$', HK: 'HK$', CN: '¥', SG: 'S$' } as Record<string, string>)[marketOf(symbol)] ?? ''}${value.toFixed(2)}`;
 const formatPercent = (value: number): string =>
   `${value >= 0 ? '+' : ''}${value.toFixed(2)}%`;
 
@@ -38,6 +37,12 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
   const { t } = useTranslation();
   const client = useFinagentClient();
   const watchlist = useAtomValue(watchlistAtom);
+  const [groups, setGroups] = useAtom(watchlistGroupsAtom);
+  const [groupId, setGroupId] = React.useState('ALL');
+  const [groupEditor, setGroupEditor] = React.useState<string | null>(null);
+  const [importOpen, setImportOpen] = React.useState(false);
+  const [refreshing, setRefreshing] = React.useState(false);
+  const fetchQuote = useSetAtom(fetchQuoteAtom);
   const addSymbol = useSetAtom(addToWatchlistAtom);
   const removeSymbol = useSetAtom(removeFromWatchlistAtom);
   const setActiveSymbol = useSetAtom(activeSymbolAtom);
@@ -53,6 +58,8 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
 
   const [newSymbol, setNewSymbol] = React.useState('');
   const [error, setError] = React.useState('');
+  const selectedGroup = groups.find((group) => group.id === groupId);
+  useEffect(() => { if (!['ALL', 'NONE'].includes(groupId) && !selectedGroup) setGroupId('ALL'); }, [groupId, selectedGroup]);
 
   // Local static-info name cache: symbol -> display name.
   const nameCache = useRef(new Map<string, string>());
@@ -87,7 +94,7 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
     const symbol = newSymbol.trim().toUpperCase();
     if (!symbol) return;
 
-    if (!SYMBOL_REGEX.test(symbol)) {
+    if (!WATCHLIST_SYMBOL_PATTERN.test(symbol)) {
       setError(t('navigation.watchlistInvalid'));
       return;
     }
@@ -96,8 +103,10 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
       setError(t('navigation.watchlistDuplicate'));
       return;
     }
+    if (watchlist.length >= MAX_WATCHLIST_SYMBOLS) { setError(t('navigation.watchlistLimit')); return; }
 
     addSymbol(symbol);
+    if (selectedGroup) setGroups((current) => current.map((group) => group.id === selectedGroup.id ? { ...group, symbols: [...group.symbols, symbol] } : group));
     setQuery('');
     setMarket('ALL');
     setNewSymbol('');
@@ -110,12 +119,19 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
     }
   };
 
-  const visible = watchlist.filter((symbol) => (market === 'ALL' || marketOf(symbol) === market)
+  const visible = watchlist.filter((symbol) => (market === 'ALL' || watchlistMarket(symbol) === market)
+    && (groupId === 'ALL' || (groupId === 'NONE' ? !groups.some((group) => group.symbols.includes(symbol)) : selectedGroup?.symbols.includes(symbol)))
     && (symbol + ' ' + (nameCache.current.get(symbol) ?? '')).toLowerCase().includes(query.trim().toLowerCase()));
   const ordered = sort === 'symbol' ? [...watchlist].sort() : watchlist;
 
   return (
     <div className={`felix-watchlist flex flex-col ${fullPage ? 'felix-watchlist-page' : 'h-full'}`}>
+      {fullPage && <div className="felix-watchlist-groups" role="group" aria-label={t('navigation.groupFilter')}>
+        <button type="button" aria-pressed={groupId === 'ALL'} onClick={() => setGroupId('ALL')}>{t('navigation.allGroups')} <small>{watchlist.length}</small></button>
+        <button type="button" aria-pressed={groupId === 'NONE'} onClick={() => setGroupId('NONE')}>{t('navigation.ungrouped')}</button>
+        {groups.map((group) => <button key={group.id} type="button" aria-pressed={groupId === group.id} onClick={() => setGroupId(group.id)}><Folder size={13} />{group.name} <small>{group.symbols.length}</small></button>)}
+        <button type="button" className="felix-manage-groups" onClick={() => setGroupEditor('')}><CirclePlus size={13} />{t('navigation.manageGroups')}</button>
+      </div>}
       <div className="felix-watchlist-header border-b mac-section-divider px-3 py-3">
         {showHeader && (
           <div className="mb-2 flex min-w-0 flex-wrap items-center justify-between gap-x-2 gap-y-1 px-0.5">
@@ -125,7 +141,7 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
             <span className="flex min-w-0 items-center gap-2">
               {hasDemoQuotes && <DemoBadge />}
               <DataFreshness
-                providerName={quotesAreDemo ? t('demo.badge') : 'Longbridge'}
+                providerName={quotesAreDemo ? t('demo.badge') : t('navigation.listLatestQuote')}
                 updatedAtMs={
                   latestTimestamp ? latestTimestamp * 1000 : undefined
                 }
@@ -134,6 +150,18 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
             </span>
           </div>
         )}
+        {fullPage && <div className="felix-watchlist-actions">
+          <span>{t('navigation.watchlistCapacity', { count: watchlist.length, max: MAX_WATCHLIST_SYMBOLS })}</span>
+          <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}><Upload size={14} />{t('navigation.watchlistImport')}</Button>
+          <Button size="sm" variant="outline" disabled={refreshing || visible.length === 0} onClick={async () => {
+            setRefreshing(true);
+            try {
+              for (let offset = 0; offset < visible.length; offset += 4) {
+                await Promise.all(visible.slice(offset, offset + 4).map((symbol) => fetchQuote({ client, symbol })));
+              }
+            } finally { setRefreshing(false); }
+          }}><RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />{t('navigation.refreshQuotes')}</Button>
+        </div>}
         <div className="felix-watchlist-add flex gap-1.5">
           <Input
             value={newSymbol}
@@ -177,6 +205,8 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
             symbol={symbol}
             name={resolveName(symbol)}
             active={symbol === activeSymbol}
+            groups={groups.filter((group) => group.symbols.includes(symbol)).map((group) => group.name)}
+            onGroups={() => setGroupEditor(symbol)}
             onSelect={() => {
               setActiveSymbol(symbol);
               setActiveView('overview');
@@ -193,6 +223,8 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
           </div>
         )}
       </div>
+      {groupEditor !== null && <WatchlistGroupsDialog symbol={groupEditor || undefined} onClose={() => setGroupEditor(null)} />}
+      {importOpen && <WatchlistImportDialog groupId={selectedGroup?.id} onClose={() => setImportOpen(false)} />}
     </div>
   );
 };
@@ -205,6 +237,8 @@ interface WatchlistRowProps {
   active: boolean;
   onSelect: () => void;
   onRemove: () => void;
+  groups: string[];
+  onGroups: () => void;
 }
 
 const WatchlistRow: React.FC<WatchlistRowProps> = ({
@@ -215,6 +249,8 @@ const WatchlistRow: React.FC<WatchlistRowProps> = ({
   active,
   onSelect,
   onRemove,
+  groups,
+  onGroups,
 }) => {
   const { t } = useTranslation();
   const client = useFinagentClient();
@@ -237,13 +273,18 @@ const WatchlistRow: React.FC<WatchlistRowProps> = ({
 
   return (
     <div hidden={hidden} className={`felix-watchlist-row group ${active ? 'felix-watchlist-row--active' : ''}`}>
+      <div className="felix-watchlist-row-main">
       <button type="button" aria-label={symbol} data-testid={`watchlist-row-${symbol}`} onClick={onSelect} className="felix-watchlist-open">
         <span className="felix-watchlist-identity"><strong>{symbol}</strong><span>{name}</span></span>
-        {fullPage && <span className="felix-watchlist-market">{t("navigation.market" + marketOf(symbol))}</span>}
-        <span className="felix-watchlist-price">{loading ? <span className="inline-block h-3.5 w-14 animate-pulse rounded bg-foreground/10" /> : quote ? formatPrice(quote.lastPrice, symbol) : DASH}</span>
+        {fullPage && <span className="felix-watchlist-market">{t('navigation.market' + watchlistMarket(symbol))}</span>}
+        <span className="felix-watchlist-price">{loading ? <span className="inline-block h-3.5 w-14 animate-pulse rounded bg-foreground/10" /> : quote ? formatMarketPrice(quote.lastPrice, symbol) : DASH}</span>
         <span className="felix-watchlist-change" style={{ color: changeColor }}>{quote ? formatPercent(quote.changePercent) : DASH}</span>
       </button>
+      {fullPage && <button type="button" className="felix-hub-remove" aria-label={t('navigation.groupMembershipFor', { symbol })} onClick={onGroups}><Folder size={15} /></button>}
       <button type="button" onClick={onRemove} className="felix-hub-remove" aria-label={t("navigation.watchlistRemoveSymbol", { symbol })}><X size={15} /></button>
+      </div>
+      {groups.length > 0 && <div className="felix-watchlist-memberships">{groups.map((name) => <span key={name}>{name}</span>)}</div>}
+      {fullPage && <QuoteStatus quote={quote} error={cache.error} />}
     </div>
   );
 };

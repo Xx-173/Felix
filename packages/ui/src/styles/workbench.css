@@ -140,6 +140,41 @@ body { font-size: 13px; }
 .felix-session-open:hover strong { color: var(--accent); }
 .felix-session-meta { display: flex; flex-wrap: wrap; gap: 6px 16px; margin-top: 8px; font-size: 10px; color: var(--foreground-subtle); }
 .felix-session-symbols { display: block; margin-top: 6px; font-size: 10px; color: var(--accent); overflow-wrap: anywhere; }
+.felix-watchlist-groups { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 16px; border-bottom: 1px solid var(--border); }
+.felix-watchlist-groups button { display: inline-flex; align-items: center; gap: 6px; padding: 7px 10px; border: 1px solid var(--border); border-radius: 7px; font-size: 11px; color: var(--foreground-muted); }
+.felix-watchlist-groups button[aria-pressed=true] { border-color: var(--accent); background: color-mix(in srgb, var(--accent) 6%, var(--surface)); color: var(--accent); }
+.felix-watchlist-groups small { font-variant-numeric: tabular-nums; color: var(--foreground-subtle); }
+.felix-watchlist-groups .felix-manage-groups { border-style: dashed; }
+.felix-watchlist-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-top: 12px; }
+.felix-watchlist-actions > span { flex: 1; min-width: 120px; font-size: 10px; color: var(--foreground-subtle); }
+.felix-watchlist-columns { grid-template-columns: minmax(110px, 1fr) 66px 88px 76px 68px; }
+.felix-watchlist-row { display: block; padding-bottom: 12px; }
+.felix-watchlist-row-main { display: flex; align-items: center; gap: 4px; }
+.felix-watchlist-open { min-height: 52px; }
+.felix-watchlist-memberships { display: flex; flex-wrap: wrap; gap: 5px; margin: 0 0 6px; }
+.felix-watchlist-memberships > span { border-radius: 4px; background: var(--surface-muted); color: var(--foreground-muted); padding: 2px 6px; font-size: 9px; }
+.felix-quote-status { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; min-width: 0; font-size: 9px; line-height: 1.6; color: var(--foreground-subtle); }
+.felix-quote-state { padding: 1px 6px; background: var(--surface-muted); border-radius: 4px; color: var(--foreground-muted); }
+.felix-quote-status[data-state=demo] .felix-quote-state { color: var(--accent); background: color-mix(in srgb, var(--accent) 8%, var(--surface)); }
+.felix-quote-status:is([data-state=refreshFailed], [data-state=unavailable]) .felix-quote-state { color: var(--negative); }
+.felix-quote-error { min-width: 0; max-width: 100%; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.felix-security-header .felix-quote-status { justify-content: flex-end; max-width: 520px; margin-top: 10px; }
+.felix-watchlist-dialog { width: calc(100% - 2rem); max-width: 680px; max-height: 85vh; overflow-y: auto; border-radius: 12px; }
+.felix-watchlist-dialog select, .felix-group-editor input { height: 34px; min-width: 0; max-width: 100%; padding: 0 9px; font-size: 12px; border: 1px solid var(--input); border-radius: 7px; background: var(--surface); color: var(--foreground); }
+.felix-import-file input { display: block; max-width: 100%; margin-top: 5px; font-size: 11px; }
+.felix-import-preview { max-height: 220px; overflow-y: auto; border: 1px solid var(--border); border-radius: 7px; }
+.felix-import-preview > div { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 8px 12px; border-bottom: 1px solid var(--border); font-size: 11px; }
+.felix-import-preview > div span:first-child { min-width: 0; overflow-wrap: anywhere; }
+.felix-import-preview > div span:last-child { color: var(--foreground-subtle); }
+.felix-import-preview > div[data-state=new] span:last-child { color: var(--accent); }
+.felix-group-editor { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.felix-group-editor input { flex: 1; }
+.felix-group-list { margin-top: 16px; }
+.felix-group-editor-row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 0; border-bottom: 1px solid var(--border); font-size: 12px; }
+.felix-group-editor-row > span, .felix-group-editor-row > label { display: flex; align-items: center; gap: 8px; flex: 1; min-width: 80px; overflow-wrap: anywhere; }
+.felix-group-editor-row small { color: var(--foreground-subtle); }
+.felix-group-delete-confirm { flex-basis: 100%; display: flex; flex-wrap: wrap; gap: 8px; background: var(--surface-muted); padding: 12px; border-radius: 7px; }
+.felix-group-delete-confirm p { flex-basis: 100%; color: var(--foreground-muted); font-size: 11px; }
 @container (max-width: 550px) {
   .felix-watchlist-columns, .felix-watchlist-market { display: none; }
   .felix-watchlist-open { grid-template-columns: minmax(90px, 1fr) 82px; gap: 4px 8px; }

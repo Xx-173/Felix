@@ -1,3 +1,4 @@
+import type { PersonalWorkspace } from '@finagent/core';
 import { contextBridge, ipcRenderer } from 'electron';
 
 interface ProviderSettingsInput {
@@ -80,7 +81,7 @@ export interface ElectronAPI {
   compare: {
     build: (symbols: string[]) => Promise<unknown>;
   };
-  workspace: { get: () => Promise<unknown>; update: (input: { watchlist: string[] }) => Promise<unknown> };
+  workspace: { get: () => Promise<unknown>; update: (input: PersonalWorkspace) => Promise<unknown> };
   portfolioRisk: {
     analyze: (input?: { accountId?: string }) => Promise<unknown>;
   };
@@ -291,7 +292,7 @@ const electronAPI: ElectronAPI = {
   compare: {
     build: (symbols: string[]) => ipcRenderer.invoke('compare:build', { symbols }),
   },
-  workspace: { get: () => ipcRenderer.invoke('workspace:get'), update: (input: { watchlist: string[] }) => ipcRenderer.invoke('workspace:update', input) },
+  workspace: { get: () => ipcRenderer.invoke('workspace:get'), update: (input: PersonalWorkspace) => ipcRenderer.invoke('workspace:update', input) },
   portfolioRisk: {
     analyze: (input?: { accountId?: string }) => ipcRenderer.invoke('portfolioRisk:analyze', input),
   },

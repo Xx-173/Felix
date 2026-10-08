@@ -1,6 +1,6 @@
 import { atom } from 'jotai';
 import { atomFamily } from 'jotai/utils';
-import type { Quote } from '@finagent/core';
+import { MAX_WATCHLIST_SYMBOLS, type Quote, type WatchlistGroup } from '@finagent/core';
 import type { FinagentClient } from '../client';
 import { demoQuote, hasDemoQuote } from '../demo/demoData';
 
@@ -28,6 +28,7 @@ export const quoteCacheAtomFamily = atomFamily((symbol: string) =>
 
 // Watchlist atoms
 export const watchlistAtom = atom<string[]>(['AAPL.US', 'TSLA.US', 'NVDA.US']);
+export const watchlistGroupsAtom = atom<WatchlistGroup[]>([]);
 
 /** Newest quote timestamp (epoch seconds) across the watchlist, for the §34 freshness line. */
 export const watchlistLatestTimestampAtom = atom<number | undefined>((get) => {
@@ -46,7 +47,7 @@ export const addToWatchlistAtom = atom(
   null,
   (_get, set, symbol: string) => {
     set(watchlistAtom, (list) => {
-      if (list.includes(symbol)) return list;
+      if (list.includes(symbol) || list.length >= MAX_WATCHLIST_SYMBOLS) return list;
       return [...list, symbol];
     });
   }
@@ -57,6 +58,7 @@ export const removeFromWatchlistAtom = atom(
   null,
   (_get, set, symbol: string) => {
     set(watchlistAtom, (list) => list.filter((s) => s !== symbol));
+    set(watchlistGroupsAtom, (groups) => groups.map((group) => ({ ...group, symbols: group.symbols.filter((s) => s !== symbol) })));
   }
 );
 
@@ -65,6 +67,7 @@ export const fetchQuoteAtom = atom(
   null,
   async (_get, set, input: { client: FinagentClient; symbol: string }) => {
     const { client, symbol } = input;
+    if (_get(quoteCacheAtomFamily(symbol)).loading) return null;
     // Set loading state
     set(quoteCacheAtomFamily(symbol), (cache) => ({
       ...cache,
@@ -93,10 +96,14 @@ export const fetchQuoteAtom = atom(
       // No live provider available: fall back to built-in sample data when we
       // have it, so the UI shows a populated (clearly badged) default instead
       // of an empty state. Unknown symbols keep the honest error path.
-      const demo = hasDemoQuote(symbol) ? demoQuote(symbol) : null;
+      const cached = _get(quoteCacheAtomFamily(symbol));
+      // Preserve the last genuine quote on transient errors. Never replace a
+      // user's real quote with a sample price merely because refresh failed.
+      const previous = cached.data && !cached.isDemo ? cached.data : null;
+      const demo = !previous && hasDemoQuote(symbol) ? demoQuote(symbol) : null;
       set(quoteCacheAtomFamily(symbol), (cache) => ({
         ...cache,
-        data: demo,
+        data: previous ?? demo,
         isDemo: demo != null,
         timestamp: demo != null ? Date.now() : cache.timestamp,
         loading: false,

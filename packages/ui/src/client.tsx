@@ -190,8 +190,8 @@ export interface FinagentClient {
     saveSettings: (input: { modelAllowedHosts: string[]; revision: number }) => Promise<ApiResult<ServerManagementSettings>>;
   };
   workspace?: {
-    get: () => Promise<ApiResult<{ watchlist: string[] }>>;
-    update: (input: { watchlist: string[] }) => Promise<ApiResult<{ watchlist: string[] }>>;
+    get: () => Promise<ApiResult<import('@finagent/core').PersonalWorkspace>>;
+    update: (input: import('@finagent/core').PersonalWorkspace) => Promise<ApiResult<import('@finagent/core').PersonalWorkspace>>;
     exportData?: () => Promise<ApiResult<unknown>>;
   };
   account?: {

@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
-import type { Quote, StaticInfo, MarketStatus } from '@finagent/core';
-import { activeSymbolAtom, navSectionAtom } from '../../atoms';
+import type { StaticInfo, MarketStatus } from '@finagent/core';
+import { activeSymbolAtom, navSectionAtom, quoteCacheAtomFamily, fetchQuoteAtom } from '../../atoms';
 import { useFinagentClient } from '../../client';
 import { BilingualLabel } from '../primitives/BilingualLabel';
-import { DataFreshness } from '../primitives/DataFreshness';
+import { QuoteStatus } from '../stock/QuoteStatus';
+import { formatMarketPrice } from '../../lib/watchlist';
 const DASH = '\u2014';
 
-const formatPrice = (value: number): string => `$${value.toFixed(2)}`;
 const formatNumber = (value: number): string => value.toLocaleString();
 const formatSigned = (value: number): string =>
   `${value >= 0 ? '+' : ''}${value.toFixed(2)}`;
@@ -34,77 +34,31 @@ export const SecurityHeader: React.FC = () => {
   const client = useFinagentClient();
   const symbol = useAtomValue(activeSymbolAtom);
   const setNavSection = useSetAtom(navSectionAtom);
-  const [quote, setQuote] = useState<Quote | null>(null);
+  const cache = useAtomValue(quoteCacheAtomFamily(symbol ?? ''));
+  const fetchQuote = useSetAtom(fetchQuoteAtom);
+  const quote = cache.data;
+  const loading = cache.loading && !quote;
+  const error = cache.error;
   const [info, setInfo] = useState<StaticInfo | null>(null);
   const [marketStatus, setMarketStatus] = useState<string | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
-    if (!symbol) {
-      setQuote(null);
-      setInfo(null);
-      setMarketStatus(null);
-      setLoading(false);
-      setError(null);
-      return;
-    }
-
+    setInfo(null); setMarketStatus(null);
+    if (!symbol) return;
     let cancelled = false;
-    setLoading(true);
-    setError(null);
-    setQuote(null);
-    setInfo(null);
-    setMarketStatus(null);
-
-    const marketSuffix = symbol.split('.').pop()?.toUpperCase();
-
-    const load = async () => {
-      const quoteRes = await client.market.getQuote(symbol);
-      if (cancelled) return;
-      if (!quoteRes.ok) {
-        setError(quoteRes.error.message);
-        setLoading(false);
-        return;
-      }
-      setQuote(quoteRes.data);
-
-      client.market
-        .getStaticInfo(symbol)
-        .then((res) => {
-          if (!cancelled && res.ok) setInfo(res.data);
-        })
-        .catch(() => {
-          /* leave info null -> "—" */
-        });
-
-      client.market
-        .getMarketStatus()
-        .then((res) => {
-          if (cancelled || !res.ok) return;
-          const match = marketSuffix
-            ? res.data.find(
-                (s: MarketStatus) => s.market.toUpperCase() === marketSuffix
-              )
-            : undefined;
-          setMarketStatus(match ? match.status : null);
-        })
-        .catch(() => {
-          /* leave market status null -> "—" */
-        });
-
-      setLoading(false);
-    };
-
-    void load();
-    return () => {
-      cancelled = true;
-    };
-  }, [client, symbol]);
+    void fetchQuote({ client, symbol });
+    const interval = setInterval(() => void fetchQuote({ client, symbol }), 30000);
+    void client.market.getStaticInfo(symbol).then((result) => { if (!cancelled && result.ok) setInfo(result.data); }).catch(() => undefined);
+    const suffix = symbol.split(".").pop()?.toUpperCase();
+    void client.market.getMarketStatus().then((result) => {
+      if (!cancelled && result.ok) setMarketStatus(result.data.find((item: MarketStatus) => item.market.toUpperCase() === suffix)?.status ?? null);
+    }).catch(() => undefined);
+    return () => { cancelled = true; clearInterval(interval); };
+  }, [client, symbol, fetchQuote]);
 
   if (!symbol) return null;
 
-  if (error) {
+  if (error && !quote) {
     return (
       <div className="felix-security-header">
         <div
@@ -132,6 +86,7 @@ export const SecurityHeader: React.FC = () => {
     );
   }
 
+  const formatPrice = (value: number) => formatMarketPrice(value, symbol, info?.currency);
   const isPositive = quote.change >= 0;
   const changeColor = isPositive ? 'var(--positive)' : 'var(--negative)';
   const name = info?.name ?? symbol;
@@ -177,11 +132,7 @@ export const SecurityHeader: React.FC = () => {
           >
             {formatSigned(quote.change)} ({formatPercent(quote.changePercent)})
           </div>
-          <DataFreshness
-            providerName={quote.source === 'demo' ? t('demo.badge') : client.deployment ? t('security.header.marketStatus') : '长桥（Longbridge）'}
-            updatedAtMs={quote.timestamp ? quote.timestamp * 1000 : undefined}
-            className="mt-1.5"
-          />
+          <QuoteStatus quote={quote} error={error} />
           </div>
         <div className="flex items-center gap-2">
           <button

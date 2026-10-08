@@ -68,6 +68,26 @@ test('registration claims guest records; login on another browser restores isola
   db.close();
 });
 
+test('watchlist groups persist per account and legacy updates preserve memberships', async () => {
+  const dataDir = await directory(), app = await start({ dataDir });
+  const owner = client(app), other = client(app, 'other-address');
+  const groups = [{ id: 'research', name: '研究中', symbols: ['AAPL.US', 'MSFT.US'] }];
+  expect((await owner.rpc('workspace.update', { watchlist: ['AAPL.US', 'MSFT.US'], groups })).ok).toBe(true);
+  expect((await other.rpc('workspace.get')).data.groups).toBeUndefined();
+  await owner.auth('register', { username: 'group-owner', password });
+  await other.auth('login', { username: 'group-owner', password });
+  expect((await other.rpc('workspace.get')).data.groups).toEqual(groups);
+  await other.rpc('workspace.update', { watchlist: ['MSFT.US'] });
+  expect((await other.rpc('workspace.get')).data.groups[0].symbols).toEqual(['MSFT.US']);
+  const rejected = await other.rpc('workspace.update', { watchlist: ['MSFT.US'], groups: [{ id: 'bad', name: '', symbols: [] }] });
+  expect(rejected.ok).toBe(false);
+  expect((await other.rpc('workspace.get')).data.groups[0].name).toBe('研究中');
+  await app.close();
+  const reopened = client(await start({ dataDir }));
+  await reopened.auth('login', { username: 'group-owner', password });
+  expect((await reopened.rpc('workspace.get')).data.groups[0]).toEqual({ id: 'research', name: '研究中', symbols: ['MSFT.US'] });
+});
+
 test('recovery rotates code, revokes old sessions; password-protected deletion removes workspace and keys', async () => {
   const dataDir = await directory(), app = await start({ dataDir });
   const owner = client(app), recoveryBrowser = client(app, 'recovery-address');

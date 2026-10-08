@@ -1,3 +1,5 @@
+import { updateWorkspaceDocument } from '@finagent/shared';
+import type { PersonalWorkspace } from '@finagent/core';
 import { z } from 'zod';
 import { join } from 'node:path';
 import { createHash } from 'node:crypto';
@@ -817,9 +819,10 @@ export class AgentKernelHost {
 
   async workspaceGet() { return new JsonFileStore(app.getPath('userData')).read('workspace.json', { watchlist: ['AAPL.US', 'TSLA.US', 'NVDA.US'] }); }
   async workspaceUpdate(input: unknown) {
-    const value = z.object({ watchlist: z.array(z.string().regex(/^[A-Z0-9]{1,6}\.(US|HK|SG|SH|SZ|HAS)$/)).max(40) }).parse(input);
-    const result = { watchlist: [...new Set(value.watchlist)] };
-    await new JsonFileStore(app.getPath('userData')).write('workspace.json', result); return result;
+    const store = new JsonFileStore(app.getPath('userData'));
+    const previous = await store.read<PersonalWorkspace>('workspace.json', { watchlist: [] });
+    const result = updateWorkspaceDocument(input, previous);
+    await store.write('workspace.json', result); return result;
   }
 
   async portfolioRiskAnalyze(input?: unknown): Promise<PortfolioRiskReport> {
