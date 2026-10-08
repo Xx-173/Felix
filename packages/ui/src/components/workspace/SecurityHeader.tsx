@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import type { Quote, StaticInfo, MarketStatus } from '@finagent/core';
 import { activeSymbolAtom, navSectionAtom } from '../../atoms';
 import { useFinagentClient } from '../../client';
+import { BilingualLabel } from '../primitives/BilingualLabel';
 import { DataFreshness } from '../primitives/DataFreshness';
 const DASH = '\u2014';
 
@@ -22,7 +23,7 @@ interface StatCellProps {
 const StatCell: React.FC<StatCellProps> = ({ label, value }) => (
   <div className="min-w-0 border-l border-[var(--mac-border)] pl-3 first:border-l-0 first:pl-0">
     <div className="truncate text-[10px] font-semibold uppercase tracking-[0.08em] text-foreground/42">
-      {label}
+      <BilingualLabel>{label}</BilingualLabel>
     </div>
     <div className="mt-1 truncate text-[12px] font-medium tabular-nums text-foreground/80">{value}</div>
   </div>
@@ -105,7 +106,7 @@ export const SecurityHeader: React.FC = () => {
 
   if (error) {
     return (
-      <div className="mx-4 mt-4 rounded-[16px] border border-[var(--mac-border)] bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="felix-security-header">
         <div
           className="text-[13px] font-semibold uppercase tracking-wide text-foreground/72"
           data-testid="security-header-symbol"
@@ -121,7 +122,7 @@ export const SecurityHeader: React.FC = () => {
 
   if (loading || !quote) {
     return (
-      <div className="mx-4 mt-4 rounded-[16px] border border-[var(--mac-border)] bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+      <div className="felix-security-header">
         <div className="flex items-center gap-2">
           <div className="h-4 w-24 animate-pulse rounded bg-foreground/10" />
           <div className="h-4 w-12 animate-pulse rounded bg-foreground/8" />
@@ -146,7 +147,7 @@ export const SecurityHeader: React.FC = () => {
   ];
 
   return (
-    <div className="mx-4 mt-4 rounded-[16px] border border-[var(--mac-border)] bg-white px-5 py-4 shadow-[0_1px_2px_rgba(15,23,42,0.04)]">
+    <div className="felix-security-header">
       <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
         <div className="min-w-0">
           <div className="flex items-center gap-2">
@@ -193,7 +194,7 @@ export const SecurityHeader: React.FC = () => {
         </div>
         </div>
       </div>
-      <div className="mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-[var(--mac-border)] pt-3 sm:grid-cols-4 xl:grid-cols-7">
+      <div className="felix-security-stats mt-4 grid grid-cols-2 gap-x-4 gap-y-3 border-t border-[var(--mac-border)] pt-3 sm:grid-cols-4 xl:grid-cols-7">
         {stats.map((stat) => (
           <StatCell key={stat.label} label={stat.label} value={stat.value} />
         ))}

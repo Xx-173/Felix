@@ -1,3 +1,4 @@
+import { BilingualLabel } from '../primitives/BilingualLabel';
 import { uiTerm } from '../../i18n/displayNames';
 import { type ReactNode, useEffect, useRef, useState } from 'react';
 import { useAtomValue } from 'jotai';
@@ -110,20 +111,21 @@ export function ChartView() {
   }
 
   return (
-    <div className="flex h-full min-h-0 flex-col gap-3 bg-[#f7f8fa] p-4">
-      <div className="flex items-center gap-1 rounded-[12px] border border-[var(--mac-border)] bg-white px-2 py-1.5 shadow-[0_1px_2px_rgba(15,23,42,0.035)]">
+    <div className="felix-chart-view flex h-full min-h-0 flex-col gap-3 bg-background p-4">
+      <div className="felix-chart-toolbar">
         {PERIODS.map((value) => (
           <button
-            key={uiTerm(value)}
+            key={value}
             onClick={() => setPeriod(value)}
             aria-pressed={period === value}
+            aria-label={uiTerm(value)}
             className={`h-6 rounded-[6px] px-2.5 text-[11.5px] font-medium tabular-nums transition-smooth ${
               period === value
                 ? 'bg-[#0052ff] text-white'
                 : 'text-text-muted hover:bg-[#f0f2f5] hover:text-foreground'
             }`}
           >
-            {uiTerm(value)}
+            <BilingualLabel>{uiTerm(value)}</BilingualLabel>
           </button>
         ))}
         <div className="ml-auto">
@@ -135,7 +137,7 @@ export function ChartView() {
           />
         </div>
       </div>
-      <div className="min-h-0 flex-1 overflow-hidden rounded-[14px] border border-[var(--mac-border)] bg-white shadow-[0_1px_2px_rgba(15,23,42,0.035)]">{body}</div>
+      <div className="min-h-0 flex-1 overflow-hidden rounded-xl border border-border bg-surface">{body}</div>
     </div>
   );
 }

@@ -1,5 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { useFinagentClient } from '../../client';
+import { ChevronDown, Download, KeyRound, LogOut, ShieldCheck, Trash2, UserRound } from 'lucide-react';
+import { DropdownMenu, DropdownMenuTrigger, DropdownMenuContent, DropdownMenuItem, DropdownMenuLabel } from '../ui/dropdown-menu';
+import { BilingualLabel } from '../primitives/BilingualLabel';
 import { ServerAdminPanel } from './ServerAdminPanel';
 
 type Mode = 'login' | 'register' | 'resetPassword' | 'changePassword' | 'deleteAccount';
@@ -43,10 +46,24 @@ export const WebAccountPanel: React.FC = () => {
     const link = document.createElement('a'); link.href = url; link.download = 'felix-workspace.json'; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   };
   return <>
-    <div className="flex shrink-0 flex-wrap items-center gap-2 border-b border-border bg-surface px-4 py-2" data-testid="account-bar">
-      <span className="mr-auto text-xs">{user ? `个人工作区（Personal workspace）：${user.username}` : '匿名试用（Guest trial） · 注册可保留当前记录并在其他设备登录（Register to keep this workspace across devices）。'}</span>
-      {user?.role === 'admin' && client.admin && <button className={buttonStyle} onClick={() => setAdministration(true)}>管理设置（Administration）</button>}
-      {user ? <><button className={buttonStyle} disabled={busy} onClick={() => void exportData()}>导出数据（Export data）</button><button className={buttonStyle} onClick={() => open('changePassword')}>修改密码（Change password）</button><button className={buttonStyle} onClick={() => open('deleteAccount')}>删除账号（Delete account）</button><button className={buttonStyle} disabled={busy} onClick={() => void logout()}>退出（Sign out）</button></> : <><button className={buttonStyle} onClick={() => open('login')}>登录（Sign in）</button><button className={buttonStyle} onClick={() => open('register')}>注册（Register）</button></>}
+    <div className="felix-account-bar" data-testid="account-bar">
+      <div className="felix-account-identity"><span className="felix-account-avatar"><UserRound size={14} /></span>
+        <span>{user ? user.username : '匿名试用（Guest trial）'}</span>
+        <span className="felix-account-hint">{user ? '个人工作区（Personal workspace）' : '注册后跨设备保留记录（Register to sync your workspace）'}</span>
+      </div>
+      <div className="felix-account-actions">
+        {user?.role === 'admin' && client.admin && <button className="felix-account-admin" onClick={() => setAdministration(true)} aria-label="管理设置（Administration）"><ShieldCheck size={14} /><BilingualLabel>管理设置（Administration）</BilingualLabel></button>}
+        {user ? <DropdownMenu>
+          <DropdownMenuTrigger asChild><button className="felix-account-menu-trigger" data-testid="account-menu-trigger" aria-label="账号菜单（Account menu）"><BilingualLabel>账号（Account）</BilingualLabel><ChevronDown size={13} /></button></DropdownMenuTrigger>
+          <DropdownMenuContent align="end" className="felix-account-menu">
+            <DropdownMenuLabel>{user.username}</DropdownMenuLabel>
+            <DropdownMenuItem aria-label="导出数据（Export data）" disabled={busy} onSelect={() => void exportData()}><Download size={14} /><BilingualLabel>导出数据（Export data）</BilingualLabel></DropdownMenuItem>
+            <DropdownMenuItem aria-label="修改密码（Change password）" onSelect={() => open('changePassword')}><KeyRound size={14} /><BilingualLabel>修改密码（Change password）</BilingualLabel></DropdownMenuItem>
+            <DropdownMenuItem aria-label="退出（Sign out）" disabled={busy} onSelect={() => void logout()}><LogOut size={14} /><BilingualLabel>退出（Sign out）</BilingualLabel></DropdownMenuItem>
+            <DropdownMenuItem aria-label="删除账号（Delete account）" className="text-negative" onSelect={() => open('deleteAccount')}><Trash2 size={14} /><BilingualLabel>删除账号（Delete account）</BilingualLabel></DropdownMenuItem>
+          </DropdownMenuContent>
+        </DropdownMenu> : <><button className="felix-account-signin" onClick={() => open('login')}>登录（Sign in）</button><button className="felix-account-register" onClick={() => open('register')}>注册（Register）</button></>}
+      </div>
       {!mode && error && <p role="alert" className="w-full text-xs text-destructive">{error}</p>}
     </div>
     {administration && <ServerAdminPanel onClose={() => setAdministration(false)} />}

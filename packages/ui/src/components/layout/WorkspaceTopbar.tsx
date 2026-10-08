@@ -1,54 +1,32 @@
 import React from 'react';
-import { Moon, RefreshCw } from 'lucide-react';
+import { Moon, Sun, PanelRight } from 'lucide-react';
 import { useAtom, useAtomValue } from 'jotai';
 import { useTranslation } from 'react-i18next';
-import { activeSymbolAtom, activeViewAtom, navSectionAtom } from '../../atoms';
-import type { WorkspaceView } from '@finagent/core';
+import { activeSymbolAtom, agentPanelVisibleAtom, navSectionAtom } from '../../atoms';
+import { BilingualLabel } from '../primitives/BilingualLabel';
+import { useTheme } from './ThemeProvider';
 
-const TABS: Array<{ labelKey: string; view: WorkspaceView }> = [
-  { labelKey: 'kLines', view: 'chart' },
-  { labelKey: 'statements', view: 'financials' },
-  { labelKey: 'news', view: 'news' },
-  { labelKey: 'reports', view: 'overview' },
-];
-
-/** Stitch's persistent center-column header: asset tabs stay available while
- * the existing Felix navigation controls the actual page surface below. */
+/** Page context and global controls; asset views live next to the quote below. */
 export const WorkspaceTopbar: React.FC = () => {
   const { t } = useTranslation();
-  const activeSymbol = useAtomValue(activeSymbolAtom);
-  const navSection = useAtomValue(navSectionAtom);
-  const [activeView, setActiveView] = useAtom(activeViewAtom);
-  const showAssetTabs = navSection !== 'today' && navSection !== 'alerts' && navSection !== 'events' && navSection !== 'profile' && navSection !== 'settings';
-
-  const selectTab = (view: WorkspaceView) => {
-    setActiveView(view);
-  };
-
+  const symbol = useAtomValue(activeSymbolAtom);
+  const section = useAtomValue(navSectionAtom);
+  const [agentVisible, setAgentVisible] = useAtom(agentPanelVisibleAtom);
+  const { isDark: dark, setMode } = useTheme();
+  const key = section === 'watchlist' || section === 'sessions' ? 'workspace' : section;
   return (
-    <header className="felix-workspace-topbar flex h-16 shrink-0 items-center justify-between gap-4 border-b border-border bg-surface px-4">
+    <header className="felix-workspace-topbar flex shrink-0 items-center justify-between gap-3 border-b border-border bg-surface px-5">
       <div className="flex min-w-0 items-center gap-3">
-        <div className="felix-workspace-topbar-title min-w-0 max-w-40">Felix 研究（Felix Research）</div>
-        {showAssetTabs && (
-          <nav aria-label={t('navigation.workspaceTabs')} className="felix-workspace-topbar-tabs flex h-full items-center gap-3">
-            {TABS.map((tab) => (
-              <button
-                key={tab.labelKey}
-                type="button"
-                aria-pressed={activeSymbol != null && navSection === 'watchlist' && activeView === tab.view}
-                onClick={() => selectTab(tab.view)}
-                className={`felix-workspace-topbar-tab ${activeSymbol != null && navSection === 'watchlist' && activeView === tab.view ? 'felix-workspace-topbar-tab--active' : ''}`}
-              >
-                {t(`navigation.${tab.labelKey}`)}
-              </button>
-            ))}
-          </nav>
-        )}
+        <h1 className="felix-workspace-topbar-title"><BilingualLabel>{t('navigation.' + key)}</BilingualLabel></h1>
+        {section === 'watchlist' && symbol && <span className="felix-workspace-symbol">{symbol}</span>}
       </div>
-      <div className="flex shrink-0 items-center gap-3 text-foreground/48">
-        <RefreshCw className="h-3.5 w-3.5" aria-hidden="true" />
-        <Moon className="h-3.5 w-3.5" aria-hidden="true" />
-        <span className="felix-workspace-status"><span />{t('navigation.agentPanel')}</span>
+      <div className="flex shrink-0 items-center gap-2">
+        <button type="button" className="felix-topbar-icon" aria-label={dark ? '切换浅色主题（Light theme）' : '切换深色主题（Dark theme）'} onClick={() => setMode(dark ? 'light' : 'dark')}>
+          {dark ? <Sun size={16} /> : <Moon size={16} />}
+        </button>
+        <button type="button" className="felix-agent-toggle" aria-label={t('navigation.agentPanel')} aria-pressed={agentVisible} onClick={() => setAgentVisible(!agentVisible)}>
+          <PanelRight size={15} /><BilingualLabel>{t('navigation.agentPanel')}</BilingualLabel>
+        </button>
       </div>
     </header>
   );

@@ -20,6 +20,7 @@ import { researchOriginAtom } from '../../atoms/discoverAtoms'
 import { watchlistMoversAtom, mapUpcomingEvents, thesesNeedingReview } from '../../atoms/todayAtoms'
 import { watchlistHasDemoQuotesAtom } from '../../atoms/quoteAtoms'
 import { demoCalendarEvents } from '../../demo/demoData'
+import { BilingualLabel } from '../primitives/BilingualLabel'
 import { DemoBadge } from '../primitives/DemoBadge'
 import { analyzePortfolioRiskAtom } from '../../atoms/portfolioRiskAtoms'
 import { loadSymbolReports } from '../../atoms/researchAtoms'
@@ -323,13 +324,13 @@ export const TodayView: React.FC = () => {
     <div className="felix-today-view h-full overflow-y-auto bg-background px-6 py-6" data-testid="today-view">
       <div className="felix-today-content mx-auto max-w-6xl">
         <header className="felix-today-heading mb-6">
-          <h1 className="font-display-lg text-foreground">{t('today.greeting')}</h1>
-          <p>{t('today.heroSubtitle')}</p>
+          <h1 className="font-display-lg text-foreground"><BilingualLabel>{t('today.greeting')}</BilingualLabel></h1>
+          <p><BilingualLabel>{t('today.heroSubtitle')}</BilingualLabel></p>
         </header>
         <div className="felix-today-bento grid grid-cols-1 gap-4 lg:grid-cols-3">
           <section className="felix-stitch-card lg:col-span-2" data-testid="today-portfolio-glance">
             <div className="felix-stitch-card-heading">
-              <h2>{t('portfolio.totalValue')}</h2>
+              <h2><BilingualLabel>{t('navigation.portfolio')}</BilingualLabel></h2>
               <span className="flex items-center gap-2">
                 {(portfolioCache.isDemo || quotesAreDemo) && <DemoBadge />}
                 <span className="felix-card-menu" aria-hidden="true">•••</span>
@@ -337,19 +338,19 @@ export const TodayView: React.FC = () => {
             </div>
             {portfolioContent}
             <div className="felix-today-mover-columns mt-5 grid grid-cols-2 gap-4 border-t border-border pt-4">
-              <div><h3>{t('today.topGainers')}</h3>{movers.length > 0 ? movers.filter((item) => (item.changePercent ?? 0) >= 0).slice(0, 2).map((item) => <div className="felix-today-mini-row" key={item.symbol}><span>{item.symbol}</span><strong className="text-positive">{formatPercent(item.changePercent)}</strong></div>) : <div className="felix-today-muted">{DASH}</div>}</div>
-              <div className="border-l border-border pl-4"><h3>{t('today.topLosers')}</h3>{movers.length > 0 ? movers.filter((item) => (item.changePercent ?? 0) < 0).slice(0, 2).map((item) => <div className="felix-today-mini-row" key={item.symbol}><span>{item.symbol}</span><strong className="text-negative">{formatPercent(item.changePercent)}</strong></div>) : <div className="felix-today-muted">{DASH}</div>}</div>
+              <div><h3><BilingualLabel>{t('today.topGainers')}</BilingualLabel></h3>{movers.length > 0 ? movers.filter((item) => (item.changePercent ?? 0) >= 0).slice(0, 2).map((item) => <div className="felix-today-mini-row" key={item.symbol}><span>{item.symbol}</span><strong className="text-positive">{formatPercent(item.changePercent)}</strong></div>) : <div className="felix-today-muted">{DASH}</div>}</div>
+              <div className="border-l border-border pl-4"><h3><BilingualLabel>{t('today.topLosers')}</BilingualLabel></h3>{movers.length > 0 ? movers.filter((item) => (item.changePercent ?? 0) < 0).slice(0, 2).map((item) => <div className="felix-today-mini-row" key={item.symbol}><span>{item.symbol}</span><strong className="text-negative">{formatPercent(item.changePercent)}</strong></div>) : <div className="felix-today-muted">{DASH}</div>}</div>
             </div>
           </section>
 
           <section className="felix-stitch-card" data-testid="today-upcoming-events">
-            <div className="felix-stitch-card-heading"><h2>{t('today.upcomingEvents')}</h2><span className="flex items-center gap-2">{eventsAreDemo && <DemoBadge />}<CalendarDays className="h-4 w-4 text-foreground/48" /></span></div>
+            <div className="felix-stitch-card-heading"><h2><BilingualLabel>{t('today.upcomingEvents')}</BilingualLabel></h2><span className="flex items-center gap-2">{eventsAreDemo && <DemoBadge />}<CalendarDays className="h-4 w-4 text-foreground/48" /></span></div>
             {upcomingContent}
             <button type="button" onClick={() => setNavSection('events')} className="felix-stitch-secondary-button mt-5 w-full">{t('events.title')}</button>
           </section>
 
           <section className="felix-stitch-card lg:col-span-3" data-testid="today-watchlist-activity">
-            <div className="felix-stitch-card-heading"><h2>{t('today.watchlistMovers')}</h2><span className="flex items-center gap-2">{quotesAreDemo && <DemoBadge />}<button type="button" onClick={() => setNavSection('watchlist')} className="felix-stitch-text-button">{t('navigation.watchlist')}</button></span></div>
+            <div className="felix-stitch-card-heading"><h2><BilingualLabel>{t('today.watchlistMovers')}</BilingualLabel></h2><span className="flex items-center gap-2">{quotesAreDemo && <DemoBadge />}<button type="button" onClick={() => setNavSection('watchlist')} className="felix-stitch-text-button">{t('navigation.watchlist')}</button></span></div>
             {moversContent}
           </section>
         </div>
@@ -383,9 +384,9 @@ const QuickAction: React.FC<{
   tone: 'blue' | 'green' | 'violet'
   onClick: () => void
 }> = ({ icon: Icon, label, hint, tone, onClick }) => (
-  <button type="button" onClick={onClick} className={`felix-quick-action group flex items-center gap-3 rounded-[9px] border border-border px-3 py-2.5 text-left transition-smooth hover:border-[var(--mac-blue)]/35 hover:bg-[var(--mac-blue-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 ${tone === 'blue' ? 'bg-accent/5' : tone === 'green' ? 'bg-positive/5' : 'bg-info/5'}`}>
+  <button type="button" onClick={onClick} aria-label={label} className={`felix-quick-action group flex items-center gap-3 rounded-[9px] border border-border px-3 py-2.5 text-left transition-smooth hover:border-[var(--mac-blue)]/35 hover:bg-[var(--mac-blue-soft)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-accent/25 ${tone === 'blue' ? 'bg-accent/5' : tone === 'green' ? 'bg-positive/5' : 'bg-info/5'}`}>
     <span className={`flex h-8 w-8 shrink-0 items-center justify-center rounded-[8px] ${tone === 'blue' ? 'bg-accent/10 text-accent' : tone === 'green' ? 'bg-positive/10 text-positive' : 'bg-info/10 text-info'}`}><Icon className="h-4 w-4" strokeWidth={1.8} /></span>
-    <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold text-foreground">{label}</span><span className="mt-0.5 block truncate text-[11px] text-foreground/44">{hint}</span></span>
+    <span className="min-w-0 flex-1"><span className="block text-[12px] font-semibold text-foreground"><BilingualLabel>{label}</BilingualLabel></span><span className="mt-0.5 block truncate text-[11px] text-foreground/44">{hint}</span></span>
     <ArrowUpRight className="h-3.5 w-3.5 text-accent/55 transition-transform group-hover:-translate-y-0.5 group-hover:translate-x-0.5" />
   </button>
 )

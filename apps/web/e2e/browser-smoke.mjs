@@ -51,6 +51,23 @@ try {
     await page.getByRole('button', { name: /^添加标的（/ }).click();
   }
   await page.getByTestId('watchlist-row-AAPL.US').click();
+  await page.getByRole('tab', { name: 'K 线（Chart）', exact: true }).click();
+  await page.locator('.felix-chart-toolbar').waitFor();
+  const sidebarWidth = (await page.getByTestId('sidebar').boundingBox()).width;
+  const assistantToggle = page.locator('.felix-workspace-topbar').getByRole('button', { name: /^研究助手/ });
+  await assistantToggle.click();
+  await page.waitForTimeout(150);
+  assert.ok(Math.abs((await page.getByTestId('sidebar').boundingBox()).width - sidebarWidth) < 2, 'closing the assistant preserves sidebar width');
+  await page.screenshot({ path: resolve(artifacts, 'workbench-light.png') });
+  await page.getByRole('button', { name: '切换深色主题（Dark theme）', exact: true }).click();
+  await page.waitForFunction(() => document.documentElement.classList.contains('dark'));
+  await page.waitForTimeout(250); // Wait for the shared color transitions before visual capture.
+  await page.screenshot({ path: resolve(artifacts, 'workbench-dark.png') });
+  await page.getByRole('button', { name: '切换浅色主题（Light theme）', exact: true }).click();
+  await assistantToggle.click();
+  await page.getByTestId('agent-panel').waitFor({ state: 'visible' });
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'workbench fits the viewport');
+  steps.push('中英双语行情页、明暗主题及助手开关正常，侧栏宽度保持不变');
   await page.getByTestId('sidebar').getByRole('button', { name: /^研究（/ }).click();
   await page.getByTestId('research-panel').waitFor();
   await page.getByTestId('research-panel').getByRole('button', { name: '深度研究（Deep Research）', exact: true }).click();
@@ -74,6 +91,7 @@ try {
   }
   steps.push('桌面全部 13 个导航入口保留，逐页打开无脚本错误');
   await page.getByRole('tab', { name: /^大语言模型（/ }).click();
+  await page.screenshot({ path: resolve(artifacts, 'settings-models.png') });
   const credential = page.locator('input[type="password"]').first();
   await page.waitForFunction(() => document.querySelectorAll('input[type="password"]').length >= 5);
   await credential.pressSequentially('dummy-browser-test-key', { delay: 30 });
@@ -130,9 +148,11 @@ try {
   await accountPage.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
   await accountPage.getByTestId('watchlist-row-MSFT.US').waitFor();
   const workspaceDownload = accountPage.waitForEvent('download');
-  await accountPage.getByRole('button', { name: '导出数据（Export data）', exact: true }).click();
+  await accountPage.getByTestId('account-menu-trigger').click();
+  await accountPage.getByRole('menuitem', { name: '导出数据（Export data）', exact: true }).click();
   assert.equal((await workspaceDownload).suggestedFilename(), 'felix-workspace.json');
-  await Promise.all([accountPage.waitForEvent('load'), accountPage.getByRole('button', { name: '退出（Sign out）', exact: true }).click()]);
+  await accountPage.getByTestId('account-menu-trigger').click();
+  await Promise.all([accountPage.waitForEvent('load'), accountPage.getByRole('menuitem', { name: '退出（Sign out）', exact: true }).click()]);
   await accountPage.getByRole('button', { name: '登录（Sign in）', exact: true }).waitFor();
   const afterLogout = await accountPage.evaluate(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"kernel.hydrate"}' })).json()).data.sessions);
   assert.equal(afterLogout.length, 0);
@@ -145,7 +165,8 @@ try {
   await page.getByTestId('agent-input').waitFor({ state: 'visible' });
   await page.screenshot({ path: resolve(artifacts, 'web-mobile.png') });
   steps.push('390px 手机宽度可切换并使用研究助手');
-  await page.getByTestId('account-bar').getByRole('button', { name: '删除账号（Delete account）', exact: true }).click();
+  await page.getByTestId('account-menu-trigger').click();
+  await page.getByRole('menuitem', { name: '删除账号（Delete account）', exact: true }).click();
   const deletion = page.getByRole('dialog', { name: '删除账号和数据（Delete account and data）', exact: true });
   await deletion.getByLabel('密码（Password）', { exact: true }).fill(password);
   await deletion.getByLabel('输入用户名确认（Type username to confirm）', { exact: true }).fill(username);

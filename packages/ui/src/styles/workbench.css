@@ -1,0 +1,116 @@
+/* Shared desktop/browser workbench: compact chrome, quiet cards, blue actions. */
+:root {
+  --background: #f5f7fb;
+  --surface-muted: #f0f3f8;
+  --surface-hover: #eaf0fb;
+  --foreground-muted: #55647a;
+  --foreground-subtle: #7b899d;
+  --primary: #2563eb;
+  --accent: #2563eb;
+  --accent-rgb: 37, 99, 235;
+  --border: #e3e9f2;
+  --input: #d6dfeb;
+  --radius: 8px;
+}
+.dark {
+  --background: #10151f;
+  --surface: #171e2b;
+  --surface-muted: #1c2534;
+  --surface-hover: #253148;
+  --foreground-muted: #b4c0d2;
+  --foreground-subtle: #8d9bb0;
+  --primary: #72a1ff;
+  --primary-foreground: #10151f;
+  --accent: #72a1ff;
+  --accent-foreground: #10151f;
+  --border: #2b374a;
+  --input: #3a4961;
+}
+body { font-size: 13px; }
+.felix-bilingual { line-height: 1.4; }
+.felix-bilingual-gloss { font-size: .82em; font-weight: 400; opacity: .68; }
+.felix-bilingual--stacked { display: block; }
+.felix-bilingual--stacked > span { display: block; }
+.felix-bilingual--stacked .felix-bilingual-gloss { margin-top: 1px; font-size: 10px; line-height: 1.15; }
+.mac-titlebar { height: 32px; flex-basis: 32px; }
+.felix-deployment-notice { flex-shrink: 0; padding: 7px 20px; font-size: 11px; background: color-mix(in srgb, var(--accent) 5%, var(--surface)); color: var(--foreground-muted); }
+.felix-account-bar { position: relative; display: flex; flex-shrink: 0; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 8px; min-height: 44px; padding: 6px 20px; border-bottom: 1px solid var(--border); background: var(--surface); }
+.felix-account-identity, .felix-account-actions { display: flex; min-width: 0; align-items: center; gap: 10px; font-size: 12px; }
+.felix-account-identity > span:nth-child(2) { font-weight: 600; }
+.felix-account-avatar { display: inline-flex; width: 26px; height: 26px; flex-shrink: 0; align-items: center; justify-content: center; border-radius: 8px; background: var(--surface-muted); color: var(--accent); }
+.felix-account-hint { color: var(--foreground-subtle); font-size: 11px; }
+.felix-account-actions button { display: inline-flex; align-items: center; justify-content: center; gap: 6px; min-height: 29px; border-radius: 7px; padding: 4px 10px; font-size: 11px; white-space: nowrap; }
+.felix-account-admin, .felix-account-signin, .felix-account-menu-trigger { border: 1px solid var(--border); color: var(--foreground-muted); }
+.felix-account-admin { color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); }
+.felix-account-register { background: var(--primary); color: var(--primary-foreground); }
+.felix-account-actions button:hover { filter: brightness(.97); }
+.felix-account-menu { min-width: 230px; border-radius: 10px; padding: 5px; }
+.felix-account-menu [role=menuitem] { gap: 10px; padding: 10px; border-radius: 6px; }
+.felix-account-menu [role=menuitem]:last-child { border-top: 1px solid var(--border); margin-top: 4px; }
+.felix-sidebar-content { padding: 20px 12px 12px; background: var(--surface); }
+.felix-sidebar-brand { margin-bottom: 20px; padding: 0 12px; }
+.felix-sidebar-brand-name { color: var(--foreground); font-size: 27px; letter-spacing: -.06em; }
+.felix-sidebar-brand-kicker { font-family: var(--font-sans-stack); letter-spacing: .025em; font-size: 9px; margin-top: 6px; }
+.felix-sidebar-new-analysis { border-radius: 8px; margin-bottom: 16px; min-height: 36px; font-size: 12px; box-shadow: 0 3px 8px rgba(var(--accent-rgb), .14); }
+.felix-sidebar-nav { gap: 3px; }
+.felix-sidebar-nav-item { min-height: 42px; gap: 11px; border-radius: 8px; padding: 6px 12px; font-size: 12px; }
+.felix-sidebar-nav-label { overflow-wrap: normal; }
+.felix-sidebar-nav-item--active { border-right: 0; color: var(--accent); background: color-mix(in srgb, var(--accent) 9%, var(--surface)); }
+.felix-sidebar-nav-item--active::before { content: ''; position: absolute; left: 0; top: 12px; bottom: 12px; width: 3px; border-radius: 3px; background: var(--accent); }
+.felix-sidebar-nav-item--active .felix-bilingual-gloss { opacity: .8; }
+.felix-sidebar-context { margin-top: 12px; padding-top: 10px; }
+.felix-sidebar-footer { padding-top: 8px; }
+.felix-sidebar-support { padding: 6px 12px; font-size: 10px; }
+.felix-workspace-topbar { min-height: 56px; }
+.felix-workspace-topbar-title { margin: 0; max-width: none; font-size: 15px; white-space: nowrap; }
+.felix-workspace-topbar-title .felix-bilingual-gloss { margin-left: 6px; font-size: 11px; color: var(--foreground-subtle); }
+.felix-workspace-symbol { border-left: 1px solid var(--border); padding-left: 12px; font-size: 11px; color: var(--foreground-subtle); }
+.felix-topbar-icon { display: flex; align-items: center; justify-content: center; width: 30px; height: 30px; border-radius: 7px; color: var(--foreground-muted); }
+.felix-topbar-icon:hover { background: var(--surface-muted); }
+.felix-agent-toggle { display: flex; align-items: center; gap: 7px; padding: 6px 10px; border: 1px solid var(--border); border-radius: 7px; color: var(--foreground-muted); font-size: 11px; }
+.felix-agent-toggle[aria-pressed=true] { background: color-mix(in srgb, var(--accent) 7%, var(--surface)); color: var(--accent); border-color: color-mix(in srgb, var(--accent) 20%, var(--border)); }
+.felix-security-header { margin: 18px 20px 0; padding: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--surface); box-shadow: 0 2px 8px rgba(var(--foreground-rgb), .025); }
+.felix-security-tabs { margin: 12px 20px 0; border-bottom: 1px solid var(--border); }
+.felix-security-tabs [role=tab] { padding: 12px 14px; white-space: nowrap; }
+.felix-security-tabs [data-state=active] { color: var(--accent); }
+.felix-security-stats { gap: 14px; }
+.felix-chart-view { padding: 16px 20px 20px; }
+.felix-chart-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; border: 1px solid var(--border); border-radius: 10px; background: var(--surface); padding: 8px; }
+.felix-chart-toolbar > button { height: 30px; white-space: nowrap; }
+.felix-chart-toolbar > button[aria-pressed=true] { background: var(--accent); color: var(--accent-foreground); }
+.felix-chart-toolbar > div { font-size: 10px; padding: 0 4px; }
+.felix-settings-header { flex-shrink: 0; padding: 24px 24px 0; background: var(--surface); border-bottom: 1px solid var(--border); }
+.felix-settings-tabs { margin-top: 20px; overflow-x: auto; }
+.felix-settings-tabs [role=tablist] { display: inline-flex; min-width: max-content; border-bottom: 0; }
+.felix-settings-tabs [role=tab] { white-space: nowrap; }
+.felix-settings-tabs [role=tab][data-state=active] { color: var(--accent); background: color-mix(in srgb, var(--accent) 5%, var(--surface)); border-radius: 7px 7px 0 0; }
+.felix-settings-content { padding: 24px; }
+.felix-settings-content > div { width: 100%; max-width: 1024px; margin-inline: auto; }
+.felix-settings-content input:not([type=checkbox]), .felix-settings-content textarea { border-radius: 7px; background: var(--surface); }
+.felix-stitch-card, .felix-page-section { border-radius: 12px; box-shadow: 0 2px 8px rgba(var(--foreground-rgb), .025); }
+.felix-today-heading h1 { font-weight: 650; }
+.felix-agent-body { background: var(--background); }
+.felix-banner { font-size: 11px; padding-block: 6px; }
+@media (max-width: 1100px) {
+  .felix-account-hint { display: none; }
+  .felix-workspace-symbol { display: none; }
+}
+@media (max-width: 899px) {
+  .felix-sidebar-content { padding: 12px 5px; }
+  .felix-sidebar-new-analysis { min-height: 36px; }
+  .felix-sidebar-nav-item { min-height: 36px; padding: 8px 0; }
+  .felix-sidebar-nav-item--active::before { top: 8px; bottom: 8px; }
+  .felix-deployment-notice { padding: 6px 12px; font-size: 10px; }
+  .felix-account-bar { padding: 6px 12px; gap: 6px; }
+  .felix-account-identity { font-size: 11px; gap: 6px; }
+  .felix-account-actions { gap: 4px; }
+  .felix-account-actions button { font-size: 10px; padding-inline: 7px; }
+  .felix-security-header { margin: 12px 12px 0; padding: 16px; }
+  .felix-security-tabs { margin-inline: 12px; overflow-x: auto; }
+  .felix-security-tabs [role=tablist] { min-width: max-content; }
+  .felix-chart-view { padding: 12px; }
+  .felix-settings-header { padding: 18px 16px 0; }
+  .felix-settings-header > div:first-child { flex-wrap: wrap; }
+  .felix-settings-header > div > p { text-align: left; }
+  .felix-settings-content { padding: 16px; }
+}

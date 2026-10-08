@@ -1,4 +1,5 @@
 import React from 'react';
+import { BilingualLabel } from './BilingualLabel';
 import { FlaskConical } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
@@ -17,7 +18,7 @@ export const DemoBadge: React.FC<{ className?: string }> = ({ className = '' }) 
       className={`inline-flex shrink-0 cursor-help items-center gap-1 rounded-full border border-[var(--mac-border)] bg-foreground/[0.04] px-2 py-0.5 text-[10px] font-medium text-foreground/55 ${className}`}
     >
       <FlaskConical className="h-3 w-3" aria-hidden="true" />
-      {t('demo.badge')}
+      <BilingualLabel>{t('demo.badge')}</BilingualLabel>
     </span>
   );
 };

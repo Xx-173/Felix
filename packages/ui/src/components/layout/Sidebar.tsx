@@ -31,6 +31,7 @@ import {
 } from '../../atoms';
 import { useFinagentClient } from '../../client';
 import { Watchlist } from '../stock/Watchlist';
+import { BilingualLabel } from '../primitives/BilingualLabel';
 
 type SidebarItem = { key: NavSection; labelKey: string; icon: LucideIcon };
 
@@ -64,7 +65,7 @@ const SidebarNavButton: React.FC<{
       className={`felix-sidebar-nav-item ${active ? 'felix-sidebar-nav-item--active' : ''}`}
     >
       <Icon className="h-4 w-4 shrink-0" strokeWidth={active ? 2 : 1.7} />
-      <span className="felix-sidebar-nav-label">{label}</span>
+      <span className="felix-sidebar-nav-label"><BilingualLabel stacked>{label}</BilingualLabel></span>
       {item.key === 'alerts' && <span className="felix-sidebar-alert-dot" aria-hidden="true" />}
     </button>
   );
@@ -95,7 +96,7 @@ export const Sidebar: React.FC = () => {
           className="felix-sidebar-new-analysis mb-6 flex h-9 w-full items-center justify-center gap-2 rounded-[4px] px-3 text-[12px] font-semibold"
         >
           <CirclePlus className="h-4 w-4" />
-          <span>{t('navigation.newSession')}</span>
+          <span><BilingualLabel>{t('navigation.newSession')}</BilingualLabel></span>
         </button>
 
         <nav aria-label={t('navigation.globalNavAria')} className="felix-sidebar-nav flex min-h-0 flex-1 flex-col gap-1">

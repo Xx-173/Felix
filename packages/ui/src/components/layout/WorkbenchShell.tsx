@@ -12,7 +12,7 @@ import { AgentPanel } from '../agent/AgentPanel';
 import { WorkspaceTopbar } from './WorkspaceTopbar';
 
 const SIZES_KEY = 'allotmentSizes';
-const DEFAULT_SIZES = [240, 640, 400];
+const DEFAULT_SIZES = [224, 800, 360];
 
 export const WorkbenchShell: React.FC = () => {
   const client = useFinagentClient();
@@ -40,7 +40,11 @@ export const WorkbenchShell: React.FC = () => {
     // Keep the user's sidebar preference while preserving the last Copilot
     // width for the next time the third pane is restored.
     if (next.length === 2) {
-      setSizes((current) => [next[0] ?? current[0], current[1], current[2]]);
+      setSizes((current) => {
+        const updated = [next[0] ?? current[0], current[1], current[2]];
+        writePersisted(SIZES_KEY, updated);
+        return updated;
+      });
       return;
     }
     setSizes(next);
@@ -69,10 +73,10 @@ export const WorkbenchShell: React.FC = () => {
       <Allotment
         key={showAgent ? 'workbench-with-agent' : isNarrow ? 'workbench-narrow' : 'workbench-without-agent'}
         className="h-full"
-        defaultSizes={showAgent ? normalized : isNarrow ? [56, Math.max(320, normalized[1])] : [360, Math.max(720, normalized[1] + normalized[2])]}
+        defaultSizes={showAgent ? normalized : isNarrow ? [56, Math.max(320, normalized[1])] : [normalized[0], normalized[1] + normalized[2]]}
         onDragEnd={handleDragEnd}
       >
-        <Allotment.Pane minSize={isNarrow ? 56 : 200} preferredSize={isNarrow ? 56 : showAgent ? normalized[0] : 360}>
+        <Allotment.Pane minSize={isNarrow ? 56 : 200} maxSize={isNarrow ? 56 : 280} preferredSize={isNarrow ? 56 : Math.min(normalized[0], 280)}>
           <Sidebar />
         </Allotment.Pane>
         <Allotment.Pane minSize={isNarrow ? 320 : 500}>

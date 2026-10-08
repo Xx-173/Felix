@@ -31,7 +31,7 @@ export const AppShell: React.FC<AppShellProps> = ({ client = fallbackClient }) =
             <WorkspaceBridge client={client} />
             <div className="mac-app-window flex h-screen flex-col overflow-hidden bg-background text-foreground">
               <TitleBar />
-              {client.deployment ? <div role="status" className="border-b border-border bg-surface-muted px-4 py-2 text-xs text-foreground-muted">{client.deployment.notice}</div> : <LongBridgeBanner />}
+              {client.deployment ? <div role="status" className="felix-deployment-notice border-b border-border bg-surface-muted px-4 py-2 text-xs text-text-muted">{client.deployment.notice}</div> : <LongBridgeBanner />}
               {client.account && <WebAccountPanel />}
               <WorkbenchShell />
             </div>

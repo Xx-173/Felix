@@ -16,9 +16,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
       return 'light';
     }
   });
+  const [isDark, setIsDark] = useState(() => mode === 'dark' || (mode === 'system' && systemIsDark()));
 
   useEffect(() => {
-    const apply = () => document.documentElement.classList.toggle('dark', mode === 'dark' || (mode === 'system' && systemIsDark()));
+    const apply = () => {
+      const dark = mode === 'dark' || (mode === 'system' && systemIsDark());
+      document.documentElement.classList.toggle('dark', dark);
+      setIsDark(dark);
+    };
     apply();
     try { window.localStorage.setItem(STORAGE_KEY, mode); } catch { /* optional persistence */ }
     if (mode !== 'system' || typeof window.matchMedia !== 'function') return undefined;
@@ -28,8 +33,8 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
     return () => media.removeEventListener?.('change', listener);
   }, [mode]);
 
-  return <ThemeContext.Provider value={{ mode, setMode }}>{children}</ThemeContext.Provider>;
+  return <ThemeContext.Provider value={{ mode, setMode, isDark }}>{children}</ThemeContext.Provider>;
 }
 
-const ThemeContext = React.createContext<{ mode: ThemeMode; setMode: (mode: ThemeMode) => void }>({ mode: 'light', setMode: () => undefined });
+const ThemeContext = React.createContext<{ mode: ThemeMode; setMode: (mode: ThemeMode) => void; isDark: boolean }>({ mode: 'light', setMode: () => undefined, isDark: false });
 export function useTheme() { return React.useContext(ThemeContext); }

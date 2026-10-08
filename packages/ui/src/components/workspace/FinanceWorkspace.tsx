@@ -3,6 +3,7 @@ import { useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import type { WorkspaceView } from '@finagent/core';
 import { navSectionAtom, activeSymbolAtom, activeViewAtom } from '../../atoms';
+import { BilingualLabel } from '../primitives/BilingualLabel';
 import { SecurityHeader } from './SecurityHeader';
 import { OverviewView } from './OverviewView';
 import { FinancialsView } from './FinancialsView';
@@ -22,10 +23,10 @@ import { EventsView } from '../events/EventsView';
 import { ProfileSecurityView } from '../profile/ProfileSecurityView';
 import { Tabs, TabsList, TabsTrigger } from '../ui/tabs';
 const WORKSPACE_TABS: { value: WorkspaceView; label: string }[] = [
-  { value: 'overview', label: 'Overview' },
-  { value: 'chart', label: 'Chart' },
-  { value: 'financials', label: 'Financials' },
-  { value: 'news', label: 'News' },
+  { value: 'overview', label: '概览（Overview）' },
+  { value: 'chart', label: 'K 线（Chart）' },
+  { value: 'financials', label: '财务报表（Financials）' },
+  { value: 'news', label: '新闻（News）' },
 ];
 
 
@@ -106,12 +107,12 @@ const SecurityWorkspace: React.FC = () => {
   }
 
   return (
-    <div className="felix-security-workspace flex h-full flex-col bg-[#f7f8fa]">
+    <div className="felix-security-workspace flex h-full flex-col bg-background">
       <SecurityHeader />
-      <div className="border-b border-[var(--mac-border)] bg-white px-4">
+      <div className="felix-security-tabs">
         <Tabs value={activeView} onValueChange={(value) => setActiveView(value as WorkspaceView)}>
           <TabsList className="gap-0 border-0">
-            {WORKSPACE_TABS.map((tab) => <TabsTrigger key={tab.value} value={tab.value}>{tab.label}</TabsTrigger>)}
+            {WORKSPACE_TABS.map((tab) => <TabsTrigger key={tab.value} value={tab.value} aria-label={tab.label}><BilingualLabel>{tab.label}</BilingualLabel></TabsTrigger>)}
           </TabsList>
         </Tabs>
       </div>

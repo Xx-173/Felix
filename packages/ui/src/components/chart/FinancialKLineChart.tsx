@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import {
   dispose,
   init,
+  registerLocale,
   type Chart,
   type DeepPartial,
   type KLineData,
@@ -19,6 +20,14 @@ interface FinancialKLineChartProps {
 }
 
 const CANDLE_PANE_ID = 'candle_pane';
+
+registerLocale('felix-bilingual', {
+  time: '时间（Time）：', open: '开盘（Open）：', high: '最高（High）：',
+  low: '最低（Low）：', close: '收盘（Close）：', volume: '成交量（Volume）：',
+  change: '涨跌（Change）：', turnover: '成交额（Turnover）：',
+  second: '秒（S）', minute: '分（m）', hour: '时（h）', day: '日（D）',
+  week: '周（W）', month: '月（M）', year: '年（Y）',
+});
 
 // Resolves a theme custom property (e.g. --positive) to a concrete color
 // string the canvas can consume. Custom properties are returned verbatim by
@@ -86,7 +95,7 @@ export function FinancialKLineChart({
 
     const upColor = resolveColor(el, '--positive', '#30d158');
     const downColor = resolveColor(el, '--negative', '#ff453a');
-    const mutedColor = resolveColor(el, '--text-muted', '#94a3b8');
+    const mutedColor = resolveColor(el, '--foreground-muted', '#64748b');
 
     const styles: DeepPartial<Styles> = {
       grid: {
@@ -94,6 +103,7 @@ export function FinancialKLineChart({
         vertical: { color: 'rgba(148, 163, 184, 0.12)' },
       },
       candle: {
+        tooltip: { title: { color: mutedColor, size: 11 }, legend: { color: mutedColor, size: 11 } },
         bar: {
           upColor,
           downColor,
@@ -110,7 +120,7 @@ export function FinancialKLineChart({
       yAxis: { tickText: { color: mutedColor } },
     };
 
-    const chart = init(el, { styles });
+    const chart = init(el, { styles, locale: 'felix-bilingual' });
     if (!chart) return;
     chartRef.current = chart;
 
@@ -123,8 +133,19 @@ export function FinancialKLineChart({
     const resizeObserver = new ResizeObserver(() => chart.resize());
     resizeObserver.observe(el);
 
+    // Canvas text must follow theme changes just like the surrounding DOM.
+    const themeObserver = new MutationObserver(() => {
+      const color = resolveColor(el, '--foreground-muted', '#64748b');
+      chart.setStyles({
+        candle: { tooltip: { title: { color }, legend: { color } } },
+        xAxis: { tickText: { color } }, yAxis: { tickText: { color } },
+      });
+    });
+    themeObserver.observe(document.documentElement, { attributes: true, attributeFilter: ['class'] });
+
     return () => {
       resizeObserver.disconnect();
+      themeObserver.disconnect();
       dispose(el);
       chartRef.current = null;
       maIdRef.current = null;
@@ -170,7 +191,7 @@ export function FinancialKLineChart({
   if (!hasData) {
     return (
       <div className="flex h-full w-full items-center justify-center text-[12.5px] text-text-muted">
-        No market data
+        暂无行情数据（No market data）
       </div>
     );
   }

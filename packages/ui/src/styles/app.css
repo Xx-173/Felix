@@ -156,7 +156,10 @@ body {
   font-feature-settings: "kern" 1, "liga" 1;
 }
 h1, h2, h3, h4, h5, h6 { font-family: var(--font-display-stack); }
-button, input, textarea, select { font: inherit; }
+/* Base resets must not override Tailwind's explicit control sizes. */
+@layer base {
+  button, input, textarea, select { font: inherit; }
+}
 button { cursor: pointer; }
 button:disabled { cursor: not-allowed; }
 :focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }

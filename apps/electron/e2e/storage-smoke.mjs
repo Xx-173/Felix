@@ -1,7 +1,7 @@
 // Run after build:electron. Uses an isolated profile and the actual Electron runtime.
 import { spawn } from 'node:child_process';
 import { once } from 'node:events';
-import { mkdtemp, writeFile, rm } from 'node:fs/promises';
+import { mkdtemp, writeFile, rm, mkdir } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { dirname, join, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -23,7 +23,7 @@ await new Promise((done) => listener.close(done));
 await writeFile(join(profile, 'workspace.json'), JSON.stringify({ watchlist: ['TSLA.US'] }));
 let child, browser, page, diagnostics = '';
 async function launch() {
-  const env = { ...process.env, FINAGENT_AGENT_PROVIDER: 'local', FINAGENT_E2E: '1', FINAGENT_E2E_HIDDEN: '1', FINAGENT_DEMO_DATA: '1', FINAGENT_FORCE_PROD_LOAD: '1', FINAGENT_USER_DATA_DIR: profile };
+  const env = { ...process.env, FINAGENT_AGENT_PROVIDER: 'local', FINAGENT_E2E: '1', FINAGENT_E2E_HIDDEN: '1', FINAGENT_DOCS_SCREENSHOTS: '1', FINAGENT_DEMO_DATA: '1', FINAGENT_FORCE_PROD_LOAD: '1', FINAGENT_USER_DATA_DIR: profile };
   delete env.ELECTRON_RUN_AS_NODE;
   child = spawn(electron, [appRoot, `--remote-debugging-port=${port}`, '--no-sandbox'], { cwd: appRoot, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'], env });
   child.stderr.on('data', (chunk) => { diagnostics = (diagnostics + chunk).slice(-8000); });
@@ -49,6 +49,24 @@ async function stop() {
 }
 try {
   await launch();
+  const artifacts = resolve(appRoot, '../../artifacts/web');
+  await mkdir(artifacts, { recursive: true });
+  await page.setViewportSize({ width: 1440, height: 1000 });
+  const skip = page.getByTestId('onboarding-skip');
+  await skip.waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
+  if (await skip.isVisible()) await skip.click();
+  assert.equal(await page.getByTestId('account-bar').count(), 0, 'desktop keeps its local account behavior');
+  await page.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
+  await page.getByTestId('watchlist-row-TSLA.US').click();
+  await page.getByRole('tab', { name: 'K 线（Chart）', exact: true }).click();
+  await page.getByTestId('chart-canvas').waitFor();
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: join(artifacts, 'desktop-workbench.png') });
+  await page.getByRole('button', { name: '切换深色主题（Dark theme）', exact: true }).click();
+  await page.waitForFunction(() => document.documentElement.classList.contains('dark'));
+  await page.waitForTimeout(250);
+  await page.screenshot({ path: join(artifacts, 'desktop-workbench-dark.png') });
+  await page.getByRole('button', { name: '切换浅色主题（Light theme）', exact: true }).click();
   const migrated = await page.evaluate(() => window.electronAPI.workspace.get());
   assert.deepEqual(migrated.data.watchlist, ['TSLA.US']);
   assert.equal((await page.evaluate(() => window.electronAPI.workspace.update({ watchlist: ['MSFT.US'] }))).ok, true);

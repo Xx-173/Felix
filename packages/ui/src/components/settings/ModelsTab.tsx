@@ -1,3 +1,4 @@
+import { BilingualLabel } from '../primitives/BilingualLabel';
 import { uiTerm } from '../../i18n/displayNames';
 import React, { useCallback, useEffect, useState } from 'react';
 import { useAtom, useSetAtom } from 'jotai';
@@ -24,7 +25,7 @@ import { ThinkingSelector } from '../agent/ThinkingSelector';
 
 const Section: React.FC<{ title: string; children: React.ReactNode }> = ({ title, children }) => (
   <section className="space-y-3">
-    <h2 className="text-[15px] font-semibold text-foreground">{title}</h2>
+    <h2 className="text-[15px] font-semibold text-foreground"><BilingualLabel>{title}</BilingualLabel></h2>
     {children}
   </section>
 );
@@ -437,9 +438,10 @@ interface FieldProps {
 
 const Field: React.FC<FieldProps> = ({ label, value, onChange, type = 'text', placeholder, className }) => (
   <label className={`flex flex-col gap-1.5 ${className ?? ''}`}>
-    <span className="text-[11px] font-medium text-foreground/54">{label}</span>
+    <span className="text-[11px] font-medium text-foreground/54"><BilingualLabel>{label}</BilingualLabel></span>
     <input
       type={type}
+      aria-label={label}
       value={value}
       onChange={(e) => onChange(e.target.value)}
       placeholder={placeholder}

@@ -5,6 +5,7 @@ import { AppShell } from '@finagent/ui';
 import { navSectionAtom } from '../../../packages/ui/src/atoms';
 import { createWebClient } from './client';
 import '../../../packages/ui/src/styles/app.css';
+import '../../../packages/ui/src/styles/workbench.css';
 import './web.css';
 
 const root = createRoot(document.getElementById('root')!);

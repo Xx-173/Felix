@@ -2,6 +2,7 @@ import React from 'react';
 import { createRoot } from 'react-dom/client';
 import App from './App';
 import '../../../../packages/ui/src/styles/app.css';
+import '../../../../packages/ui/src/styles/workbench.css';
 
 const container = document.getElementById('root');
 if (!container) {
