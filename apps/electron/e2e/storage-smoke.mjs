@@ -56,7 +56,16 @@ try {
   await skip.waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
   if (await skip.isVisible()) await skip.click();
   assert.equal(await page.getByTestId('account-bar').count(), 0, 'desktop keeps its local account behavior');
-  await page.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
+  await page.getByTestId('sidebar').getByRole('button', { name: /^市场看板（/ }).click();
+  await page.getByTestId('market-dashboard').waitFor();
+  await page.getByRole('tab', { name: '港股（HK）', exact: true }).click();
+  await page.locator('[data-market=HK]').waitFor();
+  await page.getByRole('tab', { name: '美股（US）', exact: true }).click();
+  await page.locator('[data-market=US]').waitFor();
+  await page.screenshot({ path: join(artifacts, 'desktop-market-dashboard.png') });
+  await page.getByTestId('new-session-fab').click();
+  await page.getByTestId('agent-input').waitFor();
+  await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await page.getByTestId('workspace-home').waitFor();
   await page.getByRole('button', { name: '管理分组（Manage groups）', exact: true }).click();
   const groupDialog = page.getByRole('dialog', { name: '管理分组（Manage groups）', exact: true });
@@ -69,7 +78,7 @@ try {
   await membership.getByRole('button', { name: '完成（Done）', exact: true }).click();
   await page.waitForFunction(async () => (await window.electronAPI.workspace.get()).data.groups?.[0].symbols.includes('TSLA.US'));
   assert.equal(await page.locator('.felix-sidebar-context').count(), 0);
-  assert.ok((await page.getByTestId('watchlist-row-TSLA.US').boundingBox()).height >= 50);
+  assert.ok((await page.getByTestId('watchlist-row-TSLA.US').boundingBox()).height >= 42);
   await page.screenshot({ path: join(artifacts, 'desktop-workspace-home.png') });
   await page.getByTestId('watchlist-row-TSLA.US').click();
   await page.getByRole('tab', { name: 'K 线（Chart）', exact: true }).click();

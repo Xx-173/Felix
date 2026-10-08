@@ -16,6 +16,7 @@ import {
 } from '../../client';
 import { I18nProvider } from '../../i18n/I18nProvider';
 import { LongBridgeBanner } from './LongBridgeBanner';
+import { NewSessionFloatingButton } from './NewSessionFloatingButton';
 
 interface AppShellProps {
   client?: FinagentClient;
@@ -36,6 +37,7 @@ export const AppShell: React.FC<AppShellProps> = ({ client = fallbackClient }) =
               <WorkbenchShell />
             </div>
             <OnboardingOverlay />
+            <NewSessionFloatingButton />
             <CommandPalette />
             <Toaster closeButton richColors={false} />
           </TooltipProvider>

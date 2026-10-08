@@ -55,6 +55,7 @@ function createElectronClient(): FinagentClient {
       getStaticInfo: (symbol) => ipcResult(window.electronAPI.market.getStaticInfo(symbol)),
       getCalcIndex: (symbol) => ipcResult(window.electronAPI.market.getCalcIndex(symbol)),
       getMarketStatus: () => ipcResult(window.electronAPI.market.getMarketStatus()),
+      getMarketTemperature: (market) => ipcResult(window.electronAPI.market.getMarketTemperature(market)),
       getNews: (symbol) => ipcResult(window.electronAPI.market.getNews(symbol)),
       getCalendarEvents: (input) => ipcResult(window.electronAPI.market.getCalendarEvents(input)),
     },

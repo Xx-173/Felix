@@ -24,6 +24,25 @@ try {
   await page.getByTestId('sidebar').waitFor();
   assert.match(await page.locator('body').innerText(), /示例行情/);
   assert.equal(await page.evaluate(() => Boolean(window.electronAPI)), false);
+  await page.getByTestId('market-dashboard').waitFor();
+  assert.equal(await page.locator('.felix-sidebar-new-analysis').count(), 0);
+  for (const [code, label] of [['CN', 'A 股（CN）'], ['HK', '港股（HK）'], ['US', '美股（US）']]) {
+    await page.getByRole('tab', { name: label, exact: true }).click();
+    await page.locator(`[data-testid=market-dashboard][data-market=${code}]`).waitFor();
+    await page.waitForFunction(() => document.querySelector('.felix-index-card .felix-quote-status')?.getAttribute('data-state') !== 'loading');
+    await page.screenshot({ path: resolve(artifacts, `market-dashboard-${code}.png`) });
+  }
+  await page.getByRole('button', { name: '个人概览（Personal overview）', exact: true }).click();
+  await page.getByRole('button', { name: '返回市场看板（Back to market dashboard）', exact: true }).click();
+  const fab = page.getByTestId('new-session-fab');
+  const beforeDrag = await fab.boundingBox();
+  await page.mouse.move(beforeDrag.x + 28, beforeDrag.y + 28);
+  await page.mouse.down();
+  await page.mouse.move(beforeDrag.x - 70, beforeDrag.y - 40, { steps: 8 });
+  await page.mouse.up();
+  assert.ok((await fab.boundingBox()).x < beforeDrag.x - 50);
+  assert.equal(await page.evaluate(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"kernel.hydrate"}' })).json()).data.sessions.length), 0, 'dragging does not create a session');
+  steps.push('三市场看板、个人概览入口、可拖动悬浮新会话按钮正常，拖动不会误建会话');
   steps.push('普通浏览器启动，明确标注示例行情与规则分析');
   await page.getByRole('button', { name: /^新建会话（/ }).click();
   await page.getByTestId('agent-input').fill('查询 AAPL.US 的行情');
@@ -45,7 +64,7 @@ try {
   await page.getByTestId('agent-panel').waitFor();
   await page.getByTestId('agent-panel').getByText('再次查询 MSFT.US', { exact: true }).waitFor();
   steps.push('刷新后恢复会话与消息');
-  await page.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
+  await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await page.getByTestId('workspace-home').waitFor();
   assert.equal(await page.locator('.felix-sidebar-context').count(), 0, 'lists have moved out of the sidebar');
   const search = page.getByRole('textbox', { name: /^搜索代码或名称/ });
@@ -57,8 +76,11 @@ try {
   await page.getByText(/^没有匹配的记录/).waitFor();
   await page.getByRole('combobox', { name: /^市场筛选/ }).selectOption('ALL');
   await page.getByRole('combobox', { name: /^排列方式/ }).selectOption('symbol');
+  await page.getByRole('button', { name: '卡片视图（Card view）', exact: true }).click();
+  await page.locator('.felix-watchlist[data-view=cards]').waitFor();
+  await page.getByRole('button', { name: '表格视图（Table view）', exact: true }).click();
   assert.deepEqual(await page.locator('.felix-watchlist-open:visible').evaluateAll((buttons) => buttons.map((button) => button.getAttribute('aria-label'))), ['AAPL.US', 'NVDA.US', 'TSLA.US']);
-  assert.ok((await page.getByTestId('watchlist-row-AAPL.US').boundingBox()).height >= 50, 'watchlist rows have room for name and quote');
+  assert.ok((await page.getByTestId('watchlist-row-AAPL.US').boundingBox()).height >= 42, 'watchlist rows have room for name and quote');
   await page.getByRole('button', { name: '管理分组（Manage groups）', exact: true }).click();
   let groupDialog = page.getByRole('dialog', { name: '管理分组（Manage groups）', exact: true });
   await groupDialog.getByRole('textbox', { name: '分组名称（Group name）', exact: true }).fill('长期关注');
@@ -87,7 +109,7 @@ try {
   await page.getByTestId('watchlist-row-MSFT.US').waitFor({ state: 'visible' });
   await page.waitForFunction(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"workspace.get"}' })).json()).data.groups?.[0].symbols.includes('MSFT.US'));
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
+  await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await page.getByTestId('workspace-home').waitFor();
   await page.getByRole('group', { name: '自选分组（Watchlist groups）', exact: true }).getByRole('button', { name: /^长期关注/ }).click();
   await page.getByTestId('watchlist-row-MSFT.US').waitFor({ state: 'visible' });
@@ -130,7 +152,7 @@ try {
   await page.getByRole('button', { name: /^继续会话/ }).click();
   await page.getByTestId('agent-input').waitFor({ state: 'visible' });
   await page.screenshot({ path: resolve(artifacts, 'workspace-sessions.png') });
-  await page.getByRole('button', { name: /^开始研究（/ }).click();
+  await page.getByTestId('new-session-fab').click();
   await page.waitForFunction(() => document.querySelectorAll('.felix-session-card').length === 2);
   await page.locator('.felix-session-card').first().getByRole('button', { name: /^删除 / }).click();
   let sessionDeletion = page.getByRole('dialog', { name: /^删除会话/ });
@@ -143,8 +165,9 @@ try {
   await page.getByRole('tab', { name: '自选（Watchlist）', exact: true }).click();
   steps.push('独立工作台支持自选搜索、市场筛选、排序、会话搜索和恢复，删除前可取消');
   if (!await page.getByTestId('watchlist-row-AAPL.US').count()) {
-    await page.getByPlaceholder('AAPL.US', { exact: true }).fill('AAPL.US');
     await page.getByRole('button', { name: /^添加标的（/ }).click();
+    await page.getByPlaceholder('AAPL.US', { exact: true }).fill('AAPL.US');
+    await page.getByRole('button', { name: /^确认添加（/ }).click();
   }
   await page.getByTestId('watchlist-row-AAPL.US').click();
   await page.getByRole('tab', { name: 'K 线（Chart）', exact: true }).click();
@@ -183,7 +206,7 @@ try {
   await page.getByTestId('sidebar').getByRole('button', { name: /^投资逻辑（/ }).click();
   await page.getByTestId('thesis-card').waitFor();
   steps.push('研究报告可保存为投资论点，并在完整投资逻辑页面查看');
-  for (const label of ['今日', '机会发现', '工作台', '投资组合', '对比', '提醒', '研究', '投资逻辑', '技能', '评测', '事件', '个人与安全', '设置']) {
+  for (const label of ['市场看板', '机会发现', '自选', '投资组合', '对比', '提醒', '研究', '投资逻辑', '技能', '评测', '事件', '个人与安全', '设置']) {
     const button = page.getByTestId('sidebar').getByRole('button', { name: new RegExp('^' + label + '（') });
     assert.equal(await button.count(), 1, label + ' navigation preserved');
     await button.click(); await page.waitForTimeout(180);
@@ -206,7 +229,7 @@ try {
     return (await response.json()).data.every((item) => !item.configured);
   });
   steps.push('通过原有模型设置页保存及移除访客自己的密钥');
-  await page.getByTestId('sidebar').getByRole('button', { name: /^今日（/ }).click();
+  await page.getByTestId('sidebar').getByRole('button', { name: /^市场看板（/ }).click();
   await page.screenshot({ path: resolve(artifacts, 'web-desktop.png') });
   const second = await browser.newContext();
   const other = await second.newPage(); await other.goto(origin, { waitUntil: 'domcontentloaded' });
@@ -214,14 +237,15 @@ try {
   const sessions = await other.evaluate(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"kernel.hydrate"}' })).json()).data.sessions);
   assert.equal(sessions.length, 0); steps.push('新浏览器访客没有前一访客的会话');
   await second.close();
-  await page.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
+  await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   if (!await page.getByTestId('watchlist-row-MSFT.US').count()) {
-    await page.getByPlaceholder('AAPL.US', { exact: true }).fill('MSFT.US');
     await page.getByRole('button', { name: /^添加标的（/ }).click();
+    await page.getByPlaceholder('AAPL.US', { exact: true }).fill('MSFT.US');
+    await page.getByRole('button', { name: /^确认添加（/ }).click();
   }
   await page.waitForFunction(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"workspace.get"}' })).json()).data.watchlist.includes('MSFT.US'));
   await page.reload({ waitUntil: 'domcontentloaded' });
-  await page.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
+  await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await page.getByTestId('watchlist-row-MSFT.US').waitFor();
   steps.push('通过界面修改自选股，刷新后从服务器恢复');
   const username = 'browser-' + Date.now().toString(36), password = 'dummy-browser-password-2026';
@@ -245,7 +269,7 @@ try {
   await accountPage.getByTestId('account-bar').getByText(new RegExp(username)).waitFor();
   const accountSessions = await accountPage.evaluate(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"kernel.hydrate"}' })).json()).data.sessions);
   assert.equal(accountSessions.length, 1);
-  await accountPage.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
+  await accountPage.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await accountPage.getByTestId('watchlist-row-MSFT.US').waitFor();
   await accountPage.getByRole('group', { name: '自选分组（Watchlist groups）', exact: true }).getByRole('button', { name: /^重点关注/ }).waitFor();
   const workspaceDownload = accountPage.waitForEvent('download');
@@ -259,14 +283,21 @@ try {
   assert.equal(afterLogout.length, 0);
   await accountContext.close();
   steps.push('界面注册和恢复码、另一浏览器登录恢复记录、自选股、导出及退出隔离均通过');
-  await page.getByTestId('sidebar').getByRole('button', { name: /^今日（/ }).click();
+  await page.getByTestId('sidebar').getByRole('button', { name: /^市场看板（/ }).click();
   await page.screenshot({ path: resolve(artifacts, 'web-account-desktop.png') });
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.getByTestId('sidebar').getByRole('button', { name: /^工作台（/ }).click();
+  await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await page.getByTestId('workspace-home').waitFor({ state: 'visible' });
   assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'mobile workspace fits the viewport');
   assert.equal(await page.getByTestId('sidebar').locator('.felix-sidebar-nav-label').first().isVisible(), false, 'narrow navigation shows icons with accessible labels');
   await page.screenshot({ path: resolve(artifacts, 'workspace-mobile.png') });
+  await page.getByTestId('sidebar').getByRole('button', { name: /^市场看板（/ }).click();
+  await page.getByTestId('market-dashboard').waitFor();
+  assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth), 'mobile dashboard fits the viewport');
+  await page.screenshot({ path: resolve(artifacts, 'market-dashboard-mobile.png') });
+  const mobileFab = await page.getByTestId('new-session-fab').boundingBox();
+  assert.ok(mobileFab.x >= 0 && mobileFab.x + mobileFab.width <= 390, 'floating button remains reachable after resizing');
+  await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await page.getByRole('tab', { name: '会话（Sessions）', exact: true }).click();
   await page.getByRole('button', { name: /^继续会话/ }).click();
   await page.getByTestId('agent-input').waitFor({ state: 'visible' });

@@ -191,6 +191,7 @@ ipcMain.handle('market:getCalcIndex', async (_event, symbol: unknown) =>
 ipcMain.handle('market:getMarketStatus', async () =>
   toIpcResult(() => agentKernelHost.getMarketStatus())
 );
+ipcMain.handle('market:getMarketTemperature', async (_event, market: unknown) => toIpcResult(() => agentKernelHost.getMarketTemperature(market)));
 
 ipcMain.handle('market:getCalendarEvents', async (_event, input: unknown) => toIpcResult(() => agentKernelHost.getCalendarEvents(input)));
 

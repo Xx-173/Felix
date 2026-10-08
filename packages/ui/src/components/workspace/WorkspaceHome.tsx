@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
-import { ArrowUpRight, CirclePlus, MessageSquare, Search, Trash2 } from 'lucide-react';
+import { ArrowUpRight, MessageSquare, Search, Trash2 } from 'lucide-react';
 import type { SessionMeta } from '@finagent/core';
 import {
-  activeSessionIdAtom, agentPanelVisibleAtom, createSessionAtom,
+  activeSessionIdAtom, agentPanelVisibleAtom,
   deleteSessionAtom, navSectionAtom, sessionsAtom, watchlistAtom, mobileAgentVisibleAtom,
 } from '../../atoms';
 import { useFinagentClient } from '../../client';
@@ -25,7 +25,6 @@ export const WorkspaceHome: React.FC = () => {
   const setActiveId = useSetAtom(activeSessionIdAtom);
   const showAgent = useSetAtom(agentPanelVisibleAtom);
   const showMobileAgent = useSetAtom(mobileAgentVisibleAtom);
-  const createSession = useSetAtom(createSessionAtom);
   const deleteSession = useSetAtom(deleteSessionAtom);
   const [query, setQuery] = useState('');
   const [pendingDelete, setPendingDelete] = useState<SessionMeta | null>(null);
@@ -41,13 +40,9 @@ export const WorkspaceHome: React.FC = () => {
     <main className="felix-workspace-home" data-testid="workspace-home">
       <div className="felix-hub-heading">
         <div>
-          <div className="felix-hub-eyebrow">FELIX / <BilingualLabel>{t('navigation.personalResearch')}</BilingualLabel></div>
-          <h2><BilingualLabel>{t('navigation.workspace')}</BilingualLabel></h2>
-          <p><BilingualLabel>{t('navigation.workspaceIntro')}</BilingualLabel></p>
+          <h2><BilingualLabel>{t('navigation.watchlist')}</BilingualLabel></h2>
+          <p><BilingualLabel>{t('navigation.watchlistCompactIntro')}</BilingualLabel></p>
         </div>
-        <Button size="sm" onClick={() => { showAgent(true); showMobileAgent(true); void createSession(client); }} aria-label={t('navigation.startResearch')}>
-          <CirclePlus size={15} /><BilingualLabel>{t('navigation.startResearch')}</BilingualLabel>
-        </Button>
       </div>
       <div className="felix-hub-tabs" role="tablist" aria-label={t('navigation.workspaceTabs')}>
         {(['workspace', 'sessions'] as const).map((tab) => (
@@ -66,7 +61,7 @@ export const WorkspaceHome: React.FC = () => {
         ))}
       </div>
       <section id="hub-content" role="tabpanel" aria-labelledby={`hub-tab-${isSessions ? 'sessions' : 'workspace'}`} className="felix-hub-panel">
-        {!isSessions ? <Watchlist fullPage /> : <>
+        {!isSessions ? <Watchlist fullPage showHeader={false} /> : <>
           <div className="felix-hub-toolbar">
             <label className="felix-hub-search"><Search size={16} /><input aria-label={t('navigation.sessionSearch')} placeholder={t('navigation.sessionSearch')} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
             <span className="text-xs text-foreground/50"><BilingualLabel>{t('navigation.sessionLatest')}</BilingualLabel></span>

@@ -1,4 +1,5 @@
 import type { Holding, Kline, PortfolioAccount, PortfolioSnapshot, Quote } from '@finagent/core';
+import { DEMO_INDEX_QUOTES } from '@finagent/core';
 import type { MarketDataFetchers } from './market-data-service.ts';
 import type { CapabilityFetchResult } from '../capabilities/fetchers.ts';
 
@@ -15,6 +16,7 @@ type QuoteResultFetcher = (symbol: string, signal?: AbortSignal) => Promise<Capa
 
 /** Static spec per demo symbol (same values as the renderer demo dataset). */
 const DEMO_QUOTE_SPECS: Record<string, { lastPrice: number; changePercent: number; volume: number }> = {
+  ...DEMO_INDEX_QUOTES,
   'AAPL.US': { lastPrice: 189.43, changePercent: 1.2, volume: 52_400_000 },
   'TSLA.US': { lastPrice: 175.22, changePercent: -2.1, volume: 98_100_000 },
   'NVDA.US': { lastPrice: 880.12, changePercent: 4.2, volume: 41_300_000 },

@@ -8,7 +8,6 @@ import {
   CalendarDays,
   ChartNoAxesCombined,
   CircleHelp,
-  CirclePlus,
   Compass,
   FileText,
   FlaskConical,
@@ -20,13 +19,10 @@ import {
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
-  createSessionAtom,
-  agentPanelVisibleAtom,
   mobileAgentVisibleAtom,
   navSectionAtom,
   type NavSection,
 } from '../../atoms';
-import { useFinagentClient } from '../../client';
 import { BilingualLabel } from '../primitives/BilingualLabel';
 
 type SidebarItem = { key: NavSection; labelKey: string; icon: LucideIcon };
@@ -70,9 +66,6 @@ const SidebarNavButton: React.FC<{
 
 export const Sidebar: React.FC = () => {
   const { t } = useTranslation();
-  const client = useFinagentClient();
-  const createSession = useSetAtom(createSessionAtom);
-  const showAgent = useSetAtom(agentPanelVisibleAtom);
   const showMobileAgent = useSetAtom(mobileAgentVisibleAtom);
   const [navSection, setNavSection] = useAtom(navSectionAtom);
 
@@ -83,16 +76,6 @@ export const Sidebar: React.FC = () => {
           <div className="felix-sidebar-brand-name">Felix</div>
           <div className="felix-sidebar-brand-kicker">{t('navigation.institutionalResearch')}</div>
         </div>
-
-        <button
-          type="button"
-          aria-label={t('navigation.newSession')}
-          onClick={() => { showAgent(true); showMobileAgent(true); void createSession(client); }}
-          className="felix-sidebar-new-analysis mb-6 flex h-9 w-full items-center justify-center gap-2 rounded-[4px] px-3 text-[12px] font-semibold"
-        >
-          <CirclePlus className="h-4 w-4" />
-          <span><BilingualLabel>{t('navigation.newSession')}</BilingualLabel></span>
-        </button>
 
         <nav aria-label={t('navigation.globalNavAria')} className="felix-sidebar-nav flex min-h-0 flex-1 flex-col gap-1">
           {SIDEBAR_ITEMS.map((item) => (

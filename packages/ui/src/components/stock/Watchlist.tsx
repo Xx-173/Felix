@@ -1,6 +1,6 @@
 import React, { useEffect, useReducer, useRef } from 'react';
-import { CirclePlus, Folder, RefreshCw, Search, Upload, X } from 'lucide-react';
-import { useAtom, useAtomValue, useSetAtom } from 'jotai';
+import { CirclePlus, Folder, RefreshCw, Search, Upload, X, LayoutGrid, List } from 'lucide-react';
+import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { MAX_WATCHLIST_SYMBOLS } from '@finagent/core';
 import { useTranslation } from 'react-i18next';
 import {
@@ -27,6 +27,9 @@ import { formatMarketPrice, watchlistMarket, WATCHLIST_SYMBOL_PATTERN } from '..
 import { QuoteStatus } from './QuoteStatus';
 import { WatchlistGroupsDialog } from './WatchlistGroupsDialog';
 import { WatchlistImportDialog } from './WatchlistImportDialog';
+import { Dialog } from '../primitives/Dialog';
+import { readPersisted, writePersisted } from '../../lib/persistedPrefs';
+import { summarizeQuotes } from '../../lib/market-dashboard';
 
 const DASH = '\u2014';
 
@@ -41,6 +44,8 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
   const [groupId, setGroupId] = React.useState('ALL');
   const [groupEditor, setGroupEditor] = React.useState<string | null>(null);
   const [importOpen, setImportOpen] = React.useState(false);
+  const [addOpen, setAddOpen] = React.useState(false);
+  const [display, setDisplay] = React.useState(() => readPersisted<string>('watchlistDisplay', 'table') === 'cards' ? 'cards' : 'table');
   const [refreshing, setRefreshing] = React.useState(false);
   const fetchQuote = useSetAtom(fetchQuoteAtom);
   const addSymbol = useSetAtom(addToWatchlistAtom);
@@ -55,6 +60,8 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
   const latestTimestamp = useAtomValue(watchlistLatestTimestampAtom);
   const quotesAreDemo = useAtomValue(watchlistQuotesAreDemoAtom);
   const hasDemoQuotes = useAtomValue(watchlistHasDemoQuotesAtom);
+  const cacheAtom = React.useMemo(() => atom((get) => Object.fromEntries(watchlist.map((symbol) => [symbol, get(quoteCacheAtomFamily(symbol)).data]))), [watchlist]);
+  const quotes = useAtomValue(cacheAtom);
 
   const [newSymbol, setNewSymbol] = React.useState('');
   const [error, setError] = React.useState('');
@@ -111,6 +118,7 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
     setMarket('ALL');
     setNewSymbol('');
     setError('');
+    setAddOpen(false);
   };
 
   const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -122,14 +130,29 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
   const visible = watchlist.filter((symbol) => (market === 'ALL' || watchlistMarket(symbol) === market)
     && (groupId === 'ALL' || (groupId === 'NONE' ? !groups.some((group) => group.symbols.includes(symbol)) : selectedGroup?.symbols.includes(symbol)))
     && (symbol + ' ' + (nameCache.current.get(symbol) ?? '')).toLowerCase().includes(query.trim().toLowerCase()));
-  const ordered = sort === 'symbol' ? [...watchlist].sort() : watchlist;
+  const summary = summarizeQuotes(visible.flatMap((symbol) => quotes[symbol] ? [quotes[symbol]!] : []));
+  const ordered = sort === 'symbol' ? [...watchlist].sort() : ['changeDesc', 'changeAsc', 'priceDesc'].includes(sort) ? [...watchlist].sort((a, b) => {
+    const key = sort === 'priceDesc' ? 'lastPrice' : 'changePercent';
+    const av = quotes[a]?.[key], bv = quotes[b]?.[key];
+    if (av == null || !Number.isFinite(av)) return bv == null || !Number.isFinite(bv) ? 0 : 1;
+    if (bv == null || !Number.isFinite(bv)) return -1;
+    return sort === 'changeAsc' ? av - bv : bv - av;
+  }) : watchlist;
+
+  const addForm = <div className="felix-watchlist-add flex gap-1.5">
+    <Input value={newSymbol} onChange={(event) => { setNewSymbol(event.target.value.toUpperCase()); setError(''); }} onKeyDown={handleKeyDown} placeholder="AAPL.US" aria-label={t('navigation.watchlistAddSymbol')} error={error} className="h-8 flex-1 text-[12px]" />
+    <Button size={fullPage ? 'sm' : 'icon'} onClick={handleAddSymbol} aria-label={t(fullPage ? 'navigation.confirmAddSymbol' : 'navigation.watchlistAddSymbol')}><CirclePlus size={14} />{fullPage && t('navigation.confirmAddSymbol')}</Button>
+  </div>;
 
   return (
-    <div className={`felix-watchlist flex flex-col ${fullPage ? 'felix-watchlist-page' : 'h-full'}`}>
+    <div className={`felix-watchlist flex flex-col ${fullPage ? 'felix-watchlist-page' : 'h-full'}`} data-view={display}>
       {fullPage && <div className="felix-watchlist-groups" role="group" aria-label={t('navigation.groupFilter')}>
         <button type="button" aria-pressed={groupId === 'ALL'} onClick={() => setGroupId('ALL')}>{t('navigation.allGroups')} <small>{watchlist.length}</small></button>
         <button type="button" aria-pressed={groupId === 'NONE'} onClick={() => setGroupId('NONE')}>{t('navigation.ungrouped')}</button>
-        {groups.map((group) => <button key={group.id} type="button" aria-pressed={groupId === group.id} onClick={() => setGroupId(group.id)}><Folder size={13} />{group.name} <small>{group.symbols.length}</small></button>)}
+        {groups.map((group) => {
+          const stats = summarizeQuotes(group.symbols.flatMap((symbol) => quotes[symbol] ? [quotes[symbol]!] : []));
+          return <button key={group.id} type="button" aria-pressed={groupId === group.id} onClick={() => setGroupId(group.id)}><Folder size={13} />{group.name} <small>{group.symbols.length}</small>{stats.average !== null && <small style={{ color: stats.average >= 0 ? 'var(--positive)' : 'var(--negative)' }}>{stats.isDemo ? '* ' : ''}{formatPercent(stats.average)}</small>}</button>;
+        })}
         <button type="button" className="felix-manage-groups" onClick={() => setGroupEditor('')}><CirclePlus size={13} />{t('navigation.manageGroups')}</button>
       </div>}
       <div className="felix-watchlist-header border-b mac-section-divider px-3 py-3">
@@ -152,6 +175,7 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
         )}
         {fullPage && <div className="felix-watchlist-actions">
           <span>{t('navigation.watchlistCapacity', { count: watchlist.length, max: MAX_WATCHLIST_SYMBOLS })}</span>
+          <Button size="sm" onClick={() => setAddOpen(true)} aria-label={t('navigation.watchlistAddSymbol')}><CirclePlus size={14} /><BilingualLabel>{t('navigation.watchlistAddSymbol')}</BilingualLabel></Button>
           <Button size="sm" variant="outline" onClick={() => setImportOpen(true)}><Upload size={14} />{t('navigation.watchlistImport')}</Button>
           <Button size="sm" variant="outline" disabled={refreshing || visible.length === 0} onClick={async () => {
             setRefreshing(true);
@@ -161,27 +185,20 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
               }
             } finally { setRefreshing(false); }
           }}><RefreshCw size={14} className={refreshing ? 'animate-spin' : ''} />{t('navigation.refreshQuotes')}</Button>
+          <div className="felix-watchlist-view-toggle">
+            <button type="button" aria-label={t('navigation.tableView')} title={t('navigation.tableView')} aria-pressed={display === 'table'} onClick={() => { setDisplay('table'); writePersisted('watchlistDisplay', 'table'); }}><List size={16} /></button>
+            <button type="button" aria-label={t('navigation.cardView')} title={t('navigation.cardView')} aria-pressed={display === 'cards'} onClick={() => { setDisplay('cards'); writePersisted('watchlistDisplay', 'cards'); }}><LayoutGrid size={16} /></button>
+          </div>
         </div>}
-        <div className="felix-watchlist-add flex gap-1.5">
-          <Input
-            value={newSymbol}
-            onChange={(e: React.ChangeEvent<HTMLInputElement>) => {
-              setNewSymbol(e.target.value.toUpperCase());
-              setError('');
-            }}
-            onKeyDown={handleKeyDown}
-            placeholder="AAPL.US"
-            aria-label={t('navigation.watchlistAddSymbol')}
-            error={error}
-            className="h-8 flex-1 text-[12px]"
-          />
-          <Button size={fullPage ? 'sm' : 'icon'} onClick={handleAddSymbol} aria-label={t('navigation.watchlistAddSymbol')}>
-            <CirclePlus className="h-4 w-4" strokeWidth={1.8} />
-            {fullPage && <span>{t('navigation.watchlistAddSymbol')}</span>}
-          </Button>
-        </div>
+        {!fullPage && addForm}
       </div>
-
+      {fullPage && <div className="felix-watchlist-summary" data-testid="watchlist-summary">
+        {summary.isDemo && <DemoBadge />}
+        <span>{t('navigation.validQuotes')} <strong>{summary.count} / {visible.length}</strong></span>
+        <span>{t('navigation.risingList')} <strong style={{ color: 'var(--positive)' }}>{summary.count ? summary.rising : '—'}</strong></span>
+        <span>{t('navigation.fallingList')} <strong style={{ color: 'var(--negative)' }}>{summary.count ? summary.falling : '—'}</strong></span>
+        <span>{t('navigation.averageChange')} <strong>{summary.average === null ? '—' : formatPercent(summary.average)}</strong></span>
+      </div>}
       {fullPage && <div className="felix-hub-toolbar">
         <label className="felix-hub-search"><Search size={16} /><input aria-label={t('navigation.watchlistSearch')} placeholder={t('navigation.watchlistSearch')} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
         <select aria-label={t('navigation.marketFilter')} value={market} onChange={(event) => setMarket(event.target.value)}>
@@ -190,10 +207,11 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
         </select>
         <select aria-label={t('navigation.symbolSort')} value={sort} onChange={(event) => setSort(event.target.value)}>
           <option value="added">{t('navigation.addedOrder')}</option><option value="symbol">{t('navigation.alphabetical')}</option>
+          <option value="changeDesc">{t('navigation.changeDescending')}</option><option value="changeAsc">{t('navigation.changeAscending')}</option><option value="priceDesc">{t('navigation.priceDescending')}</option>
         </select>
       </div>}
       {fullPage && <div className="felix-watchlist-columns" aria-hidden="true">
-        {['symbolColumn', 'marketColumn', 'priceColumn', 'changeColumn', 'actionsColumn'].map((key) => <span key={key}><BilingualLabel stacked>{t('navigation.' + key)}</BilingualLabel></span>)}
+        {['symbolColumn', 'priceColumn', 'changeColumn', 'volumeColumn', 'highColumn', 'lowColumn', 'actionsColumn'].map((key) => <span key={key}><BilingualLabel stacked>{t('navigation.' + key)}</BilingualLabel></span>)}
       </div>}
       <div className="felix-watchlist-list flex-1 p-1.5">
         {/* Hidden rows still resolve names and refresh quotes for accurate search. */}
@@ -225,6 +243,7 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
       </div>
       {groupEditor !== null && <WatchlistGroupsDialog symbol={groupEditor || undefined} onClose={() => setGroupEditor(null)} />}
       {importOpen && <WatchlistImportDialog groupId={selectedGroup?.id} onClose={() => setImportOpen(false)} />}
+      {fullPage && <Dialog open={addOpen} onClose={() => setAddOpen(false)} title={t('navigation.addSymbolTitle')}><p className="mb-4 text-xs text-foreground/60">{t('navigation.importInstructions')}</p>{addForm}</Dialog>}
     </div>
   );
 };
@@ -275,10 +294,10 @@ const WatchlistRow: React.FC<WatchlistRowProps> = ({
     <div hidden={hidden} className={`felix-watchlist-row group ${active ? 'felix-watchlist-row--active' : ''}`}>
       <div className="felix-watchlist-row-main">
       <button type="button" aria-label={symbol} data-testid={`watchlist-row-${symbol}`} onClick={onSelect} className="felix-watchlist-open">
-        <span className="felix-watchlist-identity"><strong>{symbol}</strong><span>{name}</span></span>
-        {fullPage && <span className="felix-watchlist-market">{t('navigation.market' + watchlistMarket(symbol))}</span>}
+        <span className="felix-watchlist-identity"><strong>{symbol} {fullPage && <small className="felix-watchlist-market"><BilingualLabel>{t('navigation.market' + watchlistMarket(symbol))}</BilingualLabel></small>}</strong><span>{name}</span></span>
         <span className="felix-watchlist-price">{loading ? <span className="inline-block h-3.5 w-14 animate-pulse rounded bg-foreground/10" /> : quote ? formatMarketPrice(quote.lastPrice, symbol) : DASH}</span>
         <span className="felix-watchlist-change" style={{ color: changeColor }}>{quote ? formatPercent(quote.changePercent) : DASH}</span>
+        {fullPage && <><span className="felix-watchlist-volume">{quote && Number.isFinite(quote.volume) ? new Intl.NumberFormat(undefined, { notation: 'compact', maximumFractionDigits: 1 }).format(quote.volume) : DASH}</span><span className="felix-watchlist-range">{quote ? formatMarketPrice(quote.high, symbol) : DASH}</span><span className="felix-watchlist-range">{quote ? formatMarketPrice(quote.low, symbol) : DASH}</span></>}
       </button>
       {fullPage && <button type="button" className="felix-hub-remove" aria-label={t('navigation.groupMembershipFor', { symbol })} onClick={onGroups}><Folder size={15} /></button>}
       <button type="button" onClick={onRemove} className="felix-hub-remove" aria-label={t("navigation.watchlistRemoveSymbol", { symbol })}><X size={15} /></button>

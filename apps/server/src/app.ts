@@ -298,7 +298,7 @@ export async function createWebApplication(options: ServerOptions) {
       case 'market.getDepth': return market.getDepth(symbolSchema.parse(args[0]));
       case 'market.getTrades': return market.getTrades(symbolSchema.parse(args[0]), z.number().int().min(1).max(200).parse(args[1] ?? 20));
       case 'market.getCapitalFlow': return market.getCapitalFlow(symbolSchema.parse(args[0]));
-      case 'market.getMarketTemperature': return market.getMarketTemperature(z.enum(['US', 'HK', 'SG', 'SH', 'SZ']).parse(args[0] ?? 'US'));
+      case 'market.getMarketTemperature': return market.getMarketTemperature(z.enum(['CN', 'US', 'HK', 'SG', 'SH', 'SZ']).parse(args[0] ?? 'US'));
       case 'market.getFinancialReport': return market.getFinancialReport(symbolSchema.parse(args[0]), z.enum(['IS', 'BS', 'CF', 'ALL']).parse(args[1] ?? 'ALL'), args[2] === undefined ? undefined : z.string().max(40).parse(args[2]));
       case 'market.getInstitutionRating': return market.getInstitutionRating(symbolSchema.parse(args[0]));
       case 'market.getDividends': return market.getDividends(symbolSchema.parse(args[0]));

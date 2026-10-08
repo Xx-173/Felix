@@ -42,6 +42,7 @@ export interface ElectronAPI {
     getStaticInfo: (symbol: string) => Promise<unknown>;
     getCalcIndex: (symbol: string) => Promise<unknown>;
     getMarketStatus: () => Promise<unknown>;
+    getMarketTemperature: (market: 'CN' | 'HK' | 'US') => Promise<unknown>;
     getNews: (symbol: string) => Promise<unknown>;
     getCalendarEvents: (input: { eventType?: string; symbols?: string[] }) => Promise<unknown>;
   };
@@ -241,6 +242,7 @@ const electronAPI: ElectronAPI = {
     getStaticInfo: (symbol: string) => ipcRenderer.invoke('market:getStaticInfo', symbol),
     getCalcIndex: (symbol: string) => ipcRenderer.invoke('market:getCalcIndex', symbol),
     getMarketStatus: () => ipcRenderer.invoke('market:getMarketStatus'),
+    getMarketTemperature: (market: 'CN' | 'HK' | 'US') => ipcRenderer.invoke('market:getMarketTemperature', market),
     getNews: (symbol: string) => ipcRenderer.invoke('market:getNews', symbol),
     getCalendarEvents: (input: { eventType?: string; symbols?: string[] }) => ipcRenderer.invoke('market:getCalendarEvents', input),
   },

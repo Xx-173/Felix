@@ -653,6 +653,10 @@ export class AgentKernelHost {
     return this.marketData.getMarketStatus();
   }
 
+  getMarketTemperature(market: unknown) {
+    return this.marketData.getMarketTemperature(z.enum(['CN', 'HK', 'US']).parse(market));
+  }
+
   getCalendarEvents(raw: unknown) {
     const input = z.object({ eventType: z.enum(['financial', 'report', 'dividend', 'ipo', 'macrodata', 'closed']).default('financial'), symbols: z.array(z.string().regex(/^[A-Z0-9]{1,6}\.(US|HK|SG|SH|SZ|HAS)$/)).max(10).optional() }).parse(raw ?? {});
     return this.marketData.getCalendarEvents(input);

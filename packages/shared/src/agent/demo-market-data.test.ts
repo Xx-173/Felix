@@ -7,7 +7,7 @@ type DemoFetchers = Pick<MarketDataFetchers, 'getQuote' | 'getKline'>;
 describe('built-in demo price history', () => {
   it('ends at the displayed quote and keeps consecutive prices coherent across a long history', async () => {
     const market = withDemoDataFallback({}) as DemoFetchers;
-    for (const symbol of ['AAPL.US', 'NVDA.US', 'TSLA.US', '0700.HK']) {
+    for (const symbol of ['AAPL.US', 'NVDA.US', 'TSLA.US', '0700.HK', 'SPX.US', '000001.SH', 'HSI.HK']) {
       const quote = await market.getQuote(symbol);
       const bars = await market.getKline({ symbol, period: '1d', limit: 300 });
       expect(bars).toHaveLength(300);

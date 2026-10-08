@@ -228,6 +228,7 @@ export interface FinagentClient {
     getTools: () => Promise<ApiResult<ToolDefinition[]>>;
   };
   market: {
+    getMarketTemperature?: (market: 'CN' | 'HK' | 'US') => Promise<ApiResult<import('@finagent/core').MarketTemperature>>;
     getQuote: (symbol: string) => Promise<ApiResult<Quote>>;
     getKline: (request: KlineRequest) => Promise<ApiResult<Kline[]>>;
     getPortfolio: () => Promise<ApiResult<PortfolioSnapshot>>;

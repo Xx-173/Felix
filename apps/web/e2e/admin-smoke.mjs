@@ -86,8 +86,14 @@ try {
   const ordinary = await browser.newContext(), ordinaryPage = await ordinary.newPage();
   await ordinaryPage.goto(origin);
   const registered = await ordinaryPage.evaluate(async ({ username, password }) => {
-    const response = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'register', input: { username: 'user-' + username, password, role: 'admin' } }) });
-    return response.json();
+    // A background read may still own a queued task. Wait for that task;
+    // every other registration error must fail immediately.
+    for (let attempt = 0; attempt < 40; attempt++) {
+      const response = await fetch('/api/auth', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'register', input: { username: 'user-' + username, password, role: 'admin' } }) });
+      const result = await response.json();
+      if (result.ok || result.error?.code !== 'RUN_ACTIVE' || attempt === 39) return result;
+      await new Promise((done) => setTimeout(done, 250));
+    }
   }, { username, password });
   assert.equal(registered.ok, true, JSON.stringify(registered.error));
   assert.equal(registered.data.user.role, 'user');

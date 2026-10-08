@@ -4,6 +4,7 @@ import type { SupportedLocale } from './locale.ts';
 import type { FinancialEvidenceEnvelope } from './financial-evidence.ts';
 import type { ProviderProvenance } from './provider.ts';
 export * from './workspace-storage.ts';
+export * from './demo-indices.ts';
 
 export type { SupportedLocale, LocalePreference } from './locale.ts';
 
