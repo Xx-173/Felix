@@ -89,6 +89,14 @@ try {
   await groupDialog.getByRole('textbox', { name: '分组名称（Group name）', exact: true }).fill('桌面研究');
   await groupDialog.getByRole('button', { name: '新建分组（Create group）', exact: true }).click();
   await groupDialog.getByRole('button', { name: '完成（Done）', exact: true }).click();
+  // A native window and CDP viewport can start at different sizes. Move the
+  // movable launcher away from row actions using the same drag as a user.
+  const launcher = await page.getByTestId('new-session-fab').boundingBox();
+  await page.mouse.move(launcher.x + launcher.width / 2, launcher.y + launcher.height / 2);
+  await page.mouse.down();
+  await page.mouse.move(130, 150, { steps: 8 });
+  await page.mouse.up();
+  assert.ok((await page.getByTestId('new-session-fab').boundingBox()).x < 200);
   await page.getByRole('button', { name: '设置 TSLA.US 的分组（Set groups for TSLA.US）', exact: true }).click();
   const membership = page.getByRole('dialog', { name: /所属分组/ });
   await membership.getByRole('checkbox', { name: '桌面研究', exact: true }).check();
