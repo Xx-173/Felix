@@ -61,6 +61,11 @@ export type UniverseProvider = () => Promise<UniverseEntry[]>
 
 /** Built-in bounded pool of liquid, well-known names (US/HK/SG). */
 export const STATIC_UNIVERSE: UniverseEntry[] = [
+  { symbol: '600519.SH', name: '贵州茅台' },
+  { symbol: '601318.SH', name: '中国平安' },
+  { symbol: '000001.SZ', name: '平安银行' },
+  { symbol: '000858.SZ', name: '五粮液' },
+  { symbol: '300750.SZ', name: '宁德时代' },
   { symbol: 'AAPL.US', name: 'Apple' },
   { symbol: 'MSFT.US', name: 'Microsoft' },
   { symbol: 'NVDA.US', name: 'NVIDIA' },
@@ -245,7 +250,7 @@ export class ScreeningService {
         dedupe.set(symbol, { symbol, ...(entry.name ? { name: entry.name } : {}) })
       }
     }
-    return [...dedupe.values()].slice(0, MAX_UNIVERSE)
+    return [...dedupe.values()].filter((entry) => !query.market || marketForSymbol(entry.symbol) === query.market.toUpperCase()).slice(0, MAX_UNIVERSE)
   }
 
   private buildSpecs(

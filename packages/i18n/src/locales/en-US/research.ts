@@ -7,10 +7,22 @@ import type { NamespaceResource } from '../keys.ts';
  * ASCII; only their UI labels are localised.
  */
 export const research = {
+  marketMismatch: "Choose a stock code in the selected market.",
+  selectStock: "View stock",
+  analysisIntro: "Review daily candles, key price levels and quotes, then start technical, fundamental, financial and news research.",
+  selectHint: "Enter a qualified code (600519.SH, 0700.HK, AAPL.US), or pick a watchlist stock below. Viewing a stock does not call AI.",
+  historyTitle: "Report history",
+  historyEmpty: "No research reports in this market yet.",
+  historyLoading: "Loading report…",
+  keyLevels: "Key levels (last 20 candles)",
+  rangeHigh: "Range high",
+  rangeLow: "Range low",
+  averageClose: "Average close",
+  levelsHint: "Historical range statistics for price context.",
   deepResearch: 'Deep Research',
   workspace: {
     title: 'Research',
-    searchPlaceholder: 'Search securities, topics, or notes',
+    searchPlaceholder: 'Search stock codes or watchlist names',
     addToWatchlist: 'Add to watchlist',
     inWatchlist: 'In watchlist',
     moreActions: 'More actions',

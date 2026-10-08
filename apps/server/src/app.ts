@@ -287,6 +287,7 @@ export async function createWebApplication(options: ServerOptions) {
         if (!runs.some((run) => run.id === input.runId)) throw createCodeError('RUN_NOT_FOUND', 'Run not found.');
         return kernel.runs.replayStream(input.runId, input.lastSequence);
       }
+      case 'market.getLimitUpLadder': return market.getLimitUpLadder(z.string().regex(/^\d{4}-\d{2}-\d{2}$/).parse(args[0]), z.enum(['auto', 'live']).parse(args[1] ?? 'auto'));
       case 'market.getQuote': return market.getQuote(symbolSchema.parse(args[0]));
       case 'market.getKline': {
         const input = z.object({ symbol: symbolSchema, period: z.string().regex(/^[a-zA-Z0-9]{1,12}$/).optional(), limit: z.number().int().min(1).max(500).optional() }).parse(args[0]);

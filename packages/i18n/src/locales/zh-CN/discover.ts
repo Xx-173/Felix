@@ -3,6 +3,20 @@ import type { discover as enDiscover } from '../en-US/discover.ts';
 
 /** Discover — task-driven screening — Simplified Chinese (glossary-aligned §26). */
 export const discover = {
+  ladderOnline: "在线股池（点击返回默认数据）",
+  ladderFetchOnline: "获取在线股池",
+  ladderTitle: "连板梯队",
+  ladderDate: "交易日期",
+  ladderRefresh: "刷新梯队",
+  ladderUnavailable: "连板数据暂不可用，请稍后刷新。",
+  ladderNotApplicable: "港股、美股不采用 A 股的每日涨停连板口径；请切换到 A 股查看梯队。",
+  ladderScope: "来自涨停股池，按供应商提供的连板数分层；覆盖范围以源站为准，不是自选统计，也不是完整全市场扫描。",
+  ladderSource: "东方财富涨停股池",
+  ladderCount: "{{count}} 个涨停标的",
+  ladderEmpty: "该日期股池没有记录；休市、历史范围或供应商覆盖可能影响结果。",
+  ladderFirst: "首板",
+  ladderBoards: "{{count}} 板",
+  marketScope: "仅筛选当前市场；无该市场自选时使用该市场内置证券池。",
   title: '机会发现',
   subtitle: '选择一个任务来筛选{{scope}}——基于实时市场数据的确定性规则，无 AI 扫描。',
   scopeWatchlist: '你的自选（{{count}} 个标的）',

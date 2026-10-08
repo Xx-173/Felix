@@ -61,6 +61,17 @@ test('web bootstrap labels demo mode and validates untrusted requests', async ()
   }))).status).toBe(403);
 });
 
+test('limit-up ladder RPC is typed, sample marked, bounded to a validated date and never changes watchlists', async () => {
+  const { app } = await setup(); const user = visitor(app);
+  const before = await user.rpc('workspace.get');
+  const ladder = await user.rpc('market.getLimitUpLadder', '2026-10-08');
+  expect(ladder.ok).toBe(true); expect(ladder.data.source).toBe('demo');
+  expect(ladder.data.stocks.every((stock: { symbol: string; boards: number }) => /\.(SH|SZ)$/.test(stock.symbol) && stock.boards >= 1)).toBe(true);
+  expect((await user.rpc('market.getLimitUpLadder', 'not-a-date')).ok).toBe(false);
+  expect((await user.rpc('market.getLimitUpLadder', '2026-02-29')).ok).toBe(false);
+  expect((await user.rpc('workspace.get')).data.watchlist).toEqual(before.data.watchlist);
+});
+
 test('signed visitor identity isolates session, messages, runs, and research', async () => {
   const { app } = await setup();
   const owner = visitor(app), other = visitor(app);

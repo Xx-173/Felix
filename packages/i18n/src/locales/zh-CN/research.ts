@@ -3,10 +3,22 @@ import type { research as enResearch } from '../en-US/research.ts';
 
 /** 研究(深度研究)界面(规格 §29, §44–55)。 */
 export const research = {
+  marketMismatch: "请选择当前市场的股票代码。",
+  selectStock: "查看个股",
+  analysisIntro: "先查看日 K、关键价位和行情，再主动启动技术面／基本面／财务／消息面研究。",
+  selectHint: "输入完整代码（如 600519.SH、0700.HK、AAPL.US），或选择下面的自选；查看个股不会调用 AI。",
+  historyTitle: "历史报告",
+  historyEmpty: "当前市场暂无研究报告。",
+  historyLoading: "正在读取报告…",
+  keyLevels: "关键价位（最近 20 根 K 线）",
+  rangeHigh: "区间高点",
+  rangeLow: "区间低点",
+  averageClose: "收盘均价",
+  levelsHint: "历史区间统计，仅用于观察价格位置。",
   deepResearch: '深度研究',
   workspace: {
     title: '研究',
-    searchPlaceholder: '搜索标的、主题或笔记',
+    searchPlaceholder: '搜索股票代码或自选名称',
     addToWatchlist: '加入自选',
     inWatchlist: '已在自选',
     moreActions: '更多操作',

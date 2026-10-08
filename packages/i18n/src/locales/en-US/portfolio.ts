@@ -2,6 +2,7 @@ import type { NamespaceResource } from '../keys.ts';
 
 /** Portfolio slice (spec §31) — account summary, holdings, import, risk. */
 export const portfolio = {
+  ownAssetsEmpty: "Only assets and holdings from your imported or connected accounts appear here. No sample funds are shown before importing.",
   title: 'Portfolio',
   totalValue: 'Total Value',
   cash: 'Cash',

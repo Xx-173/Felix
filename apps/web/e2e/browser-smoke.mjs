@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { verifyMarketPages } from './market-pages.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -14,12 +15,15 @@ const browser = await chromium.launch({ headless: true,
   executablePath: process.env.FELIX_BROWSER_PATH ?? (process.platform === 'win32'
     ? 'C:/Program Files/Google/Chrome/Application/chrome.exe' : '/usr/bin/google-chrome'),
 });
-const errors = [], steps = [];
+// Bound test polling so assertions do not consume the application's request budget.
+const waitForState = (target, fn, arg, options = {}) => target.waitForFunction(fn, arg, { polling: 100, ...options });
+const errors = [], steps = [], requestCounts = {};
 let page;
 try {
+  steps.push(await verifyMarketPages(browser, origin, artifacts));
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.route('**/*', (route) => route.request().url().startsWith(origin + '/') ? route.continue() : route.abort());
-  page = await context.newPage(); page.on('pageerror', (error) => errors.push(error.message));
+  page = await context.newPage(); page.on('request', (request) => { if (request.url().endsWith('/api/rpc')) { const method = request.postDataJSON()?.method; requestCounts[method] = (requestCounts[method] ?? 0) + 1; } }); page.on('pageerror', (error) => errors.push(error.message));
   await page.goto(origin, { waitUntil: 'domcontentloaded' });
   await page.getByTestId('sidebar').waitFor();
   assert.match(await page.locator('body').innerText(), /示例行情/);
@@ -62,7 +66,7 @@ try {
   for (const [code, label] of [['CN', 'A 股（CN）'], ['HK', '港股（HK）'], ['US', '美股（US）']]) {
     await page.getByRole('tab', { name: label, exact: true }).click();
     await page.locator(`[data-testid=market-dashboard][data-market=${code}]`).waitFor();
-    await page.waitForFunction(() => document.querySelector('.felix-index-card .felix-quote-status')?.getAttribute('data-state') !== 'loading');
+    await waitForState(page, () => document.querySelector('.felix-index-card .felix-quote-status')?.getAttribute('data-state') !== 'loading');
     await page.screenshot({ path: resolve(artifacts, `market-dashboard-${code}.png`) });
   }
   await page.getByRole('button', { name: '个人概览（Personal overview）', exact: true }).click();
@@ -96,14 +100,14 @@ try {
   steps.push('AI 助手提供四组17个可编辑问题，打开及点选不建空会话；展开、关闭、再次打开正常');
   await page.getByTestId('agent-input').fill('查询 AAPL.US 的行情');
   await page.getByTestId('agent-input').press('Enter');
-  await page.waitForFunction(async () => {
+  await waitForState(page, async () => {
     const rpc = async (method, args = []) => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method, args }) })).json()).data;
     const sessions = (await rpc('kernel.hydrate')).sessions;
     return sessions.length && (await rpc('kernel.getMessages', [sessions[0].id])).length === 2;
   });
   await page.getByTestId('agent-input').fill('再次查询 MSFT.US');
   await page.getByTestId('agent-input').press('Enter');
-  await page.waitForFunction(async () => {
+  await waitForState(page, async () => {
     const rpc = async (method, args = []) => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ method, args }) })).json()).data;
     const sessions = (await rpc('kernel.hydrate')).sessions;
     return (await rpc('kernel.getMessages', [sessions[0].id])).length === 4;
@@ -121,9 +125,9 @@ try {
   await page.getByTestId('watchlist-row-TSLA.US').waitFor({ state: 'visible' });
   assert.equal(await page.getByTestId('watchlist-row-AAPL.US').isVisible(), false);
   await search.fill('');
-  await page.getByRole('combobox', { name: /^市场筛选/ }).selectOption('HK');
+  await page.getByRole('tab', { name: '港股（HK）', exact: true }).click();
   await page.getByText(/^没有匹配的记录/).waitFor();
-  await page.getByRole('combobox', { name: /^市场筛选/ }).selectOption('ALL');
+  await page.getByRole('tab', { name: '全部市场（All markets）', exact: true }).click();
   await page.getByRole('combobox', { name: /^排列方式/ }).selectOption('symbol');
   await page.getByRole('button', { name: '卡片视图（Card view）', exact: true }).click();
   await page.locator('.felix-watchlist[data-view=cards]').waitFor();
@@ -156,7 +160,7 @@ try {
   await importDialog.getByRole('textbox', { name: '待导入代码（Codes to import）', exact: true }).fill('MSFT.US, NVDA.US, MSFT.US, BAD');
   await importDialog.getByRole('button', { name: '确认导入 1 个（Import 1 symbols）', exact: true }).click();
   await page.getByTestId('watchlist-row-MSFT.US').waitFor({ state: 'visible' });
-  await page.waitForFunction(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"workspace.get"}' })).json()).data.groups?.[0].symbols.includes('MSFT.US'));
+  await waitForState(page, async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"workspace.get"}' })).json()).data.groups?.[0].symbols.includes('MSFT.US'));
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await page.getByTestId('workspace-home').waitFor();
@@ -205,8 +209,8 @@ try {
   await page.getByTestId('assistant-new-session').click();
   await page.getByTestId('agent-input').fill('查询 NVDA.US 的行情');
   await page.getByTestId('agent-input').press('Enter');
-  await page.waitForFunction(() => document.querySelectorAll('.felix-session-card').length === 2);
-  await page.waitForFunction(() => !document.querySelector('[data-testid=assistant-history]')?.disabled);
+  await waitForState(page, () => document.querySelectorAll('.felix-session-card').length === 2);
+  await waitForState(page, () => !document.querySelector('[data-testid=assistant-history]')?.disabled);
   await page.getByTestId('assistant-history').click();
   await page.getByTestId('assistant-history-list').getByRole('button').last().click();
   await page.getByTestId('agent-panel').getByText('再次查询 MSFT.US', { exact: true }).waitFor();
@@ -219,7 +223,7 @@ try {
   await page.locator('.felix-session-card').first().getByRole('button', { name: /^删除 / }).click();
   sessionDeletion = page.getByRole('dialog', { name: /^删除会话/ });
   await sessionDeletion.getByRole('button', { name: /^确认删除（/ }).click();
-  await page.waitForFunction(() => document.querySelectorAll('.felix-session-card').length === 1);
+  await waitForState(page, () => document.querySelectorAll('.felix-session-card').length === 1);
   await page.getByRole('tab', { name: '自选（Watchlist）', exact: true }).click();
   steps.push('独立工作台支持自选搜索、市场筛选、排序、会话搜索和恢复，删除前可取消');
   if (!await page.getByTestId('watchlist-row-AAPL.US').count()) {
@@ -241,7 +245,7 @@ try {
   assert.ok(Math.abs((await page.getByTestId('sidebar').boundingBox()).width - sidebarWidth) < 2, 'closing the assistant preserves sidebar width');
   await page.screenshot({ path: resolve(artifacts, 'workbench-light.png') });
   await page.getByRole('button', { name: '切换深色主题（Dark theme）', exact: true }).click();
-  await page.waitForFunction(() => document.documentElement.classList.contains('dark'));
+  await waitForState(page, () => document.documentElement.classList.contains('dark'));
   await page.waitForTimeout(250); // Wait for the shared color transitions before visual capture.
   await page.screenshot({ path: resolve(artifacts, 'workbench-dark.png') });
   await assistantToggle.click();
@@ -280,15 +284,15 @@ try {
   await page.getByRole('tab', { name: /^大语言模型（/ }).click();
   await page.screenshot({ path: resolve(artifacts, 'settings-models.png') });
   const credential = page.locator('input[type="password"]').first();
-  await page.waitForFunction(() => document.querySelectorAll('input[type="password"]').length >= 5);
+  await waitForState(page, () => document.querySelectorAll('input[type="password"]').length >= 5);
   await credential.pressSequentially('dummy-browser-test-key', { delay: 30 });
   await credential.locator('..').getByRole('button', { name: /^保存（/ }).click();
-  await page.waitForFunction(async () => {
+  await waitForState(page, async () => {
     const response = await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"llm.listCredentials"}' });
     return (await response.json()).data.some((item) => item.configured);
   });
   await page.getByRole('button', { name: /^移除（/ }).first().click();
-  await page.waitForFunction(async () => {
+  await waitForState(page, async () => {
     const response = await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"llm.listCredentials"}' });
     return (await response.json()).data.every((item) => !item.configured);
   });
@@ -307,7 +311,7 @@ try {
     await page.getByPlaceholder('AAPL.US', { exact: true }).fill('MSFT.US');
     await page.getByRole('button', { name: /^确认添加（/ }).click();
   }
-  await page.waitForFunction(async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"workspace.get"}' })).json()).data.watchlist.includes('MSFT.US'));
+  await waitForState(page, async () => (await (await fetch('/api/rpc', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{"method":"workspace.get"}' })).json()).data.watchlist.includes('MSFT.US'));
   await page.reload({ waitUntil: 'domcontentloaded' });
   await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
   await page.getByTestId('watchlist-row-MSFT.US').waitFor();
@@ -398,7 +402,7 @@ try {
   console.log(JSON.stringify({ passed: true, steps, pageErrors: errors }, null, 2));
 } catch (error) {
   await page?.screenshot({ path: resolve(artifacts, 'web-failure.png') }).catch(() => {});
-  console.error(JSON.stringify({ passed: false, steps, pageErrors: errors, error: error.message,
-    visibleText: (await page?.locator('body').innerText().catch(() => '')).slice(0, 2200) }, null, 2));
+  console.error(JSON.stringify({ passed: false, steps, pageErrors: errors, error: error.message, requestCounts,
+    visibleText: ((await page?.locator('body').innerText().catch(() => '')) ?? '').slice(0, 2200) }, null, 2));
   process.exitCode = 1;
 } finally { await browser.close(); }

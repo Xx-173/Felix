@@ -12,8 +12,10 @@ function Get-LocalServer {
   if (!(Test-Path -LiteralPath $processRecord)) { return $null }
   $record = Get-Content -LiteralPath $processRecord -Raw | ConvertFrom-Json
   $process = Get-Process -Id $record.pid -ErrorAction SilentlyContinue
+  # PowerShell 7.5+ can deserialize ISO timestamps to DateTime automatically.
+  $recordedStart = if ($record.started -is [DateTime]) { $record.started.ToUniversalTime() } else { [DateTime]::Parse([string]$record.started).ToUniversalTime() }
   # Refuse to stop a different process if Windows has reused this PID.
-  if ($process -and $process.ProcessName -eq 'bun' -and $process.StartTime.ToUniversalTime().ToString('o') -eq $record.started) {
+  if ($process -and $process.ProcessName -eq 'bun' -and $process.StartTime.ToUniversalTime() -eq $recordedStart) {
     return @{ process = $process; port = $record.port }
   }
   return $null

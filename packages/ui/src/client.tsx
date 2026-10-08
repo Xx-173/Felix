@@ -228,6 +228,7 @@ export interface FinagentClient {
     getTools: () => Promise<ApiResult<ToolDefinition[]>>;
   };
   market: {
+    getLimitUpLadder?: (date: string, mode?: 'auto' | 'live') => Promise<ApiResult<import('@finagent/core').LimitLadderSnapshot>>;
     getMarketTemperature?: (market: 'CN' | 'HK' | 'US') => Promise<ApiResult<import('@finagent/core').MarketTemperature>>;
     getQuote: (symbol: string) => Promise<ApiResult<Quote>>;
     getKline: (request: KlineRequest) => Promise<ApiResult<Kline[]>>;

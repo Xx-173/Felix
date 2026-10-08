@@ -50,6 +50,8 @@ import {
   type LongBridgeStatus,
 } from '@finagent/longbridge-tools';
 
+import { fetchLimitLadder, validateLadderDate } from './limit-ladder.ts';
+
 export interface MarketDataServiceOptions {
   quoteTTL?: number;
   klineTTL?: number;
@@ -61,6 +63,7 @@ export interface MarketDataServiceOptions {
 }
 
 export interface MarketDataFetchers {
+  getLimitUpLadder?: (date: string) => Promise<import('@finagent/core').LimitLadderSnapshot>;
   getQuote: (symbol: string) => Promise<Quote>;
   getKline: (options: GetKlineOptions) => Promise<Kline[]>;
   getIntraday: (symbol: string) => Promise<IntradayData[]>;
@@ -94,6 +97,7 @@ interface CacheEntry<T> {
 }
 
 const defaultFetchers: MarketDataFetchers = {
+  getLimitUpLadder: fetchLimitLadder,
   getQuote,
   getKline,
   getIntraday,
@@ -136,6 +140,11 @@ export class MarketDataService {
     this.referenceTTL = options.referenceTTL ?? 600_000;
     this.fetchers = { ...defaultFetchers, ...options.fetchers };
     this.now = options.now ?? Date.now;
+  }
+
+  getLimitUpLadder(date: string, mode: 'auto' | 'live' = 'auto') {
+    validateLadderDate(date);
+    return this.cached(`limit-ladder:${mode}:${date}`, 60_000, () => (mode === 'live' ? fetchLimitLadder : this.fetchers.getLimitUpLadder ?? fetchLimitLadder)(date));
   }
 
   getQuote(symbol: string) {

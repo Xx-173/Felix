@@ -154,6 +154,13 @@ export function withDemoDataFallback<F extends Partial<MarketDataFetchers> & { g
   const quoteResult = fetchers.getQuoteResult;
   return {
     ...fetchers,
+    getLimitUpLadder: async (date: string) => {
+      if (fetchers.getLimitUpLadder) { try { return await fetchers.getLimitUpLadder(date); } catch { /* Explicit sample fallback. */ } }
+      return { date, fetchedAt: Date.now(), source: 'demo', stocks: [
+      { symbol: '600001.SH', name: '示例甲（Sample A）', boards: 4, price: 12.3, changePercent: 10 },
+      { symbol: '000002.SZ', name: '示例乙（Sample B）', boards: 2, price: 8.6, changePercent: 10 },
+      { symbol: '600003.SH', name: '示例丙（Sample C）', boards: 1, price: 6.2, changePercent: 10 },
+    ] }; },
     getQuote: async (symbol) => {
       const real = fetchers.getQuote;
       if (real) {

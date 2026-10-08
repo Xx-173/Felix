@@ -16,11 +16,14 @@ import {
 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 import { ClaimVerification } from './ClaimVerification';
-import type { Kline, ResearchReport, ResearchRunStatus, StaticInfo } from '@finagent/core';
+import type { ResearchReport, ResearchRunStatus, StaticInfo } from '@finagent/core';
 import { addToWatchlistAtom, quoteCacheAtomFamily, fetchQuoteAtom, removeFromWatchlistAtom, watchlistAtom } from '../../atoms';
 import { useFinagentClient } from '../../client';
 import { FinancialKLineChart } from '../chart/FinancialKLineChart';
-import { normalizeKlines, type FinancialBar } from '../chart/klineAdapter';
+import { watchlistMarket } from '../../lib/watchlist';
+import { prepareIndexHistory } from '../../lib/index-history';
+import { DemoBadge } from '../primitives/DemoBadge';
+import type { FinancialBar } from '../chart/klineAdapter';
 import { semanticCapabilityLabelKey } from '../../lib/agentPresentation';
 import { AgentAmbientField, type AgentMotionState } from '../motion/AgentAmbientField';
 
@@ -86,10 +89,13 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
   const [bars, setBars] = useState<FinancialBar[]>([]);
   const [chartLoading, setChartLoading] = useState(true);
   const [chartError, setChartError] = useState<string | null>(null);
+  const [historyDemo, setHistoryDemo] = useState(false);
+  const [indicators, setIndicators] = useState(true);
+  const [expanded, setExpanded] = useState(false);
 
   const watched = watchlist.includes(symbol);
   const quote = quoteCache.data;
-  const currency = info?.currency ?? 'USD';
+  const currency = info?.currency ?? ({ CN: 'CNY', HK: 'HKD', US: 'USD', SG: 'SGD' } as Record<string, string>)[watchlistMarket(symbol)] ?? 'USD';
   const companyName = info?.name ?? symbol;
 
   useEffect(() => {
@@ -108,7 +114,7 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
     let alive = true;
     setChartLoading(true);
     setChartError(null);
-    setBars([]);
+    setBars([]); setHistoryDemo(false);
     void client.market
       .getKline({ symbol, period, limit: 180 })
       .then((result) => {
@@ -118,7 +124,8 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
           setChartLoading(false);
           return;
         }
-        setBars(normalizeKlines(result.data as Kline[]));
+        const history = prepareIndexHistory(result.data, symbol);
+        setBars(history.bars); setHistoryDemo(history.isDemo);
         setChartLoading(false);
       })
       .catch((error: unknown) => {
@@ -144,6 +151,10 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
     [report]
   );
 
+  const recentBars = bars.slice(-20);
+  const rangeHigh = recentBars.length ? Math.max(...recentBars.map((bar) => bar.high)) : undefined;
+  const rangeLow = recentBars.length ? Math.min(...recentBars.map((bar) => bar.low)) : undefined;
+  const averageClose = recentBars.length ? recentBars.reduce((sum, bar) => sum + bar.close, 0) / recentBars.length : undefined;
   const confidence = report ? Math.round(report.confidence * 100) : 0;
   const stance = report?.stance ?? 'neutral';
   const stanceTone = report ? STANCE_TONE[stance] : 'felix-research-decision--empty';
@@ -157,7 +168,7 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
       : 'idle';
 
   return (
-    <section className="felix-research-workspace" data-testid="research-market-workspace">
+    <section className="felix-research-workspace" data-testid="research-market-workspace" data-symbol={symbol}>
       <div className="felix-research-market-main">
         <div className="felix-research-asset-header">
           <div className="felix-research-asset-copy min-w-0">
@@ -205,7 +216,7 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
           <a className="felix-research-tab" href="#research-thesis">{t('research.workspace.thesis')}</a>
         </nav>
 
-        <div id="research-overview" className="felix-research-chart-panel">
+        <div id="research-overview" className={`felix-research-chart-panel ${expanded ? 'felix-research-chart-expanded' : ''}`}>
           <div className="felix-research-chart-toolbar">
             <div className="felix-research-chart-toolbar-left">
               <span className="felix-research-chart-mode"><Activity className="h-3.5 w-3.5" />{t('research.workspace.chartMode')}</span>
@@ -224,8 +235,8 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
               </div>
             </div>
             <div className="flex items-center gap-2">
-              <button type="button" className="felix-research-toolbar-control"><SlidersHorizontal className="h-3.5 w-3.5" />{t('research.workspace.indicators')}<ChevronDown className="h-3 w-3" /></button>
-              <button type="button" className="felix-research-icon-button" aria-label={t('research.workspace.expandChart')}><Maximize2 className="h-3.5 w-3.5" /></button>
+              <button type="button" aria-pressed={indicators} onClick={() => setIndicators((current) => !current)} className="felix-research-toolbar-control"><SlidersHorizontal className="h-3.5 w-3.5" />{t('research.workspace.indicators')}<ChevronDown className="h-3 w-3" /></button>
+              <button type="button" aria-pressed={expanded} onClick={() => setExpanded((current) => !current)} className="felix-research-icon-button" aria-label={t(expanded ? 'common.close' : 'research.workspace.expandChart')}><Maximize2 className="h-3.5 w-3.5" /></button>
             </div>
           </div>
           <div className="felix-research-chart-canvas">
@@ -235,7 +246,7 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
                 <span>{t('research.workspace.loadingChart')}</span>
               </div>
             ) : bars.length > 0 ? (
-              <FinancialKLineChart bars={bars} symbol={symbol} period={period} showMA showEMA />
+              <FinancialKLineChart bars={bars} symbol={symbol} period={period} showMA={indicators} showVolume={bars.some((bar) => (bar.volume ?? 0) > 0)} showMACD={indicators} />
             ) : (
               <div className="felix-research-chart-empty" data-testid="research-chart-empty">
                 <BarChart3 className="h-5 w-5" />
@@ -243,6 +254,7 @@ export const ResearchMarketWorkspace: React.FC<ResearchMarketWorkspaceProps> = (
               </div>
             )}
           </div>
+          <div className="felix-research-key-levels" data-testid="research-key-levels"><h3>{t('research.keyLevels')}{historyDemo && <DemoBadge />}</h3><div><ResearchStat label={t('research.rangeHigh')} value={formatPrice(rangeHigh, currency)} /><ResearchStat label={t('research.rangeLow')} value={formatPrice(rangeLow, currency)} /><ResearchStat label={t('research.averageClose')} value={formatPrice(averageClose, currency)} /></div><p>{t('research.levelsHint')}</p></div>
           <div className="felix-research-stat-strip">
             <ResearchStat label={t('research.workspace.open')} value={formatPrice(quote?.open, currency)} />
             <ResearchStat label={t('research.workspace.high')} value={formatPrice(quote?.high, currency)} />

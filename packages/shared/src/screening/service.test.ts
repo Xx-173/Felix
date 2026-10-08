@@ -236,6 +236,15 @@ describe('ScreeningService.runScreening', () => {
     expect(run.query.universe).toBeUndefined()
   })
 
+  it('filters the provider and explicit universes to the requested market before capability calls', async () => {
+    const fixture = makeFixture({ symbols: ['AAPL.US', 'MSFT.US'] });
+    const service = makeService(fixture, dir, async () => [{ symbol: '0700.HK' }, { symbol: 'AAPL.US' }]);
+    const hk = await service.runScreening({ strategy: 'top-gainers', universe: ['AAPL.US'], market: 'HK', limit: 8 });
+    expect(hk.candidates).toEqual([]); expect(hk.failures.universe).toContain('empty');
+    const us = await service.runScreening({ strategy: 'top-gainers', market: 'US', limit: 8 });
+    expect(us.candidates.map((candidate) => candidate.symbol)).toEqual(['AAPL.US']);
+  });
+
   it('batches research.events per 10 symbols and attributes events by symbol', async () => {
     const symbols = Array.from({ length: 12 }, (_, i) => `S${i}.US`)
     const fixture = makeFixture({ symbols })

@@ -28,6 +28,9 @@ import { Button } from '../primitives/Button'
 import { CandidateCard, type CandidateAction } from './CandidateCard'
 import { TaskCard } from './TaskCard'
 import { ContentReveal } from '../motion/ContentReveal'
+import { MarketTabs } from '../primitives/MarketTabs'
+import { LimitUpLadder } from './LimitUpLadder'
+import { watchlistMarket } from '../../lib/watchlist'
 import { SubtleDotField } from '../motion/SubtleDotField'
 
 const RESULT_LIMIT = 8
@@ -52,11 +55,14 @@ export const DiscoverView: React.FC = () => {
   const locale = i18n.language as SupportedLocale
   const client = useFinagentClient()
   const watchlist = useAtomValue(watchlistAtom)
+  const [market, setMarket] = useState(() => ['CN', 'HK', 'US'].includes(watchlistMarket(watchlist[0] ?? '')) ? watchlistMarket(watchlist[0]!) : 'CN')
+  const marketWatchlist = watchlist.filter((symbol) => watchlistMarket(symbol) === market)
   const [running, setRunning] = useAtom(screeningRunningStrategyAtom)
   const [results, setResults] = useAtom(screeningResultsAtom)
   const [lastRun, setLastRun] = useAtom(screeningLastRunAtom)
   const [error, setError] = useAtom(screeningErrorAtom)
   const [runs, setRuns] = useAtom(screeningRunsAtom)
+  const marketRuns = runs.filter((run) => run.query.market === market || (!run.query.market && run.candidates.length > 0 && run.candidates.every((candidate) => watchlistMarket(candidate.symbol) === market)))
 
   const setActiveSymbol = useSetAtom(activeSymbolAtom)
   const setCompareSymbols = useSetAtom(compareSymbolsAtom)
@@ -93,10 +99,11 @@ export const DiscoverView: React.FC = () => {
       setRunning(task.id)
       setError(null)
       setResults(null)
-      const universe = watchlist.length > 0 ? watchlist : undefined
+      const universe = marketWatchlist.length > 0 ? marketWatchlist : undefined
       const run = await runScreening(client, {
         strategy: task.id,
         universe,
+        market,
         limit: RESULT_LIMIT,
       })
       if (run) {
@@ -108,7 +115,7 @@ export const DiscoverView: React.FC = () => {
       }
       setRunning(null)
     },
-    [client, running, watchlist, setRunning, setError, setResults, setLastRun, refreshRuns, t]
+    [client, running, marketWatchlist, market, setRunning, setError, setResults, setLastRun, refreshRuns, t]
   )
 
   const handleReopen = useCallback(
@@ -166,8 +173,8 @@ export const DiscoverView: React.FC = () => {
   const runTitle = lastRun ? strategyTitle(lastRun.strategy) : ''
 
   const scope =
-    watchlist.length > 0
-      ? t('discover.scopeWatchlist', { count: watchlist.length })
+    marketWatchlist.length > 0
+      ? t('discover.scopeWatchlist', { count: marketWatchlist.length })
       : t('discover.scopeUniverse')
 
   const failures = failureNote(lastRun)
@@ -230,7 +237,7 @@ export const DiscoverView: React.FC = () => {
 
   // ── Render by mode ────────────────────────────────────────────────────────
   return (
-    <div ref={scrollRef} className="felix-discover-view felix-pilot-shell h-full overflow-y-auto p-4" data-testid="discover-view">
+    <div ref={scrollRef} className="felix-discover-view felix-pilot-shell h-full overflow-y-auto p-4" data-testid="discover-view" data-market={market}>
       {mode === 'browse' && (
         <>
           <div className="felix-pilot-page-header mb-4">
@@ -240,6 +247,10 @@ export const DiscoverView: React.FC = () => {
               <p className="felix-pilot-subtitle">{t('discover.subtitle', { scope })}</p>
             </div>
           </div>
+
+          <MarketTabs value={market} onChange={setMarket} />
+          <p className="felix-ladder-scope">{t('discover.marketScope')}</p>
+          <LimitUpLadder market={market} />
 
           {error && (
             <div
@@ -279,12 +290,12 @@ export const DiscoverView: React.FC = () => {
             </h2>
             {runsLoading ? (
               <div className="py-4 text-center text-[12.5px] text-foreground/40">{t('common.loading')}</div>
-            ) : runs.length === 0 ? (
+            ) : marketRuns.length === 0 ? (
               <div className="felix-pilot-status py-4 text-center">
                 {t('discover.noRuns')}
               </div>
             ) : (
-              <HistoryList runs={runs} onReopen={handleReopen} strategyTitle={strategyTitle} />
+              <HistoryList runs={marketRuns} onReopen={handleReopen} strategyTitle={strategyTitle} />
             )}
           </section>
         </>
@@ -343,10 +354,10 @@ export const DiscoverView: React.FC = () => {
 
           {historyOpen && (
             <div data-testid="discover-history-panel" className="rounded-[10px] border border-border bg-surface p-2">
-              {runs.length === 0 ? (
+              {marketRuns.length === 0 ? (
                 <div className="px-3 py-3 text-center text-[12px] text-foreground/44">{t('discover.noRuns')}</div>
               ) : (
-                <HistoryList runs={runs} onReopen={handleReopen} strategyTitle={strategyTitle} />
+                <HistoryList runs={marketRuns} onReopen={handleReopen} strategyTitle={strategyTitle} />
               )}
             </div>
           )}

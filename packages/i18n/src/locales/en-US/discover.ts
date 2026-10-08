@@ -1,5 +1,19 @@
 /** Discover — task-driven screening (spec §5–10, §26). */
 export const discover = {
+  ladderOnline: "Online pool (click for default data)",
+  ladderFetchOnline: "Fetch online pool",
+  ladderTitle: "Limit-up ladder",
+  ladderDate: "Trading date",
+  ladderRefresh: "Refresh ladder",
+  ladderUnavailable: "Limit-up data unavailable. Try refreshing later.",
+  ladderNotApplicable: "The A-share daily limit-up ladder does not apply to HK or US stocks. Switch to A shares to view it.",
+  ladderScope: "Provider limit-up pool grouped by reported consecutive limits. Coverage follows the source; this is not a watchlist statistic or a complete market scan.",
+  ladderSource: "Eastmoney limit-up pool",
+  ladderCount: "{{count}} limit-up stocks",
+  ladderEmpty: "No pool records for this date. Closures, history availability or provider coverage may affect results.",
+  ladderFirst: "First limit",
+  ladderBoards: "{{count}} consecutive limits",
+  marketScope: "Only the selected market is screened. Its built-in pool is used when no matching watchlist symbols exist.",
   title: 'Discover',
   subtitle:
     'Pick a task to screen {{scope}} — deterministic rules over live market data, no AI scanning.',

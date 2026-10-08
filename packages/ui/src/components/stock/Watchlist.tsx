@@ -29,6 +29,7 @@ import { WatchlistGroupsDialog } from './WatchlistGroupsDialog';
 import { WatchlistImportDialog } from './WatchlistImportDialog';
 import { Dialog } from '../primitives/Dialog';
 import { readPersisted, writePersisted } from '../../lib/persistedPrefs';
+import { MarketTabs } from '../primitives/MarketTabs';
 import { summarizeQuotes } from '../../lib/market-dashboard';
 
 const DASH = '\u2014';
@@ -115,7 +116,7 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
     addSymbol(symbol);
     if (selectedGroup) setGroups((current) => current.map((group) => group.id === selectedGroup.id ? { ...group, symbols: [...group.symbols, symbol] } : group));
     setQuery('');
-    setMarket('ALL');
+    setMarket(watchlistMarket(symbol));
     setNewSymbol('');
     setError('');
     setAddOpen(false);
@@ -146,6 +147,7 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
 
   return (
     <div className={`felix-watchlist flex flex-col ${fullPage ? 'felix-watchlist-page' : 'h-full'}`} data-view={display}>
+      {fullPage && <MarketTabs value={market} onChange={setMarket} includeAll includeSG={watchlist.some((symbol) => watchlistMarket(symbol) === 'SG')} />}
       {fullPage && <div className="felix-watchlist-groups" role="group" aria-label={t('navigation.groupFilter')}>
         <button type="button" aria-pressed={groupId === 'ALL'} onClick={() => setGroupId('ALL')}>{t('navigation.allGroups')} <small>{watchlist.length}</small></button>
         <button type="button" aria-pressed={groupId === 'NONE'} onClick={() => setGroupId('NONE')}>{t('navigation.ungrouped')}</button>
@@ -201,10 +203,6 @@ export const Watchlist: React.FC<{ showHeader?: boolean; fullPage?: boolean }> =
       </div>}
       {fullPage && <div className="felix-hub-toolbar">
         <label className="felix-hub-search"><Search size={16} /><input aria-label={t('navigation.watchlistSearch')} placeholder={t('navigation.watchlistSearch')} value={query} onChange={(event) => setQuery(event.target.value)} /></label>
-        <select aria-label={t('navigation.marketFilter')} value={market} onChange={(event) => setMarket(event.target.value)}>
-          <option value="ALL">{t('navigation.allMarkets')}</option>
-          {['US', 'HK', 'CN', 'SG'].map((value) => <option key={value} value={value}>{t('navigation.market' + value)}</option>)}
-        </select>
         <select aria-label={t('navigation.symbolSort')} value={sort} onChange={(event) => setSort(event.target.value)}>
           <option value="added">{t('navigation.addedOrder')}</option><option value="symbol">{t('navigation.alphabetical')}</option>
           <option value="changeDesc">{t('navigation.changeDescending')}</option><option value="changeAsc">{t('navigation.changeAscending')}</option><option value="priceDesc">{t('navigation.priceDescending')}</option>

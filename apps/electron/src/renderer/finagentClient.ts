@@ -50,6 +50,7 @@ function createElectronClient(): FinagentClient {
     },
     market: {
       getQuote: (symbol) => ipcResult(window.electronAPI.market.getQuote(symbol)),
+      getLimitUpLadder: (date, mode) => ipcResult(window.electronAPI.market.getLimitUpLadder(date, mode)),
       getKline: (request) => ipcResult(window.electronAPI.market.getKline(request)),
       getPortfolio: () => ipcResult(window.electronAPI.market.getPortfolio()),
       getStaticInfo: (symbol) => ipcResult(window.electronAPI.market.getStaticInfo(symbol)),

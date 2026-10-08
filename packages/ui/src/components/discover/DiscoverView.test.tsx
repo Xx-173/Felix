@@ -187,7 +187,7 @@ describe('DiscoverView', () => {
     await flushAsync()
 
     expect(seenRequests).toEqual([
-      { strategy: 'strong-momentum', universe: ['AAPL.US', 'TSLA.US', 'NVDA.US'], limit: 8 },
+      { strategy: 'strong-momentum', universe: ['AAPL.US', 'TSLA.US', 'NVDA.US'], market: 'US', limit: 8 },
     ])
     const candidate = container.querySelector('[data-testid="candidate-MSFT.US"]')
     expect(candidate).not.toBeNull()

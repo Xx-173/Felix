@@ -3,7 +3,7 @@ import { useAtom, useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import { Check, Search } from 'lucide-react';
 import type { ResearchRunSummary, ResearchReport, StrategyId } from '@finagent/core';
-import { activeSymbolAtom, navSectionAtom } from '../../atoms';
+import { activeSymbolAtom, navSectionAtom, watchlistAtom } from '../../atoms';
 import { pendingResearchStrategyAtom, researchOriginAtom } from '../../atoms/discoverAtoms';
 import {
   researchRunsAtom,
@@ -13,12 +13,14 @@ import {
   cancelResearch,
   loadResearchRuns,
   loadResearchRun,
-  loadSymbolReports,
   loadResearchReport,
   TERMINAL_RUN_STATUSES,
 } from '../../atoms/researchAtoms';
 import { saveThesisFromReport } from '../../client/thesis';
 import { ResearchReportView } from './ResearchReportView';
+import { MarketTabs } from '../primitives/MarketTabs';
+import { watchlistMarket } from '../../lib/watchlist';
+import { ResearchStockPicker } from './ResearchStockPicker';
 import { ResearchMarketWorkspace } from './ResearchMarketWorkspace';
 import { DEFAULT_STRATEGY_ID, StrategyPicker } from './StrategyPicker';
 import { NextAction } from '../primitives/NextAction';
@@ -40,10 +42,17 @@ export const ResearchPanel: React.FC = () => {
   const { t } = useTranslation();
   const client = useFinagentClient();
   const symbol = useAtomValue(activeSymbolAtom);
+  const watchlist = useAtomValue(watchlistAtom);
+  const [market, setMarket] = useState(() => ['CN', 'HK', 'US'].includes(watchlistMarket(symbol ?? '')) ? watchlistMarket(symbol!) : 'CN');
+  useEffect(() => { if (symbol && ['CN', 'HK', 'US'].includes(watchlistMarket(symbol))) setMarket(watchlistMarket(symbol)); }, [symbol]);
   const setActiveSymbol = useSetAtom(activeSymbolAtom);
   const setNavSection = useSetAtom(navSectionAtom);
   const [runs, setRuns] = useAtom(researchRunsAtom);
-  const [reports, setReports] = useState<ResearchReport[]>([]);
+  const userSelected = React.useRef(false);
+  const requestedReport = React.useRef<string | null>(null);
+  const selectionRef = React.useRef(symbol);
+  selectionRef.current = symbol;
+  const [historyLoading, setHistoryLoading] = useState(false);
   const [report, setReport] = useAtom(researchReportAtom);
   const [loading, setLoading] = useAtom(researchLoadingAtom);
   const [error, setError] = useState<string | null>(null);
@@ -51,8 +60,6 @@ export const ResearchPanel: React.FC = () => {
   const [pendingStrategy, setPendingStrategy] = useAtom(pendingResearchStrategyAtom);
   const [researchOrigin, setResearchOrigin] = useAtom(researchOriginAtom);
   const [recommendedStrategy, setRecommendedStrategy] = useState<StrategyId | null>(null);
-  const [symbolInput, setSymbolInput] = useState('');
-  const [symbolError, setSymbolError] = useState<string | null>(null);
   const [thesisSaved, setThesisSaved] = useState(false);
 
   // Discover → Research: a candidate card carries a recommended strategy.
@@ -78,27 +85,21 @@ export const ResearchPanel: React.FC = () => {
       setRuns(loaded);
       const validRuns = loaded.filter((run) => SYMBOL_REGEX.test(run.symbol));
       const recent = validRuns.find((run) => run.status === 'interrupted' || !(run.status in TERMINAL_RUN_STATUSES)) ?? validRuns[0];
-      if (recent) setActiveSymbol((current) => current ?? recent.symbol);
+      if (recent && !userSelected.current) setActiveSymbol((current) => current ?? recent.symbol);
     });
     return () => { alive = false; };
   }, [setRuns, setActiveSymbol, client]);
 
   useEffect(() => {
-    if (!symbol) {
-      setReports([]);
-      setReport(null);
-      setThesisSaved(false);
-      return;
-    }
+    let alive = true;
     setThesisSaved(false);
-    void loadSymbolReports(symbol, client).then(setReports);
-    const latest = runs.find((run) => run.symbol === symbol && run.reportId);
-    if (latest?.reportId && !report) {
-      void loadResearchReport(latest.reportId, client).then((loaded) => {
-        if (loaded) setReport(loaded);
-      });
+    if (!symbol) { setReport(null); return; }
+    const latest = runs.find((run) => run.symbol === symbol && run.reportId === requestedReport.current) ?? runs.find((run) => run.symbol === symbol && run.reportId);
+    if (latest?.reportId && (!report || report.symbol !== symbol)) {
+      void loadResearchReport(latest.reportId, client).then((loaded) => { if (alive && loaded) setReport(loaded); });
     }
-  }, [symbol, setReport, setReports, runs, report, client]);
+    return () => { alive = false; };
+  }, [symbol, setReport, runs, report, client]);
 
   // Poll the newest active run for this symbol while it is non-terminal.
   const activeRun = runs.find(
@@ -118,7 +119,7 @@ export const ResearchPanel: React.FC = () => {
         const loaded = await loadResearchReport(updated.reportId, client);
         if (alive && loaded) {
           setReport(loaded);
-          void loadSymbolReports(updated.symbol, client).then(setReports);
+
         }
       }
     }, POLL_MS);
@@ -153,19 +154,6 @@ export const ResearchPanel: React.FC = () => {
     if (symbol) writePersisted(lastStrategyKey(symbol), next);
   };
 
-  /** V9: start research directly from the no-symbol entry point. */
-  const handleSymbolEntrySubmit = () => {
-    const value = symbolInput.trim().toUpperCase();
-    if (!SYMBOL_REGEX.test(value)) {
-      setSymbolError(t('research.symbolEntry.invalid'));
-      return;
-    }
-    setSymbolError(null);
-    setActiveSymbol(value);
-    setSymbolInput('');
-    void handleStart(value);
-  };
-
   const handleCancel = async () => {
     if (!activeRun) return;
     await cancelResearch(activeRun.id, client);
@@ -190,8 +178,7 @@ export const ResearchPanel: React.FC = () => {
     setResearchOrigin(null);
   };
 
-  const symbolRuns = runs.filter((run) => run.symbol === symbol);
-  const recoverableRuns = runs.filter((run) => (!symbol || run.symbol === symbol) &&
+  const recoverableRuns = runs.filter((run) => (!symbol ? watchlistMarket(run.symbol) === market : run.symbol === symbol) &&
     (run.status === 'interrupted' || (run.status === 'failed' && run.error)));
 
   const handleRecovery = async (runId: string, action: 'resume' | 'restart' | 'discard') => {
@@ -212,34 +199,19 @@ export const ResearchPanel: React.FC = () => {
   };
 
   return (
-    <div className="felix-pilot-shell flex h-full flex-col" data-testid="research-panel">
+    <div className="felix-pilot-shell flex h-full flex-col" data-testid="research-panel" data-market={market}>
       <div className="felix-research-topbar">
         <span className="felix-research-topbar-title">{t('research.workspace.title')}</span>
-        <label className="felix-research-command-search">
-          <Search className="h-3.5 w-3.5 shrink-0" />
-          <input
-            value={symbolInput}
-            onChange={(event) => {
-              setSymbolInput(event.target.value.toUpperCase());
-              setSymbolError(null);
-            }}
-            onKeyDown={(event) => {
-              if (event.key === 'Enter') handleSymbolEntrySubmit();
-            }}
-            placeholder={t('research.workspace.searchPlaceholder')}
-            aria-label={t('research.workspace.searchPlaceholder')}
-          />
-          <span className="felix-research-command-hint">⌘ K</span>
-        </label>
-        <span className="felix-research-topbar-market">USD <span aria-hidden="true">⌄</span></span>
+        <span className="felix-research-topbar-market">{t('navigation.market' + market)}</span>
       </div>
+      <MarketTabs value={market} disabled={loading || Boolean(activeRun)} onChange={(value) => { userSelected.current = true; setMarket(value); setActiveSymbol(null); setReport(null); requestedReport.current = null; setResearchOrigin(null); }} />
       <div className="felix-pilot-research-header">
         <div>
           <h2 className="felix-pilot-research-title">{t('research.deepResearch')}</h2>
           <p className="felix-pilot-subtitle">
             {symbol
               ? t('research.subtitleFor', { symbol })
-              : t('research.subtitleEmpty')}
+              : t('research.analysisIntro')}
           </p>
         </div>
         {symbol && (
@@ -289,7 +261,9 @@ export const ResearchPanel: React.FC = () => {
         </div>
       )}
 
-      <div className="felix-pilot-research-content">
+      <div className="felix-pilot-research-content felix-research-with-history">
+        <div className="felix-research-current">
+        <ResearchStockPicker market={market} symbols={watchlist.filter((item) => watchlistMarket(item) === market)} disabled={loading || Boolean(activeRun)} onSelect={(value) => { userSelected.current = true; requestedReport.current = null; setActiveSymbol(value); setReport(null); }} />
         {recoverableRuns.map((run) => (
           <div key={run.id} data-testid="research-recovery" className="mb-3 rounded-xl border border-border bg-surface p-4">
             <p className="text-sm font-semibold">{t('research.recovery.title', { symbol: run.symbol })}</p>
@@ -306,7 +280,7 @@ export const ResearchPanel: React.FC = () => {
             </div>
           </div>
         ))}
-        {!symbol && <SymbolEntry error={symbolError} value={symbolInput} onChange={setSymbolInput} onSubmit={handleSymbolEntrySubmit} />}
+        {!symbol && <div className="felix-research-select-empty"><Search size={32} /><h3>{t('research.symbolEntry.title')}</h3><p>{t('research.analysisIntro')}</p></div>}
 
         {symbol && (
           <ResearchMarketWorkspace
@@ -362,57 +336,19 @@ export const ResearchPanel: React.FC = () => {
           </ContentReveal>
         )}
 
-        {symbol && !activeRun && !report && (
-          <RunHistory
-            runs={symbolRuns}
-            onSelect={async (reportId) => {
-              const loaded = await loadResearchReport(reportId, client);
-              if (loaded) setReport(loaded);
-            }}
-          />
-        )}
+        </div>
+        <aside className="felix-research-history" data-testid="research-history">
+          <h3>{t('research.historyTitle')}</h3>
+          {historyLoading && <p>{t('research.historyLoading')}</p>}
+          <RunHistory runs={runs.filter((run) => watchlistMarket(run.symbol) === market && Boolean(run.reportId))} onSelect={async (reportId) => {
+            const run = runs.find((item) => item.reportId === reportId);
+            if (!run || activeRun || loading) return;
+            userSelected.current = true; requestedReport.current = reportId; setActiveSymbol(run.symbol); setReport(null); selectionRef.current = run.symbol; setHistoryLoading(true);
+            try { const loaded = await loadResearchReport(reportId, client); if (loaded && selectionRef.current === loaded.symbol && requestedReport.current === reportId) setReport(loaded); }
+            finally { setHistoryLoading(false); }
+          }} />
+        </aside>
       </div>
-    </div>
-  );
-};
-
-/** V9: first-time research start — "What are you researching?" with a primary action. */
-const SymbolEntry: React.FC<{
-  value: string;
-  onChange: (value: string) => void;
-  onSubmit: () => void;
-  error: string | null;
-}> = ({ value, onChange, onSubmit, error }) => {
-  const { t } = useTranslation();
-  return (
-    <div data-testid="research-symbol-entry" className="mx-auto mt-6 w-full max-w-md rounded-[12px] border border-border bg-surface p-5">
-      <h3 className="text-[15px] font-semibold text-foreground">{t('research.symbolEntry.title')}</h3>
-      <p className="mt-0.5 text-[12px] text-foreground/54">{t('research.symbolEntry.hint')}</p>
-      <div className="mt-3 flex gap-2">
-        <input
-          data-testid="research-symbol-input"
-          value={value}
-          onChange={(event) => {
-            onChange(event.target.value.toUpperCase());
-          }}
-          onKeyDown={(event) => {
-            if (event.key === 'Enter') onSubmit();
-          }}
-          placeholder={t('research.symbolEntry.placeholder')}
-          aria-label={t('research.symbolEntry.placeholder')}
-          className="h-9 w-full min-w-0 flex-1 rounded-[9px] border border-input bg-background px-3 text-[13px] text-foreground placeholder:text-foreground/38 focus:border-transparent focus:outline-none focus:ring-2 focus:ring-ring"
-        />
-        <button
-          type="button"
-          onClick={onSubmit}
-          data-testid="research-symbol-submit"
-          className="mac-primary-button flex h-9 shrink-0 items-center gap-1.5 rounded-[9px] px-3.5 text-[13px] font-semibold transition-smooth active:scale-[0.985]"
-        >
-          <Search className="h-3.5 w-3.5" strokeWidth={1.8} />
-          {t('research.symbolEntry.start')}
-        </button>
-      </div>
-      {error && <p className="mt-1.5 text-[12px] text-destructive">{error}</p>}
     </div>
   );
 };
@@ -561,7 +497,7 @@ const EmptyState: React.FC = () => {
   const { t } = useTranslation();
   return (
     <div className="py-10 text-center text-[12px] text-text-muted">
-      {t('research.empty')}
+      {t('research.historyEmpty')}
     </div>
   );
 };

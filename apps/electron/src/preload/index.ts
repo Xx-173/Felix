@@ -36,6 +36,7 @@ export interface ElectronAPI {
     getTools: () => Promise<unknown>;
   };
   market: {
+    getLimitUpLadder: (date: string, mode?: 'auto' | 'live') => Promise<unknown>;
     getQuote: (symbol: string) => Promise<unknown>;
     getKline: (request: { symbol: string; period?: string; limit?: number }) => Promise<unknown>;
     getPortfolio: () => Promise<unknown>;
@@ -235,6 +236,7 @@ const electronAPI: ElectronAPI = {
     getTools: () => ipcRenderer.invoke('agent:getTools'),
   },
   market: {
+    getLimitUpLadder: (date: string, mode?: 'auto' | 'live') => ipcRenderer.invoke('market:getLimitUpLadder', date, mode),
     getQuote: (symbol: string) => ipcRenderer.invoke('market:getQuote', symbol),
     getKline: (request: { symbol: string; period?: string; limit?: number }) =>
       ipcRenderer.invoke('market:getKline', request),

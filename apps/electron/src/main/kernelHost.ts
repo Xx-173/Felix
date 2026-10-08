@@ -641,6 +641,11 @@ export class AgentKernelHost {
     return this.marketData.getPortfolio();
   }
 
+  getLimitUpLadder(date: unknown, mode: unknown = 'auto') {
+    if (mode !== 'auto' && mode !== 'live') throw new Error('Invalid ladder mode');
+    return this.marketData.getLimitUpLadder(requireString(date, 'date'), mode);
+  }
+
   getStaticInfo(symbol: unknown) {
     return this.marketData.getStaticInfo(requireString(symbol, 'symbol').toUpperCase());
   }

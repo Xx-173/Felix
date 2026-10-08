@@ -180,6 +180,10 @@ ipcMain.handle('market:getPortfolio', async () =>
   toIpcResult(() => agentKernelHost.getPortfolio())
 );
 
+ipcMain.handle('market:getLimitUpLadder', async (_event, date: unknown, mode: unknown) =>
+  toIpcResult(() => agentKernelHost.getLimitUpLadder(date, mode))
+);
+
 ipcMain.handle('market:getStaticInfo', async (_event, symbol: unknown) =>
   toIpcResult(() => agentKernelHost.getStaticInfo(symbol))
 );

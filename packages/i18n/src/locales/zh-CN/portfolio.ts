@@ -3,6 +3,7 @@ import type { portfolio as enPortfolio } from '../en-US/portfolio.ts';
 
 /** Portfolio slice (spec §31) — Simplified Chinese (glossary-aligned). */
 export const portfolio = {
+  ownAssetsEmpty: "这里仅显示你导入或连接账户的真实资产与持仓，尚未导入时不显示示例资金。",
   title: '投资组合',
   totalValue: '总资产',
   cash: '现金',
