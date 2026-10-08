@@ -71,6 +71,7 @@ export type SettingsTab =
   | 'skills'
   | 'diagnostics'
   | 'performance'
+  | 'experiments'
   // Felix V7 agent evaluation settings (spec §61–63).
   | 'evaluation';
 

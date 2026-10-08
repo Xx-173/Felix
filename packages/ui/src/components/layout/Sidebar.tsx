@@ -10,13 +10,11 @@ import {
   CircleHelp,
   Compass,
   FileText,
-  FlaskConical,
   GitCompareArrows,
   LayoutDashboard,
   Activity,
   Settings,
   UserRound,
-  Zap,
 } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import {
@@ -38,8 +36,6 @@ const SIDEBAR_ITEMS: SidebarItem[] = [
   { key: 'alerts', labelKey: 'alerts', icon: Bell },
   { key: 'research', labelKey: 'research', icon: BookOpen },
   { key: 'thesis', labelKey: 'thesis', icon: FileText },
-  { key: 'skills', labelKey: 'skills', icon: Zap },
-  { key: 'evaluation', labelKey: 'evaluation', icon: FlaskConical },
   { key: 'events', labelKey: 'events', icon: CalendarDays },
 ];
 

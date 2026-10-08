@@ -55,6 +55,8 @@ try {
   const skip = page.getByTestId('onboarding-skip');
   await skip.waitFor({ state: 'visible', timeout: 5000 }).catch(() => undefined);
   if (await skip.isVisible()) await skip.click();
+  assert.ok(await page.getByTestId('assistant-bull-icon').evaluate((image) => image.complete && image.naturalWidth > 0));
+  assert.equal(await page.getByRole('tab', { name: '会话（Sessions）', exact: true }).count(), 0);
   assert.equal(await page.getByTestId('account-bar').count(), 0, 'desktop keeps its local account behavior');
   await page.getByTestId('sidebar').getByRole('button', { name: /^市场看板（/ }).click();
   await page.getByTestId('market-dashboard').waitFor();

@@ -35,6 +35,28 @@ export const settings = {
   title: 'Settings',
   preferences: 'Preferences',
   subtitle: 'Configure Felix without leaving your finance workspace.',
+  menu: {
+  "connections": "Data sources",
+  "llm": "AI settings",
+  "general": "System settings",
+  "skills": "Research tools",
+  "performance": "Research outcomes",
+  "experiments": "Research evaluation",
+  "evaluation": "Run tracing",
+  "diagnostics": "Diagnostics",
+  "collapse": "Collapse menu",
+  "expand": "Expand menu"
+},
+  menuDescriptions: {
+  "connections": "Connect quotes, news and brokerage accounts, and check data availability.",
+  "llm": "Configure your own model keys, models and thinking level.",
+  "general": "Manage theme, language and application preferences.",
+  "skills": "Skills are research tools available to AI. Enable quotes, earnings and news tools, and check missing data connections.",
+  "performance": "Review the subsequent outcomes and coverage of recorded research opinions.",
+  "experiments": "For developing and validating AI: compare models, tool calls and benchmark results. This is not a score for your investment returns.",
+  "evaluation": "Optionally connect tracing services to inspect AI runs. Everyday use does not require tracing.",
+  "diagnostics": "Check connections and application status to troubleshoot configuration."
+},
   tabs: {
     general: 'General',
     llm: 'LLM',

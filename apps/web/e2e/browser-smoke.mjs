@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import { verifyMarketPages } from './market-pages.mjs';
+import { verifySettingsPages } from './settings-pages.mjs';
 import { mkdir, writeFile } from 'node:fs/promises';
 import { resolve, dirname } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -21,6 +22,7 @@ const errors = [], steps = [], requestCounts = {};
 let page;
 try {
   steps.push(await verifyMarketPages(browser, origin, artifacts));
+  steps.push(await verifySettingsPages(browser, origin, artifacts));
   const context = await browser.newContext({ viewport: { width: 1440, height: 1000 } });
   await context.route('**/*', (route) => route.request().url().startsWith(origin + '/') ? route.continue() : route.abort());
   page = await context.newPage(); page.on('request', (request) => { if (request.url().endsWith('/api/rpc')) { const method = request.postDataJSON()?.method; requestCounts[method] = (requestCounts[method] ?? 0) + 1; } }); page.on('pageerror', (error) => errors.push(error.message));
@@ -195,37 +197,36 @@ try {
   await page.locator('[data-testid="quote-status-AAPL.US"][data-state=demo]').waitFor();
   steps.push('自选分组可创建、分配、筛选、重命名和持久化；导入预览去重且取消不写入；失败刷新保留真实报价');
   await page.screenshot({ path: resolve(artifacts, 'workspace-home.png') });
-  await page.getByRole('tab', { name: '会话（Sessions）', exact: true }).click();
-  await page.locator('.felix-session-card').waitFor();
+  assert.equal(await page.getByRole('tab', { name: '会话（Sessions）', exact: true }).count(), 0);
+  await page.getByTestId('new-session-fab').click();
+  await page.getByTestId('assistant-history').click();
   const sessionSearch = page.getByRole('textbox', { name: /^搜索会话标题/ });
   await sessionSearch.fill('no-matching-title');
   await page.getByText(/^没有匹配的记录/).waitFor();
   await sessionSearch.fill('');
-  await page.locator('.felix-workspace-topbar').getByRole('button', { name: /^研究助手/ }).click();
-  await page.getByRole('button', { name: /^继续会话/ }).click();
+  await page.locator('.felix-history-open').click();
   await page.getByTestId('agent-input').waitFor({ state: 'visible' });
-  await page.screenshot({ path: resolve(artifacts, 'workspace-sessions.png') });
-  await page.getByTestId('new-session-fab').click();
   await page.getByTestId('assistant-new-session').click();
   await page.getByTestId('agent-input').fill('查询 NVDA.US 的行情');
   await page.getByTestId('agent-input').press('Enter');
-  await waitForState(page, () => document.querySelectorAll('.felix-session-card').length === 2);
   await waitForState(page, () => !document.querySelector('[data-testid=assistant-history]')?.disabled);
   await page.getByTestId('assistant-history').click();
-  await page.getByTestId('assistant-history-list').getByRole('button').last().click();
+  assert.equal(await page.locator('.felix-assistant-history-row').count(), 2);
+  await page.locator('.felix-history-open').last().click();
   await page.getByTestId('agent-panel').getByText('再次查询 MSFT.US', { exact: true }).waitFor();
-  assert.equal(await page.locator('.felix-session-card').count(), 2, 'history restoration does not create a conversation');
-  steps.push('新问题才创建会话，历史入口能恢复原对话且不新增会话');
-  await page.locator('.felix-session-card').first().getByRole('button', { name: /^删除 / }).click();
+  await page.getByTestId('assistant-history').click();
+  assert.equal(await page.locator('.felix-assistant-history-row').count(), 2, 'history restoration does not create a conversation');
+  await page.screenshot({ path: resolve(artifacts, 'assistant-history.png') });
+  await page.locator('.felix-history-delete').first().click();
   let sessionDeletion = page.getByRole('dialog', { name: /^删除会话/ });
   await sessionDeletion.getByRole('button', { name: /^取消（/ }).click();
-  assert.equal(await page.locator('.felix-session-card').count(), 2, 'cancel leaves sessions intact');
-  await page.locator('.felix-session-card').first().getByRole('button', { name: /^删除 / }).click();
+  assert.equal(await page.locator('.felix-assistant-history-row').count(), 2);
+  await page.locator('.felix-history-delete').first().click();
   sessionDeletion = page.getByRole('dialog', { name: /^删除会话/ });
   await sessionDeletion.getByRole('button', { name: /^确认删除（/ }).click();
-  await waitForState(page, () => document.querySelectorAll('.felix-session-card').length === 1);
-  await page.getByRole('tab', { name: '自选（Watchlist）', exact: true }).click();
-  steps.push('独立工作台支持自选搜索、市场筛选、排序、会话搜索和恢复，删除前可取消');
+  await waitForState(page, () => document.querySelectorAll('.felix-assistant-history-row').length === 1);
+  await page.getByTestId('assistant-history').click();
+  steps.push('自选不再混入会话；悬浮助手历史可搜索、恢复、取消删除与确认删除');
   if (!await page.getByTestId('watchlist-row-AAPL.US').count()) {
     await page.getByRole('button', { name: /^添加标的（/ }).click();
     await page.getByPlaceholder('AAPL.US', { exact: true }).fill('AAPL.US');
@@ -274,14 +275,14 @@ try {
   await page.getByTestId('sidebar').getByRole('button', { name: /^投资逻辑（/ }).click();
   await page.getByTestId('thesis-card').waitFor();
   steps.push('研究报告可保存为投资论点，并在完整投资逻辑页面查看');
-  for (const label of ['市场看板', '指数', '机会发现', '自选', '投资组合', '对比', '提醒', '研究', '投资逻辑', '技能', '评测', '事件', '个人与安全', '设置']) {
+  for (const label of ['市场看板', '指数', '机会发现', '自选', '投资组合', '对比', '提醒', '研究', '投资逻辑', '事件', '个人与安全', '设置']) {
     const button = page.getByTestId('sidebar').getByRole('button', { name: new RegExp('^' + label + '（') });
     assert.equal(await button.count(), 1, label + ' navigation preserved');
     await button.click(); await page.waitForTimeout(180);
     assert.equal(await page.locator('body').getByText('Something went wrong', { exact: true }).count(), 0);
   }
-  steps.push('桌面全部 14 个导航入口保留，逐页打开无脚本错误');
-  await page.getByRole('tab', { name: /^大语言模型（/ }).click();
+  steps.push('桌面 12 个金融导航入口正常，逐页打开无脚本错误');
+  await page.getByRole('tab', { name: /^AI 设置（/ }).click();
   await page.screenshot({ path: resolve(artifacts, 'settings-models.png') });
   const credential = page.locator('input[type="password"]').first();
   await waitForState(page, () => document.querySelectorAll('input[type="password"]').length >= 5);
@@ -372,13 +373,14 @@ try {
   const mobileFab = await page.getByTestId('new-session-fab').boundingBox();
   assert.ok(mobileFab.x >= 0 && mobileFab.x + mobileFab.width <= 390, 'floating button remains reachable after resizing');
   await page.getByTestId('sidebar').getByRole('button', { name: /^自选（/ }).click();
-  await page.getByRole('tab', { name: '会话（Sessions）', exact: true }).click();
-  await page.getByRole('button', { name: /^继续会话/ }).click();
+  await page.getByTestId('new-session-fab').click();
+  await page.getByTestId('assistant-history').click();
+  await page.locator('.felix-history-open').click();
   await page.getByTestId('agent-input').waitFor({ state: 'visible' });
-  // Opening the already-active session must also switch mobile views.
   await page.getByRole('navigation', { name: '视图切换', exact: true }).getByRole('button', { name: '工作台（Workspace）', exact: true }).click();
-  await page.getByRole('button', { name: /^继续会话/ }).click();
-  await page.getByRole('button', { name: '研究助手（Copilot）', exact: true }).click();
+  await page.getByTestId('new-session-fab').click();
+  await page.getByTestId('assistant-history').click();
+  await page.locator('.felix-history-open').click();
   await page.getByTestId('agent-input').waitFor({ state: 'visible' });
   await page.screenshot({ path: resolve(artifacts, 'web-mobile.png') });
   await page.getByTestId('assistant-new-session').click();

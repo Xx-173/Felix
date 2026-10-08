@@ -13,7 +13,6 @@ import {
   lastRunSummaryAtom,
   loadMessagesAtom,
   mobileAgentVisibleAtom,
-  sessionsAtom,
   navSectionAtom,
   runViewAtom,
   settingsTabAtom,
@@ -33,6 +32,7 @@ import { QuoteCard } from './structured/QuoteCard';
 import { PortfolioRiskCard } from './structured/PortfolioRiskCard';
 import { AgentAmbientField, type AgentMotionState } from '../motion/AgentAmbientField';
 import { AssistantWelcome } from './AssistantWelcome';
+import { AssistantHistory } from './AssistantHistory';
 
 // ---------------------------------------------------------------------------
 // Defensive parsing of structured tool results (get_quote / get_portfolio).
@@ -95,7 +95,6 @@ export const AgentPanel: React.FC = () => {
   const [runView, setRunView] = useAtom(runViewAtom);
   const setAgentPanelVisible = useSetAtom(agentPanelVisibleAtom);
   const setMobileAgentVisible = useSetAtom(mobileAgentVisibleAtom);
-  const sessions = useAtomValue(sessionsAtom);
   const createSession = useSetAtom(createSessionAtom);
   const cancelRun = useSetAtom(cancelRunAtom);
   const [lastRun, setLastRun] = useAtom(lastRunSummaryAtom);
@@ -264,9 +263,7 @@ export const AgentPanel: React.FC = () => {
         </div>
         <div className="felix-assistant-models"><ModelSelector disabled={busy} /><ThinkingSelector disabled={busy} /></div>
       </div>
-      {historyOpen && <section className="felix-assistant-history" data-testid="assistant-history-list" aria-label={t('agent.welcome.history')}>
-        <h3>{t('agent.welcome.history')}</h3>
-        {sessions.length === 0 ? <p>{t('agent.welcome.historyEmpty')}</p> : [...sessions].sort((a, b) => b.updatedAt - a.updatedAt).map((session) => <button type="button" key={session.id} disabled={busy} aria-current={session.id === activeSessionId ? 'true' : undefined} onClick={async () => {
+      {historyOpen && <AssistantHistory busy={busy} onSelect={async (session) => {
           if (pendingRef.current || isRunning) return;
           pendingRef.current = true; setPending(true); setSendError(null);
           try {
@@ -276,8 +273,7 @@ export const AgentPanel: React.FC = () => {
           }
           catch (error) { setSendError(error instanceof Error ? error.message : t('agent.runtime.reasonUnknown')); }
           finally { pendingRef.current = false; setPending(false); }
-        }}><span>{session.title}</span><small>{session.messageCount}</small></button>)}
-      </section>}
+        }} />}
 
       {/* Workspace context chip */}
       <div className="felix-agent-context border-b mac-section-divider px-3 py-2">

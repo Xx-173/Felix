@@ -29,6 +29,28 @@ export const settings = {
   title: '设置',
   preferences: '偏好设置',
   subtitle: '无需离开金融工作台即可配置 Felix。',
+  menu: {
+  "connections": "数据源",
+  "llm": "AI 设置",
+  "general": "系统设置",
+  "skills": "研究工具",
+  "performance": "研究表现",
+  "experiments": "研究评测",
+  "evaluation": "运行追踪",
+  "diagnostics": "系统诊断",
+  "collapse": "收起菜单",
+  "expand": "展开菜单"
+},
+  menuDescriptions: {
+  "connections": "连接行情、资讯和证券账户，查看各数据源的可用状态。",
+  "llm": "配置自己的模型密钥、模型与思考等级。",
+  "general": "管理界面主题、语言及应用偏好。",
+  "skills": "技能是 AI 可调用的研究工具；在这里开关行情、财报和资讯能力，查看尚未接通的数据。",
+  "performance": "回顾已记录研究观点的后续表现与覆盖情况。",
+  "experiments": "用于开发和验证 AI：比较模型、工具调用与基准任务结果，不是个人投资收益评分。",
+  "evaluation": "按需连接追踪服务，查看 AI 运行过程；日常使用无需启用。",
+  "diagnostics": "查看连接与应用状态，定位配置问题。"
+},
   tabs: {
     general: '通用',
     llm: '大语言模型',

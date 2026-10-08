@@ -1,8 +1,8 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useAtomValue, useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import type { WorkspaceView } from '@finagent/core';
-import { navSectionAtom, activeSymbolAtom, activeViewAtom } from '../../atoms';
+import { navSectionAtom, settingsTabAtom, activeSymbolAtom, activeViewAtom } from '../../atoms';
 import { BilingualLabel } from '../primitives/BilingualLabel';
 import { SecurityHeader } from './SecurityHeader';
 import { OverviewView } from './OverviewView';
@@ -11,7 +11,6 @@ import { NewsView } from './NewsView';
 import { ChartView } from './ChartView';
 import { PortfolioSection } from './PortfolioSection';
 import { AlertsSection } from './AlertsSection';
-import { SkillsView } from '../settings/SkillsView';
 import { SettingsView } from '../settings/SettingsView';
 import { ResearchPanel } from '../research/ResearchPanel';
 import { ThesisPanel } from '../thesis/ThesisPanel';
@@ -19,7 +18,6 @@ import { CompareWorkspace } from '../compare/CompareWorkspace';
 import { MarketDashboard } from '../today/MarketDashboard';
 import { IndexWorkspace } from '../indices/IndexWorkspace';
 import { DiscoverView } from '../discover/DiscoverView';
-import { EvaluationCenter } from '../evaluation/EvaluationCenter';
 import { EventsView } from '../events/EventsView';
 import { ProfileSecurityView } from '../profile/ProfileSecurityView';
 import { WorkspaceHome } from './WorkspaceHome';
@@ -35,6 +33,15 @@ const WORKSPACE_TABS: { value: WorkspaceView; label: string }[] = [
 
 export const FinanceWorkspace: React.FC = () => {
   const navSection = useAtomValue(navSectionAtom);
+
+  const setSection = useSetAtom(navSectionAtom);
+  const setSettingsTab = useSetAtom(settingsTabAtom);
+  useEffect(() => {
+    if (navSection === 'sessions') setSection('workspace');
+    if (navSection === 'skills' || navSection === 'evaluation') {
+      setSettingsTab(navSection === 'skills' ? 'skills' : 'experiments'); setSection('settings');
+    }
+  }, [navSection, setSection, setSettingsTab]);
 
   let content: React.ReactNode;
   switch (navSection) {
@@ -64,7 +71,7 @@ export const FinanceWorkspace: React.FC = () => {
       content = <ProfileSecurityView />;
       break;
     case 'skills':
-      content = <SkillsView />;
+      content = <SettingsView />;
       break;
     case 'settings':
       content = <SettingsView />;
@@ -79,7 +86,7 @@ export const FinanceWorkspace: React.FC = () => {
       content = <CompareWorkspace />;
       break;
     case 'evaluation':
-      content = <EvaluationCenter />;
+      content = <SettingsView />;
       break;
     case 'watchlist':
     default:

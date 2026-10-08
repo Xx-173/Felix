@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { Sparkles } from 'lucide-react';
+const bullMarketIcon = new URL('../../assets/bull-market-assistant.png', import.meta.url).href;
 import { useSetAtom } from 'jotai';
 import { useTranslation } from 'react-i18next';
 import { agentPanelVisibleAtom, mobileAgentVisibleAtom } from '../../atoms';
@@ -46,6 +46,6 @@ export const NewSessionFloatingButton: React.FC = () => {
       if (suppressClick.current) { suppressClick.current = false; return; }
       showAgent(true); showMobileAgent(true);
     }}>
-    <Sparkles size={25} />
+    <img data-testid="assistant-bull-icon" src={bullMarketIcon} alt="" draggable={false} />
   </button>, document.body);
 };
